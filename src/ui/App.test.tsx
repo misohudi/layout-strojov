@@ -122,6 +122,31 @@ test('tapping the machine count opens a list of machines with order type and peo
   expect(screen.queryByRole('dialog', { name: 'Zoznam strojov' })).toBeNull();
 });
 
+test('a machine edited from the list returns to the list on "Hotovo", showing the change', async () => {
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(await screen.findByRole('button', { name: '0 / 35 strojov' }));
+  const list = await screen.findByRole('dialog', { name: 'Zoznam strojov' });
+  const row = within(list).getAllByRole('row').find((r) => r.textContent!.includes('DMU 125'))!;
+  await userEvent.click(row);
+  await userEvent.click(await screen.findByRole('button', { name: 'INT' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Hotovo' }));
+  const back = await screen.findByRole('dialog', { name: 'Zoznam strojov' });
+  const updated = within(back).getAllByRole('row').find((r) => r.textContent!.includes('DMU 125'))!;
+  expect(updated).toHaveTextContent('INT');
+  // closing the list itself goes back to the plan
+  await userEvent.click(within(back).getByRole('button', { name: 'Zavrieť' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+test('a machine opened from the plan closes back to the plan on "Hotovo"', async () => {
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(await screen.findByRole('button', { name: /DMU 125/ }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Hotovo' }));
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
 test('start screen has no foreman name field', async () => {
   renderApp();
   await screen.findByRole('button', { name: /^A/ });

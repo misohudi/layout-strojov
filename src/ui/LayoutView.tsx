@@ -29,6 +29,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const recordCount = useLiveQuery(() => db.records.count(), [db]) ?? 0;
   const [openId, setOpenId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  /** A machine opened from the machine list returns to the list when closed. */
+  const [backToList, setBackToList] = useState(false);
 
   if (draftResult === null) {
     return (
@@ -108,6 +110,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           nameOf={nameOf}
           onPick={(id) => {
             setListOpen(false);
+            setBackToList(true);
             setOpenId(id);
           }}
           onClose={() => setListOpen(false)}
@@ -121,7 +124,13 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           people={people}
           shifts={shifts}
           counts={counts}
-          onClose={() => setOpenId(null)}
+          onClose={() => {
+            setOpenId(null);
+            if (backToList) {
+              setBackToList(false);
+              setListOpen(true);
+            }
+          }}
         />
       )}
     </div>
