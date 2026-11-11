@@ -7,9 +7,10 @@ interface Props {
   onChangeShift(): void;
   onHistory(): void;
   onSettings(): void;
+  onMachineList(): void;
 }
 
-export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings }: Props) {
+export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
   return (
     <header className="header">
       <div className="header__shift">
@@ -20,7 +21,7 @@ export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings 
         <strong>{`Obsadenosť ${formatPct(stats.occupancyPct)}`}</strong>
         <span className="stat stat--ext">{`EXT ${formatPct(stats.extPct)}`}</span>
         <span className="stat stat--int">{`INT ${formatPct(stats.intPct)}`}</span>
-        <span className="muted">{`${stats.occupied} / ${stats.total} strojov`}</span>
+        <button className="btn btn--small btn--count" onClick={onMachineList}>{`${stats.occupied} / ${stats.total} strojov`}</button>
       </div>
       <div className="header__actions">
         <button className="btn btn--small" onClick={onHistory}>História</button>

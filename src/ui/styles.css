@@ -168,3 +168,12 @@ tr.clickable { cursor: pointer; }
 .start .center-card { margin-top: 12vh; max-width: 960px; align-items: center; }
 .start .btn--shift { min-width: 190px; min-height: 120px; font-size: 28px; padding: 12px 20px; gap: 6px; }
 .start .btn--shift small { font-size: 13px; }
+
+/* Machine list (tap on the machine count in the header) */
+.btn--count { color: var(--muted); }
+.sheet--tall { max-height: 90vh; max-height: 90dvh; }
+.machine-list td:first-child { font-weight: 600; white-space: nowrap; }
+.machine-list tr.clickable:active { background: var(--free); }
+.type-badge { display: inline-block; min-width: 56px; padding: 4px 10px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 14px; }
+.sheet .table-wrap { flex-shrink: 0; }
+.sheet h3 { margin: 4px 0 0; }

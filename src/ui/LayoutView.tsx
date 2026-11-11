@@ -5,6 +5,7 @@ import { Header } from './Header';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
 import { MachinePanel } from './MachinePanel';
+import { MachineList } from './MachineList';
 import { computeStats } from '../domain/stats';
 import { copyFromLastRecord } from '../db/repo';
 import { HALL_FREZY } from '../domain/seed';
@@ -27,6 +28,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const shifts = useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? [];
   const recordCount = useLiveQuery(() => db.records.count(), [db]) ?? 0;
   const [openId, setOpenId] = useState<string | null>(null);
+  const [listOpen, setListOpen] = useState(false);
 
   if (draftResult === null) {
     return (
@@ -58,6 +60,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onChangeShift={onChangeShift}
         onHistory={onHistory}
         onSettings={onSettings}
+        onMachineList={() => setListOpen(true)}
       />
       {banner}
       {isEmpty && recordCount > 0 && (
@@ -97,6 +100,19 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         <span><i className="sw tile--oos" /> mimo prevádzky</span>
         <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
       </div>
+      {listOpen && (
+        <MachineList
+          machines={machines}
+          assignments={draft.assignments}
+          stats={stats}
+          nameOf={nameOf}
+          onPick={(id) => {
+            setListOpen(false);
+            setOpenId(id);
+          }}
+          onClose={() => setListOpen(false)}
+        />
+      )}
       {open && (
         <MachinePanel
           machine={open}

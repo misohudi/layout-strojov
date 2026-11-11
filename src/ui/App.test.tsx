@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { DBProvider } from './useDB';
 import { openDB, ensureSeeded, type AppDB } from '../db/db';
-import { startDraft, setMachineType } from '../db/repo';
+import { startDraft, setMachineType, togglePerson, upsertPerson } from '../db/repo';
 
 let db: AppDB;
 let n = 0;
@@ -76,6 +76,50 @@ test('the pool ("Ostatní") is not offered as a shift on the start screen', asyn
   renderApp();
   expect(await screen.findByRole('button', { name: /^A/ })).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: /Ostatní/ })).toBeNull();
+});
+
+test('a machine set out of service in settings is not counted in occupancy', async () => {
+  renderApp();
+  await userEvent.click(await screen.findByRole('button', { name: 'Nastavenia' }));
+  await userEvent.click(await screen.findByRole('tab', { name: 'Stroje' }));
+  await userEvent.click(await screen.findByRole('button', { name: /HERMLE C60/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'Mimo prevádzky' }));
+  await vi.waitFor(async () => expect((await db.machines.get('m-0'))!.status).toBe('out_of_service'));
+  await userEvent.click(screen.getByRole('button', { name: '← Späť' }));
+  await pickShift('B');
+  const header = await screen.findByRole('banner');
+  expect(await within(header).findByText('0 / 34 strojov')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /HERMLE C42 \/ 4/ }));
+  await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
+  expect(await within(header).findByText('Obsadenosť 3 %')).toBeInTheDocument(); // 1 / 34
+});
+
+test('tapping the machine count opens a list of machines with order type and people', async () => {
+  const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await db.machines.update('m-1', { status: 'out_of_service' });
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-0', 'EXT');
+  await togglePerson(db, 's-B', 'm-0', p);
+  await setMachineType(db, 's-B', 'm-2', 'INT');
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(await screen.findByRole('button', { name: '2 / 34 strojov' }));
+  const list = await screen.findByRole('dialog', { name: 'Zoznam strojov' });
+  const active = within(list).getByRole('table', { name: 'V prevádzke' });
+  const rows = within(active).getAllByRole('row').slice(1);
+  expect(rows).toHaveLength(34);
+  const c60 = rows.find((r) => r.textContent!.includes('HERMLE C60'))!;
+  expect(c60).toHaveTextContent('EXT');
+  expect(c60).toHaveTextContent('Kováč');
+  expect(rows.find((r) => r.textContent!.includes('HERMLE C42 / 1'))).toHaveTextContent('INT');
+  expect(rows.find((r) => r.textContent!.includes('DMU 125'))).toHaveTextContent('voľný');
+  expect(within(list).getByRole('table', { name: 'Mimo prevádzky' })).toHaveTextContent('HERMLE C42 / 4');
+  expect(list).toHaveTextContent('Obsadenosť 6 %');
+
+  // tapping a row opens that machine for editing
+  await userEvent.click(c60);
+  expect(await screen.findByRole('dialog', { name: 'HERMLE C60' })).toBeInTheDocument();
+  expect(screen.queryByRole('dialog', { name: 'Zoznam strojov' })).toBeNull();
 });
 
 test('start screen has no foreman name field', async () => {
