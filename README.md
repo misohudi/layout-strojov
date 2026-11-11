@@ -23,6 +23,17 @@ Dáta sú uložené **len v tablete** (IndexedDB) – aplikácia funguje aj bez 
 - **Nastavenia (⚙):** ľudia (aj import z Excelu/CSV so stĺpcami `Meno` a `Zmena`), úprava pôdorysu strojov,
   zmeny, záloha a obnova.
 
+## Ukladanie reportov do sieťového priečinka
+
+1. Pripojte sieťový disk v tablete (napr. v aplikácii Súbory na Androide) – prihlasovacie údaje zadáva
+   používateľ priamo v tablete, aplikácia ich nevidí.
+2. V aplikácii: **Nastavenia → Report → Vybrať priečinok** a vo výbere priečinka zvoľte priečinok pre reporty.
+   Voliteľne vyplňte popis cesty pre majstrov.
+3. Pri **Uzavrieť zmenu** sa report uloží rovno do tohto priečinka (prvýkrát sa tablet môže spýtať na povolenie).
+   Ak priečinok nie je dostupný, zmena sa aj tak uzavrie a report sa dá uložiť znova alebo poslať cez Zdieľať.
+
+Vyžaduje prehliadač s podporou výberu priečinka (aktuálny Chrome na Androide). Inak zostáva Zdieľať.
+
 ## Záloha
 
 Dáta sú len v tablete – vymazanie dát prehliadača ich zmaže. V **Nastavenia → Záloha** si pravidelne ukladajte

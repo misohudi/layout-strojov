@@ -5,6 +5,7 @@ import { DBProvider } from './useDB';
 import { openDB, ensureSeeded, type AppDB } from '../db/db';
 import { startDraft, setMachineType, togglePerson, upsertPerson } from '../db/repo';
 import { shareOrDownload } from '../report/share';
+import { pickReportFolder } from '../report/folder';
 
 vi.mock('../report/share', () => ({ shareOrDownload: vi.fn(async () => 'shared') }));
 
@@ -69,6 +70,53 @@ test('a failing share shows the error and keeps the dialog usable', async () => 
   expect(await screen.findByText('Zdieľanie zlyhalo')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Zdieľať report' })).toBeEnabled();
   expect(screen.getByRole('button', { name: 'Hotovo' })).toBeEnabled();
+});
+
+describe('with a report folder chosen in settings', () => {
+  const win = window as unknown as { showDirectoryPicker?: unknown };
+  function fakeDir(fail = false) {
+    const files = new Map<string, Blob>();
+    return {
+      name: 'REPORT_OBSADENOST',
+      files,
+      queryPermission: vi.fn(async () => 'prompt' as PermissionState),
+      requestPermission: vi.fn(async () => 'granted' as PermissionState),
+      getFileHandle: vi.fn(async (fileName: string) => {
+        if (fail) throw new DOMException('Sieť nedostupná', 'NotFoundError');
+        return {
+          createWritable: async () => {
+            let data: Blob | null = null;
+            return { write: async (b: Blob) => { data = b; }, close: async () => { files.set(fileName, data!); } };
+          },
+        };
+      }),
+    };
+  }
+  afterEach(() => { delete win.showDirectoryPicker; });
+
+  test('closing the shift saves the report straight into the folder', async () => {
+    const dir = fakeDir();
+    win.showDirectoryPicker = vi.fn(async () => dir);
+    await pickReportFolder(db);
+    await openLayout();
+    await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu' }));
+    expect(await screen.findByText('Report uložený do priečinka REPORT_OBSADENOST.', {}, SLOW)).toBeInTheDocument();
+    expect(dir.requestPermission).toHaveBeenCalled();
+    expect([...dir.files.keys()]).toEqual(['Obsadenost_Frezy_2026-11-11_zmena-B.xlsx']);
+    expect(shareOrDownload).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Zdieľať report' })).toBeInTheDocument();
+  });
+
+  test('if the network folder is unavailable the shift is still closed and sharing is offered', async () => {
+    win.showDirectoryPicker = vi.fn(async () => fakeDir(true));
+    await pickReportFolder(db);
+    await openLayout();
+    await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu' }));
+    expect(await screen.findByText(/nepodarilo uložiť do priečinka \(Sieť nedostupná\)/, {}, SLOW)).toBeInTheDocument();
+    expect(await db.records.count()).toBe(1);
+    expect(await shareButtonReady()).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Uložiť do priečinka' })).toBeInTheDocument();
+  });
 });
 
 test('cancel keeps the shift open', async () => {

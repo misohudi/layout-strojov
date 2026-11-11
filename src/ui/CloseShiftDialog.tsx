@@ -5,8 +5,11 @@ import { buildShiftRecord } from '../domain/record';
 import { computeStats } from '../domain/stats';
 import { saveRecordAndReset } from '../db/repo';
 import { buildReportXlsx, formatPct, reportFileName } from '../report/xlsx';
-import { loadExcel } from '../report/excel';
+import { APP_UPDATED_MESSAGE, loadExcel } from '../report/excel';
 import { shareOrDownload } from '../report/share';
+import {
+  getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
+} from '../report/folder';
 import { HALL_FREZY } from '../domain/seed';
 import type { ShiftRecord, Stats } from '../domain/types';
 
@@ -31,6 +34,9 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [closed, setClosed] = useState<{ record: ShiftRecord; blob: Blob | null } | null>(null);
   const [shared, setShared] = useState(false);
+  /** Network folder chosen in Settings → Report (if any). */
+  const [folder, setFolder] = useState<FolderHandle | null>(null);
+  const [savedTo, setSavedTo] = useState<string | null>(null);
   const live = useLiveQuery(async () => {
     const [draft, machines] = await Promise.all([
       db.drafts.get(shiftId),
@@ -42,11 +48,20 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   // Warm up the Excel library while the foreman reads the summary.
   useEffect(() => {
     loadExcel().catch(() => {});
-  }, []);
+    getReportFolder(db).then((h) => setFolder(h ?? null));
+  }, [db]);
+
+  async function saveToFolder(record: ShiftRecord, blob: Blob) {
+    const res = await saveToReportFolder(db, blob, reportFileName(record));
+    if (res.ok) setSavedTo(saveResultMessage(res));
+    else setError(saveResultMessage(res));
+  }
 
   async function close() {
     setBusy(true);
     setError(null);
+    // Ask for folder access first, while the browser still counts this as the user's tap.
+    if (folder) await requestFolderAccess(folder);
     try {
       const [draft, machines, people, shifts] = await Promise.all([
         db.drafts.get(shiftId),
@@ -60,7 +75,9 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
       await saveRecordAndReset(db, record);
       setClosed({ record, blob: null });
       try {
-        setClosed({ record, blob: await buildReportXlsx(record) });
+        const blob = await buildReportXlsx(record);
+        setClosed({ record, blob });
+        if (folder) await saveToFolder(record, blob);
       } catch (e) {
         setError(errMsg(e));
       }
@@ -83,6 +100,18 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
       if (res !== 'cancelled') setShared(true);
     } catch (e) {
       setError(errMsg(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function retrySave() {
+    if (!closed || !folder) return;
+    setError(null);
+    setBusy(true);
+    try {
+      await requestFolderAccess(folder);
+      await saveToFolder(closed.record, closed.blob ?? (await buildReportXlsx(closed.record)));
     } finally {
       setBusy(false);
     }
@@ -118,16 +147,24 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
         ) : (
           <p className="muted">Po uzavretí sa zmena uloží do histórie a pôdorys tejto zmeny sa vyprázdni.</p>
         )}
+        {savedTo && <div className="notice notice--ok">{savedTo}</div>}
         {error && (
           <div className="notice notice--warn">
             {error}
-            {closed && <button className="btn btn--small" onClick={() => location.reload()}>Obnoviť aplikáciu</button>}
+            {error === APP_UPDATED_MESSAGE && (
+              <button className="btn btn--small" onClick={() => location.reload()}>Obnoviť aplikáciu</button>
+            )}
           </div>
         )}
         <div className="row">
           {closed ? (
             <>
-              <button className="btn btn--primary" disabled={busy} onClick={share}>Zdieľať report</button>
+              {folder && !savedTo && (
+                <button className="btn btn--primary" disabled={busy} onClick={retrySave}>Uložiť do priečinka</button>
+              )}
+              <button className={`btn ${folder && !savedTo ? '' : 'btn--primary'}`} disabled={busy} onClick={share}>
+                Zdieľať report
+              </button>
               <button className="btn" disabled={busy} onClick={onClosed}>Hotovo</button>
             </>
           ) : (

@@ -3,6 +3,10 @@ import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
+import {
+  getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
+} from '../report/folder';
+import { useDB } from './useDB';
 import type { ShiftRecord } from '../domain/types';
 
 export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack(): void }) {
@@ -10,6 +14,23 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
   // Prepare the file up front so the share sheet opens directly inside the tap (required on iPad).
   const [blob, setBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const db = useDB();
+  const [folder, setFolder] = useState<FolderHandle | null>(null);
+  const [savedTo, setSavedTo] = useState<string | null>(null);
+  useEffect(() => {
+    getReportFolder(db).then((h) => setFolder(h ?? null));
+  }, [db]);
+
+  async function saveToFolder() {
+    if (!folder || !blob) return;
+    setError(null);
+    setSavedTo(null);
+    await requestFolderAccess(folder); // first, while it still counts as the user's tap
+    const res = await saveToReportFolder(db, blob, reportFileName(record));
+    if (res.ok) setSavedTo(saveResultMessage(res));
+    else setError(saveResultMessage(res));
+  }
+
   useEffect(() => {
     let alive = true;
     buildReportXlsx(record).then(
@@ -26,6 +47,12 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       <div className="page__head">
         <button className="btn" onClick={onBack}>← Späť</button>
         <h2>{`Zmena ${record.shiftName} · ${skDate(record.date)}`}</h2>
+        <div className="row">
+        {folder && (
+          <button className="btn btn--primary" disabled={!blob} onClick={saveToFolder}>
+            Uložiť do priečinka
+          </button>
+        )}
         <button
           className="btn btn--primary"
           disabled={!blob}
@@ -35,7 +62,9 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
         >
           Zdieľať report
         </button>
+        </div>
       </div>
+      {savedTo && <div className="notice notice--ok">{savedTo}</div>}
       {error && <div className="notice notice--warn">{error}</div>}
       <div className="card">
         Majster: <strong>{record.foremanName}</strong> · Obsadenosť <strong>{formatPct(s.occupancyPct)}</strong> (

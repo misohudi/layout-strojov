@@ -27,6 +27,7 @@ afterEach(() => {
 const wrap = (ui: React.ReactNode) => render(<DBProvider db={db}>{ui}</DBProvider>);
 
 test('appearance tab switches to dark mode and remembers it', async () => {
+  delete document.documentElement.dataset.theme;
   wrap(<SettingsView onBack={() => {}} />);
   await userEvent.click(await screen.findByRole('tab', { name: 'Vzhľad' }));
   const dark = await screen.findByRole('button', { name: 'Tmavý' });
@@ -34,9 +35,34 @@ test('appearance tab switches to dark mode and remembers it', async () => {
   await userEvent.click(dark);
   await vi.waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'));
   expect(await getMeta(db, 'theme')).toBe('dark');
-  expect(dark).toHaveAttribute('aria-pressed', 'true');
+  await vi.waitFor(() => expect(dark).toHaveAttribute('aria-pressed', 'true'));
   await userEvent.click(screen.getByRole('button', { name: 'Podľa zariadenia' }));
   await vi.waitFor(() => expect(document.documentElement.dataset.theme).toBe('system'));
+});
+
+describe('report folder settings', () => {
+  const win = window as unknown as { showDirectoryPicker?: unknown };
+  afterEach(() => { delete win.showDirectoryPicker; });
+
+  test('without browser support it explains that sharing is used', async () => {
+    wrap(<SettingsView onBack={() => {}} />);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Report' }));
+    expect(await screen.findByText(/nevie ukladať priamo do priečinka/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Vybrať priečinok' })).toBeNull();
+  });
+
+  test('a folder can be chosen and described', async () => {
+    win.showDirectoryPicker = vi.fn(async () => ({ name: 'REPORT_OBSADENOST', getFileHandle: vi.fn() }));
+    wrap(<SettingsView onBack={() => {}} />);
+    await userEvent.click(await screen.findByRole('tab', { name: 'Report' }));
+    expect(await screen.findByText('Priečinok zatiaľ nie je vybraný.')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Vybrať priečinok' }));
+    expect(await screen.findByText('REPORT_OBSADENOST')).toBeInTheDocument();
+    const input = screen.getByLabelText('Cesta k priečinku (popis pre majstrov)');
+    await userEvent.type(input, 'Q:\\REPORTY');
+    await userEvent.click(screen.getByRole('button', { name: 'Uložiť popis' }));
+    await vi.waitFor(async () => expect(await getMeta(db, 'reportFolderLabel')).toBe('Q:\\REPORTY'));
+  });
 });
 
 test('machine editor moves and renames the selected machine', async () => {

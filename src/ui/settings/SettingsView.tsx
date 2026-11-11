@@ -4,11 +4,13 @@ import { MachineEditor } from './MachineEditor';
 import { ShiftSettings } from './ShiftSettings';
 import { BackupSettings } from './BackupSettings';
 import { AppearanceSettings } from './AppearanceSettings';
+import { ReportSettings } from './ReportSettings';
 
 const TABS = [
   { id: 'people', label: 'Ľudia' },
   { id: 'machines', label: 'Stroje' },
   { id: 'shifts', label: 'Zmeny' },
+  { id: 'report', label: 'Report' },
   { id: 'backup', label: 'Záloha' },
   { id: 'appearance', label: 'Vzhľad' },
 ] as const;
@@ -39,6 +41,7 @@ export function SettingsView({ onBack, initialTab = 'people' }: { onBack(): void
       {tab === 'people' && <PeopleSettings />}
       {tab === 'machines' && <MachineEditor />}
       {tab === 'shifts' && <ShiftSettings />}
+      {tab === 'report' && <ReportSettings />}
       {tab === 'backup' && <BackupSettings />}
       {tab === 'appearance' && <AppearanceSettings />}
     </div>
