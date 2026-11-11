@@ -64,6 +64,16 @@ test('settings open from the header and go back', async () => {
   expect(await screen.findAllByTestId('machine-tile')).toHaveLength(35);
 });
 
+test('if the open shift draft disappears (shift deleted / backup restored) the user can get back to the picker', async () => {
+  renderApp();
+  await pickShift('B', 'Novák');
+  await screen.findAllByTestId('machine-tile');
+  await db.drafts.delete('s-B');
+  expect(await screen.findByText('Táto zmena už nie je otvorená.')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Vybrať zmenu' }));
+  expect(await screen.findByText('Vyber svoju zmenu')).toBeInTheDocument();
+});
+
 test('continue button disabled without foreman name', async () => {
   renderApp();
   await userEvent.click(await screen.findByRole('button', { name: /^A/ }));

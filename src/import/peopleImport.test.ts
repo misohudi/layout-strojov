@@ -32,6 +32,15 @@ test('CSV with comma separator and header without diacritics', async () => {
   expect(rows).toEqual([{ name: 'Kováč', shiftName: 'A', line: 2 }]);
 });
 
+test('CSV saved by Excel in Windows-1250 keeps Slovak diacritics', async () => {
+  // "Meno;Zmena\nKováč;A\n" encoded as windows-1250 (á = 0xE1, č = 0xE8)
+  const bytes = new Uint8Array([
+    ...Array.from('Meno;Zmena\nKov', (c) => c.charCodeAt(0)), 0xe1, 0xe8, ...Array.from(';A\n', (c) => c.charCodeAt(0)),
+  ]);
+  const rows = await parsePeopleFile(new File([bytes], 'ludia.csv'));
+  expect(rows).toEqual([{ name: 'Kováč', shiftName: 'A', line: 2 }]);
+});
+
 test('XLSX import gives the same result', async () => {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Ľudia');

@@ -9,6 +9,7 @@ interface Props {
   shiftId: string;
   people: Person[];
   shifts: Shift[];
+  counts?: Record<string, number>;
   onClose(): void;
 }
 
@@ -18,7 +19,7 @@ const TYPES: { label: string; value: OrderType | null; cls: string }[] = [
   { label: 'Voľný', value: null, cls: '' },
 ];
 
-export function MachinePanel({ machine, assignment, shiftId, people, shifts, onClose }: Props) {
+export function MachinePanel({ machine, assignment, shiftId, people, shifts, counts, onClose }: Props) {
   const db = useDB();
   const type = assignment?.type ?? null;
   return (
@@ -49,6 +50,7 @@ export function MachinePanel({ machine, assignment, shiftId, people, shifts, onC
               shifts={shifts}
               currentShiftId={shiftId}
               selected={assignment?.personIds ?? []}
+              counts={counts}
               onToggle={(pid) => togglePerson(db, shiftId, machine.id, pid)}
             />
           </>

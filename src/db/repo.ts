@@ -140,6 +140,9 @@ export async function deleteShift(db: AppDB, id: string): Promise<void> {
     if ((await db.people.where('shiftId').equals(id).count()) > 0) {
       throw new Error('Zmena má priradených ľudí');
     }
+    if ((await db.shifts.count()) <= 1) {
+      throw new Error('Musí zostať aspoň jedna zmena');
+    }
     await db.shifts.delete(id);
     await db.drafts.delete(id);
   });

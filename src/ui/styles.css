@@ -143,3 +143,4 @@ tr.clickable { cursor: pointer; }
 .editor .floor { padding: 0; }
 .chip { min-height: 44px; padding: 0 16px; font-size: 15px; }
 .floor__zoom .chip { min-height: 36px; padding: 0 10px; font-size: 13px; }
+.person__count { font-size: 12px; opacity: 0.8; padding: 2px 6px; border-radius: 999px; background: rgba(127,127,127,0.2); }

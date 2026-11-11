@@ -48,6 +48,9 @@ test('exports filtered records to Excel', async () => {
 test('detail shows the record and can share its report', async () => {
   await userEvent.click(await screen.findByText('10.11.2026'));
   expect(await screen.findByRole('heading', { name: /Zmena B · 10\.11\.2026/ })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: 'Zdieľať report' }));
+  const share = screen.getByRole('button', { name: 'Zdieľať report' });
+  expect(share).toBeDisabled(); // file is prepared first so sharing happens directly in the tap
+  await vi.waitFor(() => expect(share).toBeEnabled(), { timeout: 8000 });
+  await userEvent.click(share);
   await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Obsadenost_Frezy_2026-11-10_zmena-B.xlsx'));
 });

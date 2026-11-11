@@ -104,6 +104,13 @@ test('deleteShift with people is rejected', async () => {
   expect(await db.shifts.count()).toBe(2);
 });
 
+test('deleting the last remaining shift is refused', async () => {
+  await deleteShift(db, 's-A');
+  await deleteShift(db, 's-B');
+  await expect(deleteShift(db, 's-C')).rejects.toThrow('Musí zostať aspoň jedna zmena');
+  expect(await db.shifts.count()).toBe(1);
+});
+
 test('upsertShift and upsertMachine create and update', async () => {
   const id = await upsertShift(db, { name: 'D', order: 3 });
   await upsertShift(db, { id, name: 'Nočná', order: 3 });

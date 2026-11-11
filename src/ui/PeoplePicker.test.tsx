@@ -36,6 +36,14 @@ test('selected person from another shift stays visible when collapsed', () => {
   expect(screen.getByLabelText(/Baláž/)).toBeChecked();
 });
 
+test('shows on how many machines a person already works', () => {
+  render(
+    <PeoplePicker people={people} shifts={shifts} currentShiftId="s-B" selected={[]} counts={{ b1: 2 }} onToggle={() => {}} />,
+  );
+  expect(screen.getByLabelText(/Adam/)).toBeInTheDocument();
+  expect(screen.getByText('2 stroje')).toBeInTheDocument();
+});
+
 test('toggling calls onToggle with the person id', async () => {
   const onToggle = vi.fn();
   render(<PeoplePicker people={people} shifts={shifts} currentShiftId="s-B" selected={[]} onToggle={onToggle} />);

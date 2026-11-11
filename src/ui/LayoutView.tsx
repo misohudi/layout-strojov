@@ -21,15 +21,31 @@ interface Props {
 export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCloseShift, banner }: Props) {
   const db = useDB();
   const machines = useLiveQuery(() => db.machines.where('hallId').equals(HALL_FREZY).toArray(), [db]);
-  const draft = useLiveQuery(() => db.drafts.get(shiftId), [db, shiftId]);
+  // null = loaded but no draft (shift deleted, backup restored, closed); undefined = still loading
+  const draftResult = useLiveQuery(async () => (await db.drafts.get(shiftId)) ?? null, [db, shiftId]);
   const people = useLiveQuery(() => db.people.toArray(), [db]) ?? [];
   const shifts = useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? [];
   const recordCount = useLiveQuery(() => db.records.count(), [db]) ?? 0;
   const [openId, setOpenId] = useState<string | null>(null);
 
-  if (!machines || !draft) return <p className="muted pad">Načítavam…</p>;
+  if (draftResult === null) {
+    return (
+      <div className="center-card">
+        <h2>Táto zmena už nie je otvorená.</h2>
+        <p className="muted">Mohla byť uzavretá, odstránená alebo obnovená zo zálohy.</p>
+        <button className="btn btn--primary" onClick={onChangeShift}>Vybrať zmenu</button>
+      </div>
+    );
+  }
+  if (!machines || !draftResult) return <p className="muted pad">Načítavam…</p>;
+  const draft = draftResult;
   const shift = shifts.find((s) => s.id === shiftId);
   const stats = computeStats(machines, draft.assignments);
+  const counts: Record<string, number> = {};
+  for (const m of machines) {
+    if (m.status !== 'active') continue;
+    for (const pid of draft.assignments[m.id]?.personIds ?? []) counts[pid] = (counts[pid] ?? 0) + 1;
+  }
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   const open = machines.find((m) => m.id === openId);
   const isEmpty = Object.keys(draft.assignments).length === 0;
@@ -89,6 +105,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           shiftId={shiftId}
           people={people}
           shifts={shifts}
+          counts={counts}
           onClose={() => setOpenId(null)}
         />
       )}

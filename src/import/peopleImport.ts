@@ -54,9 +54,19 @@ async function parseXlsx(buf: ArrayBuffer): Promise<string[][]> {
   return table;
 }
 
+/** UTF-8 if valid, otherwise Windows-1250 (what Slovak Excel uses for "CSV (oddelený bodkočiarkou)"). */
+function decodeText(buf: ArrayBuffer): string {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder('windows-1250').decode(buf);
+  }
+}
+
 export async function parsePeopleFile(file: File): Promise<PeopleImportRow[]> {
   const isXlsx = /\.xlsx$/i.test(file.name);
-  const table = isXlsx ? await parseXlsx(await file.arrayBuffer()) : parseCsv(await file.text());
+  const buf = await file.arrayBuffer();
+  const table = isXlsx ? await parseXlsx(buf) : parseCsv(decodeText(buf));
   return toRows(table);
 }
 

@@ -6,21 +6,26 @@ interface Props {
   shifts: Shift[];
   currentShiftId: string;
   selected: string[];
+  /** On how many machines of the current draft each person already works. */
+  counts?: Record<string, number>;
   onToggle(id: string): void;
 }
 
 const byName = (a: Person, b: Person) => a.name.localeCompare(b.name, 'sk');
 
-function PersonCheck({ p, checked, onToggle }: { p: Person; checked: boolean; onToggle(id: string): void }) {
+const machinesLabel = (n: number) => (n === 1 ? '1 stroj' : n < 5 ? `${n} stroje` : `${n} strojov`);
+
+function PersonCheck({ p, checked, count, onToggle }: { p: Person; checked: boolean; count: number; onToggle(id: string): void }) {
   return (
     <label className={`person ${checked ? 'person--on' : ''}`}>
       <input type="checkbox" checked={checked} onChange={() => onToggle(p.id)} />
       <span>{p.name}</span>
+      {count > 0 && <small className="person__count">{machinesLabel(count)}</small>}
     </label>
   );
 }
 
-export function PeoplePicker({ people, shifts, currentShiftId, selected, onToggle }: Props) {
+export function PeoplePicker({ people, shifts, currentShiftId, selected, counts = {}, onToggle }: Props) {
   const [open, setOpen] = useState(false);
   const active = people.filter((p) => p.active);
   const own = active.filter((p) => p.shiftId === currentShiftId).sort(byName);
@@ -38,7 +43,7 @@ export function PeoplePicker({ people, shifts, currentShiftId, selected, onToggl
       <div className="people-list">
         {own.length === 0 && <p className="muted">Žiadni ľudia – pridajte ich v nastaveniach.</p>}
         {own.map((p) => (
-          <PersonCheck key={p.id} p={p} checked={selected.includes(p.id)} onToggle={onToggle} />
+          <PersonCheck key={p.id} p={p} checked={selected.includes(p.id)} count={counts[p.id] ?? 0} onToggle={onToggle} />
         ))}
       </div>
       <button type="button" className="link-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -47,7 +52,7 @@ export function PeoplePicker({ people, shifts, currentShiftId, selected, onToggl
       {!open && selectedOthers.length > 0 && (
         <div className="people-list">
           {selectedOthers.map((p) => (
-            <PersonCheck key={p.id} p={p} checked onToggle={onToggle} />
+            <PersonCheck key={p.id} p={p} checked count={counts[p.id] ?? 0} onToggle={onToggle} />
           ))}
         </div>
       )}
@@ -57,7 +62,7 @@ export function PeoplePicker({ people, shifts, currentShiftId, selected, onToggl
             <h4>Zmena {g.shift.name}</h4>
             <div className="people-list">
               {g.people.map((p) => (
-                <PersonCheck key={p.id} p={p} checked={selected.includes(p.id)} onToggle={onToggle} />
+                <PersonCheck key={p.id} p={p} checked={selected.includes(p.id)} count={counts[p.id] ?? 0} onToggle={onToggle} />
               ))}
             </div>
           </div>
