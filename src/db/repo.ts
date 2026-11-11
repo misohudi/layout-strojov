@@ -18,6 +18,14 @@ export async function startDraft(db: AppDB, shiftId: string, foremanName: string
   return draft;
 }
 
+/** Continues an existing draft, keeping assignments; records the (possibly new) foreman name. */
+export async function continueDraft(db: AppDB, shiftId: string, foremanName: string): Promise<void> {
+  await db.transaction('rw', db.drafts, db.meta, async () => {
+    await db.drafts.update(shiftId, { foremanName });
+    await setMeta(db, `lastForeman:${shiftId}`, foremanName);
+  });
+}
+
 export function getLastForeman(db: AppDB, shiftId: string): Promise<string | undefined> {
   return getMeta<string>(db, `lastForeman:${shiftId}`);
 }

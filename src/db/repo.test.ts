@@ -1,6 +1,6 @@
 import { openDB, ensureSeeded, type AppDB } from './db';
 import {
-  getDraft, startDraft, getLastForeman, setMachineType, togglePerson, copyFromLastRecord,
+  getDraft, startDraft, continueDraft, getLastForeman, setMachineType, togglePerson, copyFromLastRecord,
   upsertPerson, deletePerson, setPersonActive, upsertMachine, deleteMachine,
   upsertShift, deleteShift, saveRecordAndReset, listRecords,
 } from './repo';
@@ -44,6 +44,16 @@ test('draft survives reopening the database', async () => {
   expect(d?.startedAt).toBe(NOW.toISOString());
   expect(d?.assignments['m-0']).toEqual({ type: 'EXT', personIds: ['p1'] });
   expect(await getLastForeman(db, 's-B')).toBe('Novák');
+});
+
+test('continueDraft keeps assignments and updates foreman', async () => {
+  await startDraft(db, 's-A', 'Starý', NOW);
+  await setMachineType(db, 's-A', 'm-0', 'EXT');
+  await continueDraft(db, 's-A', 'Nový');
+  const d = await getDraft(db, 's-A');
+  expect(d?.foremanName).toBe('Nový');
+  expect(d?.assignments['m-0'].type).toBe('EXT');
+  expect(await getLastForeman(db, 's-A')).toBe('Nový');
 });
 
 test('togglePerson twice removes the person', async () => {
