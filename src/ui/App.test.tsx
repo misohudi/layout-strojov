@@ -150,6 +150,14 @@ test('a machine opened from the plan closes back to the plan on "Hotovo"', async
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
+test('five taps on empty space of the plan show the easter egg', async () => {
+  renderApp();
+  await pickShift('B');
+  const plan = await screen.findByTestId('floor-scroll');
+  for (let i = 0; i < 5; i++) await userEvent.click(plan);
+  expect(await screen.findByRole('img', { name: 'Prekvapenie' })).toBeInTheDocument();
+});
+
 test('start screen has no foreman name field', async () => {
   renderApp();
   await screen.findByRole('button', { name: /^A/ });

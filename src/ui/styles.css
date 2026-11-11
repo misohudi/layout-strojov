@@ -247,3 +247,13 @@ tr.clickable { cursor: pointer; }
 .tile--selected { position: relative; z-index: 3; }
 .tile--dragging { z-index: 4; opacity: 0.9; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); cursor: grabbing; }
 .notice--ok { border-color: var(--ext); }
+
+/* Easter egg: 5 quick taps on empty space of the plan */
+.easter-egg { position: fixed; left: 12px; bottom: 0; z-index: 30; pointer-events: none; }
+.easter-egg img {
+  display: block; height: min(45vh, 420px); width: auto; pointer-events: auto; cursor: pointer;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.35));
+  transform-origin: bottom left; animation: egg-pop 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+@keyframes egg-pop { from { transform: translateY(100%) scale(0.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .easter-egg img { animation: none; } }

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import { gridTracks, type GridItem } from './grid';
 
 const MIN_ZOOM = 1;
@@ -33,7 +33,16 @@ function midpoint(el: HTMLElement, touches: TouchList) {
  * area); two fingers zoom it around the point between them. While zoomed, a semi-transparent
  * "100 %" button in the top-right corner returns to the full view and then disappears.
  */
-export function Floor({ items, children }: { items: GridItem[]; children: ReactNode }) {
+export function Floor({
+  items,
+  children,
+  onPlanClick,
+}: {
+  items: GridItem[];
+  children: ReactNode;
+  /** Any tap inside the plan area (machines included – the handler filters). */
+  onPlanClick?(e: MouseEvent): void;
+}) {
   const [zoom, setZoom] = useState(1);
   const zoomRef = useRef(1);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -114,7 +123,13 @@ export function Floor({ items, children }: { items: GridItem[]; children: ReactN
           100 %
         </button>
       )}
-      <div className="floor__scroll" data-testid="floor-scroll" ref={scrollRef} style={{ touchAction: 'pan-x pan-y' }}>
+      <div
+        className="floor__scroll"
+        data-testid="floor-scroll"
+        ref={scrollRef}
+        style={{ touchAction: 'pan-x pan-y' }}
+        onClick={onPlanClick}
+      >
         <div
           className="floor__grid"
           style={{

@@ -6,6 +6,7 @@ import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
 import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
+import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { copyFromLastRecord } from '../db/repo';
 import { HALL_FREZY } from '../domain/seed';
@@ -31,6 +32,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const [listOpen, setListOpen] = useState(false);
   /** A machine opened from the machine list returns to the list when closed. */
   const [backToList, setBackToList] = useState(false);
+  const egg = useEasterEgg();
 
   if (draftResult === null) {
     return (
@@ -80,7 +82,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
         </div>
       )}
-      <Floor items={machines}>
+      <Floor items={machines} onPlanClick={egg.onPlanClick}>
         {machines.map((m) => {
           const a = draft.assignments[m.id];
           return (
@@ -133,6 +135,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           }}
         />
       )}
+      <EasterEgg visible={egg.visible} onHide={egg.hide} />
     </div>
   );
 }
