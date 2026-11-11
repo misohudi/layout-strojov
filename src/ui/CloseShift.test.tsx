@@ -38,7 +38,8 @@ test('close dialog warns about machines with people but no type', async () => {
 test('closing saves the record, clears the draft, shares the report and returns to picker', async () => {
   await openLayout();
   await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť a zdieľať' }));
-  expect(await screen.findByText('Vyber svoju zmenu')).toBeInTheDocument();
+  // Generating the report lazy-loads ExcelJS, which can be slow on a cold, busy test run.
+  expect(await screen.findByText('Vyber svoju zmenu', {}, { timeout: 8000 })).toBeInTheDocument();
   const records = await db.records.toArray();
   expect(records).toHaveLength(1);
   expect(records[0].stats.ext).toBe(1);

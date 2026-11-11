@@ -1,4 +1,5 @@
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
+import { loadExcel } from './excel';
 import type { RecordRow, ShiftRecord } from '../domain/types';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
@@ -32,7 +33,7 @@ async function toBlob(wb: ExcelJS.Workbook): Promise<Blob> {
 }
 
 export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
-  const wb = new ExcelJS.Workbook();
+  const wb = new (await loadExcel()).Workbook();
   const ws = wb.addWorksheet('Report');
   const s = r.stats;
   ws.getCell('A1').value = 'Report obsadenosti – Frézy';
@@ -65,7 +66,7 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
 }
 
 export async function buildHistoryXlsx(records: ShiftRecord[]): Promise<Blob> {
-  const wb = new ExcelJS.Workbook();
+  const wb = new (await loadExcel()).Workbook();
   const ws = wb.addWorksheet('História');
   ws.addRow(['Dátum', 'Zmena', 'Majster', 'Strojov', 'Obsadené', 'Obsadenosť %', 'EXT', 'INT', 'EXT %', 'INT %']).font = { bold: true };
   for (const r of records) {

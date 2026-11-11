@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import { loadExcel } from '../report/excel';
 import type { AppDB } from '../db/db';
 import { upsertPerson } from '../db/repo';
 
@@ -40,7 +40,7 @@ function parseCsv(text: string): string[][] {
 }
 
 async function parseXlsx(buf: ArrayBuffer): Promise<string[][]> {
-  const wb = new ExcelJS.Workbook();
+  const wb = new (await loadExcel()).Workbook();
   await wb.xlsx.load(buf);
   const ws = wb.worksheets[0];
   if (!ws) return [];
