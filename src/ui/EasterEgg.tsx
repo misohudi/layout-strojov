@@ -4,7 +4,7 @@ import eggUrl from '../assets/easter-egg.webp';
 const TAPS = 5;
 /** All five taps have to happen within this time. */
 const WINDOW_MS = 2000;
-const SHOW_MS = 7000;
+const SHOW_MS = 1000;
 
 /** Counts quick taps on empty space of the plan (taps on machines or buttons don't count). */
 export function useEasterEgg() {

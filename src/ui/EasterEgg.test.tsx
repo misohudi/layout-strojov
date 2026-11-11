@@ -45,13 +45,15 @@ test('slow taps (more than 2 s apart in total) do not trigger it', () => {
   expect(screen.queryByRole('img', { name: 'Prekvapenie' })).toBeNull();
 });
 
-test('the photo hides when tapped, or by itself after a few seconds', () => {
+test('the photo hides when tapped, or by itself after one second', () => {
   render(<Harness />);
   tapEmpty(5);
   fireEvent.click(screen.getByRole('img', { name: 'Prekvapenie' }));
   expect(screen.queryByRole('img', { name: 'Prekvapenie' })).toBeNull();
   tapEmpty(5);
   expect(screen.getByRole('img', { name: 'Prekvapenie' })).toBeInTheDocument();
-  act(() => { vi.advanceTimersByTime(8000); });
+  act(() => { vi.advanceTimersByTime(900); });
+  expect(screen.getByRole('img', { name: 'Prekvapenie' })).toBeInTheDocument();
+  act(() => { vi.advanceTimersByTime(100); }); // gone after 1 second
   expect(screen.queryByRole('img', { name: 'Prekvapenie' })).toBeNull();
 });
