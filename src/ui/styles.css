@@ -177,3 +177,7 @@ tr.clickable { cursor: pointer; }
 .type-badge { display: inline-block; min-width: 56px; padding: 4px 10px; border-radius: 6px; text-align: center; font-weight: 700; font-size: 14px; }
 .sheet .table-wrap { flex-shrink: 0; }
 .sheet h3 { margin: 4px 0 0; }
+
+/* The selected (edited) machine is always drawn on top of the others. */
+.tile--selected { position: relative; z-index: 3; }
+.tile--dragging { z-index: 4; opacity: 0.9; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); cursor: grabbing; }
