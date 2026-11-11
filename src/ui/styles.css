@@ -164,7 +164,9 @@ tr.clickable { cursor: pointer; }
 .notice > div { width: 100%; }
 
 /* Start screen */
-.start { position: relative; min-height: 100vh; padding: 16px; }
+/* Pinned to the visible window like the plan screen, so it can't scroll by the browser bar's height;
+   it only scrolls if there are more shifts than fit. */
+.start { position: fixed; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
 .start__settings { position: absolute; top: 16px; right: 16px; }
 .start .center-card { margin-top: 12vh; max-width: 960px; align-items: center; }
 .start .btn--shift { min-width: 190px; min-height: 120px; font-size: 28px; padding: 12px 20px; gap: 6px; }
