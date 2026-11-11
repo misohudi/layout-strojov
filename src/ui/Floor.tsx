@@ -5,7 +5,6 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 4;
 /** Pinching back to just above 100 % snaps to exactly 100 %. */
 const SNAP_BELOW = 1.08;
-// Row height relative to column width is set in CSS (--rr): shorter in landscape, taller in portrait.
 
 const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
@@ -119,12 +118,12 @@ export function Floor({ items, children }: { items: GridItem[]; children: ReactN
         <div
           className="floor__grid"
           style={{
+            // At 100 % the plan is stretched to exactly fill its area; zoom scales both directions.
             width: `${Math.round(zoom * 100)}%`,
-            ['--wu' as string]: t.widthUnits,
-            ['--hu' as string]: t.heightUnits,
+            height: `${Math.round(zoom * 100)}%`,
             gridTemplateColumns: t.columns,
             gridTemplateRows: t.rows,
-            fontSize: `${(zoom * 21) / t.widthUnits}vw`,
+            fontSize: `min(${(zoom * 21) / t.widthUnits}vw, ${(zoom * 30) / t.heightUnits}vh)`,
           }}
         >
           {children}

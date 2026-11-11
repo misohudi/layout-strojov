@@ -21,6 +21,26 @@ function pinch(el: HTMLElement, d0: number, d1: number) {
   fireEvent.touchEnd(el, { touches: [] });
 }
 
+test('at 100 % the plan fills its area exactly in both directions', () => {
+  const { grid } = setup();
+  expect(grid.style.width).toBe('100%');
+  expect(grid.style.height).toBe('100%');
+  expect(grid.style.aspectRatio).toBe('');
+});
+
+test('tracks can shrink below their content so long names never widen the plan', () => {
+  const { grid } = setup();
+  expect(grid.style.gridTemplateColumns.split(') ').every((t) => t.startsWith('minmax(0'))).toBe(true);
+  expect(grid.style.gridTemplateRows.startsWith('minmax(0')).toBe(true);
+});
+
+test('zooming scales width and height together', () => {
+  const { scroller, grid } = setup();
+  pinch(scroller, 100, 200);
+  expect(grid.style.width).toBe('200%');
+  expect(grid.style.height).toBe('200%');
+});
+
 test('at 100 % there are no zoom controls covering the plan', () => {
   const { grid } = setup();
   expect(grid.style.width).toBe('100%');

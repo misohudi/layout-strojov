@@ -25,8 +25,10 @@ export function trackWeights(items: GridItem[]): { cols: number[]; rows: number[
 export function gridTracks(items: GridItem[]) {
   const { cols, rows } = trackWeights(items);
   return {
-    columns: cols.map((w) => `${w}fr`).join(' '),
-    rows: rows.map((w) => `${w}fr`).join(' '),
+    // minmax(0, …) lets a track shrink below its content, so a long machine name can never
+    // make the plan wider or taller than the area it is given.
+    columns: cols.map((w) => `minmax(0, ${w}fr)`).join(' '),
+    rows: rows.map((w) => `minmax(0, ${w}fr)`).join(' '),
     widthUnits: sum(cols),
     heightUnits: sum(rows),
   };
