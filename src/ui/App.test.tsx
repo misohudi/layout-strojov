@@ -18,6 +18,9 @@ const renderApp = () => render(<DBProvider db={db}><App /></DBProvider>);
 /** One tap on the shift opens it – no foreman name to type. */
 async function pickShift(name: string) {
   await userEvent.click(await screen.findByRole('button', { name: new RegExp(`^${name}`) }));
+  // Wait until the shift's plan is open – the start screen also has a "Nastavenia" button,
+  // so acting earlier could hit the wrong screen on a slow machine (CI).
+  await screen.findByRole('banner', {}, { timeout: 5000 });
 }
 
 test('pick shift, mark machine EXT, header shows stats', async () => {
