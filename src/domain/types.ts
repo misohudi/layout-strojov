@@ -16,7 +16,11 @@ export interface Shift {
   id: string;
   name: string;
   order: number;
+  /** 'pool' = people without a shift ("Ostatní"): selectable on machines, not offered as a shift to open. */
+  kind?: 'shift' | 'pool';
 }
+
+export const isPool = (s: Pick<Shift, 'kind'> | undefined) => s?.kind === 'pool';
 
 export interface Person {
   id: string;

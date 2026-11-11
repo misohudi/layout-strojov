@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from '../useDB';
 import { deletePerson, setPersonActive, upsertPerson } from '../../db/repo';
 import { applyPeopleImport, parsePeopleFile, type PeopleImportResult } from '../../import/peopleImport';
-import type { Person } from '../../domain/types';
+import { isPool, type Person } from '../../domain/types';
 
 function PersonRow({ p, shifts }: { p: Person; shifts: { id: string; name: string }[] }) {
   const db = useDB();
@@ -62,6 +62,7 @@ export function PeopleSettings() {
   const [shiftId, setShiftId] = useState('');
   const [result, setResult] = useState<PeopleImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [removeUnused, setRemoveUnused] = useState(true);
 
   async function add() {
     const sid = shiftId || shifts[0]?.id;
@@ -75,7 +76,7 @@ export function PeopleSettings() {
     setResult(null);
     setImportError(null);
     try {
-      setResult(await applyPeopleImport(db, await parsePeopleFile(file)));
+      setResult(await applyPeopleImport(db, await parsePeopleFile(file), { removeUnusedShifts: removeUnused }));
     } catch (e) {
       setImportError(e instanceof Error ? e.message : String(e));
     }
@@ -100,12 +101,29 @@ export function PeopleSettings() {
       <div className="card">
         <label className="field">
           <span>Importovať zo súboru (Excel alebo CSV so stĺpcami „Meno“ a „Zmena“)</span>
-          <input type="file" accept=".xlsx,.csv" onChange={(e) => onFile(e.target.files?.[0])} />
+          <input
+            type="file"
+            accept=".xlsx,.csv"
+            onChange={(e) => {
+              onFile(e.target.files?.[0]);
+              e.target.value = '';
+            }}
+          />
+        </label>
+        <p className="muted">
+          Podporované sú aj zoznamy so stĺpcom pre každú zmenu („Smena Novák“, „Smena Kováč“…) a stĺpcom „Všetci“ –
+          zmeny sa vytvoria automaticky a ľudia bez zmeny pôjdu do skupiny „Ostatní“.
+        </p>
+        <label className="check">
+          <input type="checkbox" checked={removeUnused} onChange={(e) => setRemoveUnused(e.target.checked)} />
+          <span>Odstrániť prázdne zmeny, ktoré v súbore nie sú (napr. A, B, C)</span>
         </label>
         {importError && <div className="notice notice--warn">{importError}</div>}
         {result && (
           <div className="notice">
             Pridaných {result.added}, preskočených {result.skipped}.
+            {result.shiftsCreated.length > 0 && <div>Vytvorené zmeny: {result.shiftsCreated.join(', ')}</div>}
+            {result.shiftsRemoved.length > 0 && <div>Odstránené prázdne zmeny: {result.shiftsRemoved.join(', ')}</div>}
             {result.errors.length > 0 && (
               <ul>
                 {result.errors.map((e) => <li key={e.line}>Riadok {e.line}: {e.message}</li>)}
@@ -118,8 +136,8 @@ export function PeopleSettings() {
       {shifts.map((s) => {
         const list = people.filter((p) => p.shiftId === s.id).sort((a, b) => a.name.localeCompare(b.name, 'sk'));
         return (
-          <section key={s.id} className="card" aria-label={`Zmena ${s.name}`}>
-            <h3>Zmena {s.name} <span className="muted">({list.filter((p) => p.active).length})</span></h3>
+          <section key={s.id} className="card" aria-label={isPool(s) ? s.name : `Zmena ${s.name}`}>
+            <h3>{isPool(s) ? s.name : `Zmena ${s.name}`} <span className="muted">({list.filter((p) => p.active).length})</span></h3>
             {list.length === 0 ? (
               <p className="muted">Žiadni ľudia.</p>
             ) : (

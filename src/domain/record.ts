@@ -1,5 +1,5 @@
 import { computeStats } from './stats';
-import type { Machine, Person, RecordRow, Shift, ShiftDraft, ShiftRecord } from './types';
+import { isPool, type Machine, type Person, type RecordRow, type Shift, type ShiftDraft, type ShiftRecord } from './types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -23,6 +23,7 @@ export function buildShiftRecord(input: {
   const { draft, shift, machines, people, shifts, now, id } = input;
   const personById = new Map(people.map((p) => [p.id, p]));
   const shiftName = new Map(shifts.map((s) => [s.id, s.name]));
+  const poolIds = new Set(shifts.filter(isPool).map((s) => s.id));
   const sorted = [...machines].sort(byPosition);
   const active = sorted.filter((m) => m.status === 'active');
   const inactive = sorted.filter((m) => m.status !== 'active');
@@ -40,7 +41,7 @@ export function buildShiftRecord(input: {
           .map((p) => ({
             name: p.name,
             homeShiftName: shiftName.get(p.shiftId) ?? '',
-            overtime: p.shiftId !== draft.shiftId,
+            overtime: p.shiftId !== draft.shiftId && !poolIds.has(p.shiftId),
           })),
       };
     }),

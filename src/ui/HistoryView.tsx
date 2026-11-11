@@ -6,6 +6,7 @@ import { buildHistoryXlsx, formatPct, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
 import { localDate } from '../domain/record';
 import { RecordDetail } from './RecordDetail';
+import { isPool } from '../domain/types';
 
 export function HistoryView({ onBack }: { onBack(): void }) {
   const db = useDB();
@@ -45,7 +46,7 @@ export function HistoryView({ onBack }: { onBack(): void }) {
           <span>Zmena</span>
           <select value={shiftId} onChange={(e) => setShiftId(e.target.value)}>
             <option value="">Všetky</option>
-            {shifts.map((s) => (
+            {shifts.filter((s) => !isPool(s)).map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>

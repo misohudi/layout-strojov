@@ -36,6 +36,17 @@ test('selected person from another shift stays visible when collapsed', () => {
   expect(screen.getByLabelText(/Baláž/)).toBeChecked();
 });
 
+test('pool group is labelled "Ostatní" and listed after the shifts', async () => {
+  const withPool = [...shifts, { id: 'pool', name: 'Ostatní', order: 9, kind: 'pool' as const }];
+  const ppl = [...people, { id: 'o1', name: 'Ondrej', shiftId: 'pool', active: true }];
+  render(<PeoplePicker people={ppl} shifts={withPool} currentShiftId="s-B" selected={[]} onToggle={() => {}} />);
+  await userEvent.click(screen.getByRole('button', { name: /Iné zmeny/ }));
+  const text = document.body.textContent!;
+  expect(screen.getByRole('heading', { name: 'Ostatní' })).toBeInTheDocument();
+  expect(screen.queryByRole('heading', { name: 'Zmena Ostatní' })).toBeNull();
+  expect(text.indexOf('Cibuľa')).toBeLessThan(text.indexOf('Ondrej'));
+});
+
 test('shows on how many machines a person already works', () => {
   render(
     <PeoplePicker people={people} shifts={shifts} currentShiftId="s-B" selected={[]} counts={{ b1: 2 }} onToggle={() => {}} />,

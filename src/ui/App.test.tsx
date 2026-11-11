@@ -74,6 +74,13 @@ test('if the open shift draft disappears (shift deleted / backup restored) the u
   expect(await screen.findByText('Vyber svoju zmenu')).toBeInTheDocument();
 });
 
+test('the pool ("Ostatní") is not offered as a shift on the start screen', async () => {
+  await db.shifts.put({ id: 'pool', name: 'Ostatní', order: 9, kind: 'pool' });
+  renderApp();
+  expect(await screen.findByRole('button', { name: /^A/ })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Ostatní/ })).toBeNull();
+});
+
 test('continue button disabled without foreman name', async () => {
   renderApp();
   await userEvent.click(await screen.findByRole('button', { name: /^A/ }));

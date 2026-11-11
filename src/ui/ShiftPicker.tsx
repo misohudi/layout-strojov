@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { continueDraft, getLastForeman, startDraft } from '../db/repo';
-import type { ShiftDraft } from '../domain/types';
+import { isPool, type ShiftDraft } from '../domain/types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const fmtStarted = (iso: string) => {
@@ -12,7 +12,7 @@ export const fmtStarted = (iso: string) => {
 
 export function ShiftPicker({ onPicked }: { onPicked(shiftId: string): void }) {
   const db = useDB();
-  const shifts = useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? [];
+  const shifts = (useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? []).filter((s) => !isPool(s));
   const drafts = useLiveQuery(() => db.drafts.toArray(), [db]) ?? [];
   const [shiftId, setShiftId] = useState<string | null>(null);
   const [name, setName] = useState('');

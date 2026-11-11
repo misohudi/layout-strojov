@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Person, Shift } from '../domain/types';
+import { isPool, type Person, type Shift } from '../domain/types';
 
 interface Props {
   people: Person[];
@@ -32,7 +32,7 @@ export function PeoplePicker({ people, shifts, currentShiftId, selected, counts 
   const current = shifts.find((s) => s.id === currentShiftId);
   const others = [...shifts]
     .filter((s) => s.id !== currentShiftId)
-    .sort((a, b) => a.order - b.order)
+    .sort((a, b) => Number(isPool(a)) - Number(isPool(b)) || a.order - b.order)
     .map((s) => ({ shift: s, people: active.filter((p) => p.shiftId === s.id).sort(byName) }))
     .filter((g) => g.people.length > 0);
   const selectedOthers = others.flatMap((g) => g.people).filter((p) => selected.includes(p.id));
@@ -47,7 +47,7 @@ export function PeoplePicker({ people, shifts, currentShiftId, selected, counts 
         ))}
       </div>
       <button type="button" className="link-btn" aria-expanded={open} onClick={() => setOpen(!open)}>
-        {open ? '▾' : '▸'} Iné zmeny (nadčas)
+        {open ? '▾' : '▸'} Iné zmeny (nadčas) a ostatní
       </button>
       {!open && selectedOthers.length > 0 && (
         <div className="people-list">
@@ -59,7 +59,7 @@ export function PeoplePicker({ people, shifts, currentShiftId, selected, counts 
       {open &&
         others.map((g) => (
           <div key={g.shift.id}>
-            <h4>Zmena {g.shift.name}</h4>
+            <h4>{isPool(g.shift) ? g.shift.name : `Zmena ${g.shift.name}`}</h4>
             <div className="people-list">
               {g.people.map((p) => (
                 <PersonCheck key={p.id} p={p} checked={selected.includes(p.id)} count={counts[p.id] ?? 0} onToggle={onToggle} />

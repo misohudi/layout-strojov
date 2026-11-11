@@ -58,6 +58,17 @@ test('people settings add a person to a shift', async () => {
   expect((await db.people.toArray()).map((p) => [p.name, p.shiftId])).toEqual([['Kováč', 's-A']]);
 });
 
+test('people import of a per-shift sheet creates shifts and removes empty default ones', async () => {
+  const csv = 'Smena Alfa;Smena Beta;Vsetci\nAdam;Cyril;Adam\n;;Fero\n';
+  wrap(<PeopleSettings />);
+  expect(await screen.findByLabelText(/Odstrániť prázdne zmeny/)).toBeChecked();
+  await userEvent.upload(screen.getByLabelText(/Importovať zo súboru/), new File([csv], 'ludia.csv'));
+  expect(await screen.findByText(/Pridaných 3, preskočených 0/)).toBeInTheDocument();
+  expect(screen.getByText(/Vytvorené zmeny: Alfa, Beta, Ostatní/)).toBeInTheDocument();
+  expect(screen.getByText(/Odstránené prázdne zmeny: A, B, C/)).toBeInTheDocument();
+  expect(await screen.findByRole('region', { name: 'Ostatní' })).toHaveTextContent('Fero');
+});
+
 test('people settings deactivate and delete', async () => {
   const id = await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true });
   wrap(<PeopleSettings />);

@@ -35,6 +35,20 @@ test('people from other shifts are marked as overtime; missing people are skippe
   ]);
 });
 
+test('people from the pool ("Ostatní") are not counted as overtime', () => {
+  const pool = { id: 'pool', name: 'Ostatní', order: 9, kind: 'pool' as const };
+  const r = buildShiftRecord({
+    draft: { ...draft, assignments: { 'm-0': { type: 'EXT', personIds: ['o1'] } } },
+    shift: B,
+    machines,
+    people: [{ id: 'o1', name: 'Ondrej', shiftId: 'pool', active: true }],
+    shifts: [...shifts, pool],
+    now: new Date(),
+    id: 'r3',
+  });
+  expect(r.rows[0].people).toEqual([{ name: 'Ondrej', homeShiftName: 'Ostatní', overtime: false }]);
+});
+
 test('out-of-service machines are last with no type and no people', () => {
   const r = build();
   expect(r.rows).toHaveLength(35);
