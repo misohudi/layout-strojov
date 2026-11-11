@@ -5,6 +5,9 @@ import { DBProvider } from './ui/useDB';
 import { ensureSeeded, openDB } from './db/db';
 import { requestPersistentStorage } from './pwa';
 
+// Two-finger zoom belongs to the floor plan only – stop Safari (iPad) from zooming the whole page.
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+
 const db = openDB();
 void requestPersistentStorage();
 
