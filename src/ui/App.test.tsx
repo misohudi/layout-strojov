@@ -35,6 +35,35 @@ test('pick shift, mark machine EXT, header shows stats', async () => {
   expect(within(header).getByText('EXT 100 %')).toBeInTheDocument();
 });
 
+test('backup banner shows when records exist and no recent backup; opens backup settings', async () => {
+  await db.records.put({
+    id: 'r', shiftId: 's-A', shiftName: 'A', foremanName: 'X', date: '2026-11-10',
+    startedAt: '2026-11-10T06:00:00Z', closedAt: '2026-11-10T14:00:00Z',
+    stats: { total: 35, occupied: 0, ext: 0, int: 0, occupancyPct: 0, extPct: null, intPct: null, peopleWithoutType: 0 },
+    rows: [], layout: [],
+  });
+  renderApp();
+  await pickShift('B', 'Novák');
+  await userEvent.click(await screen.findByRole('button', { name: 'Uložiť zálohu teraz' }));
+  expect(await screen.findByRole('tab', { name: 'Záloha', selected: true })).toBeInTheDocument();
+});
+
+test('no backup banner without any records', async () => {
+  renderApp();
+  await pickShift('B', 'Novák');
+  await screen.findAllByTestId('machine-tile');
+  expect(screen.queryByText(/Odporúčame uložiť zálohu/)).toBeNull();
+});
+
+test('settings open from the header and go back', async () => {
+  renderApp();
+  await pickShift('B', 'Novák');
+  await userEvent.click(await screen.findByRole('button', { name: 'Nastavenia' }));
+  expect(await screen.findByRole('heading', { name: 'Nastavenia' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: '← Späť' }));
+  expect(await screen.findAllByTestId('machine-tile')).toHaveLength(35);
+});
+
 test('continue button disabled without foreman name', async () => {
   renderApp();
   await userEvent.click(await screen.findByRole('button', { name: /^A/ }));
