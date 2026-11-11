@@ -101,7 +101,11 @@ export function Floor({ items, children }: { items: GridItem[]; children: ReactN
   function reset() {
     anchor.current = null;
     applyZoom(1);
-    scrollRef.current?.scrollTo({ left: 0, top: 0 });
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollLeft = 0;
+      el.scrollTop = 0;
+    }
   }
 
   return (
