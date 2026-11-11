@@ -54,7 +54,6 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
     <div className="screen">
       <Header
         shiftName={shift?.name ?? '?'}
-        foremanName={draft.foremanName}
         stats={stats}
         onChangeShift={onChangeShift}
         onHistory={onHistory}

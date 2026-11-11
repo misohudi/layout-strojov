@@ -24,9 +24,6 @@ afterEach(() => db.close());
 async function openLayout() {
   render(<DBProvider db={db}><App /></DBProvider>);
   await userEvent.click(await screen.findByRole('button', { name: /^B/ }));
-  await screen.findByDisplayValue('Novák');
-  await userEvent.click(screen.getByRole('button', { name: 'Pokračovať' }));
-  await userEvent.click(await screen.findByRole('button', { name: 'Pokračovať v rozpracovanej' }));
   await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu a vytvoriť report' }));
 }
 

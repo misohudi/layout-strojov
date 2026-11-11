@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
-import { continueDraft, getLastForeman, startDraft } from '../db/repo';
-import { isPool, type ShiftDraft } from '../domain/types';
+import { startDraft } from '../db/repo';
+import { isPool, type Shift } from '../domain/types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const fmtStarted = (iso: string) => {
@@ -10,79 +10,47 @@ export const fmtStarted = (iso: string) => {
   return `${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-export function ShiftPicker({ onPicked }: { onPicked(shiftId: string): void }) {
+interface Props {
+  onPicked(shiftId: string): void;
+  onSettings(): void;
+}
+
+/** Start screen: one tap on a shift (named after its foreman) opens it. */
+export function ShiftPicker({ onPicked, onSettings }: Props) {
   const db = useDB();
   const shifts = (useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? []).filter((s) => !isPool(s));
   const drafts = useLiveQuery(() => db.drafts.toArray(), [db]) ?? [];
-  const [shiftId, setShiftId] = useState<string | null>(null);
-  const [name, setName] = useState('');
-  const [pending, setPending] = useState<ShiftDraft | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  async function choose(id: string) {
-    setShiftId(id);
-    setName((await getLastForeman(db, id)) ?? '');
-  }
-
-  async function proceed() {
-    if (!shiftId || !name.trim()) return;
-    const existing = await db.drafts.get(shiftId);
-    if (existing) setPending(existing);
-    else {
-      await startDraft(db, shiftId, name.trim(), new Date());
-      onPicked(shiftId);
+  async function open(s: Shift) {
+    if (busy) return;
+    setBusy(true);
+    try {
+      // An open (not yet closed) shift simply continues; otherwise a new one starts.
+      if (!(await db.drafts.get(s.id))) await startDraft(db, s.id, s.name, new Date());
+      onPicked(s.id);
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function resume(fresh: boolean) {
-    if (!shiftId) return;
-    if (fresh) await startDraft(db, shiftId, name.trim(), new Date());
-    else await continueDraft(db, shiftId, name.trim());
-    onPicked(shiftId);
-  }
-
-  if (pending) {
-    return (
+  return (
+    <div className="start">
+      <button className="btn start__settings" aria-label="Nastavenia" onClick={onSettings}>⚙ Nastavenia</button>
       <div className="center-card">
-        <h2>Rozpracované od {fmtStarted(pending.startedAt)}</h2>
-        <p className="muted">Majster: {pending.foremanName}</p>
-        <div className="row">
-          <button className="btn btn--primary" onClick={() => resume(false)}>Pokračovať v rozpracovanej</button>
-          <button className="btn" onClick={() => resume(true)}>Začať nanovo</button>
+        <h1>Vyber svoju zmenu</h1>
+        <div className="row shift-buttons">
+          {shifts.map((s) => {
+            const draft = drafts.find((d) => d.shiftId === s.id);
+            return (
+              <button key={s.id} className="btn btn--shift" disabled={busy} onClick={() => open(s)}>
+                {s.name}
+                {draft && <small> rozpracované od {fmtStarted(draft.startedAt)}</small>}
+              </button>
+            );
+          })}
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="center-card">
-      <h1>Vyber svoju zmenu</h1>
-      <div className="row shift-buttons">
-        {shifts.map((s) => {
-          const hasDraft = drafts.some((d) => d.shiftId === s.id);
-          return (
-            <button
-              key={s.id}
-              className={`btn btn--shift ${shiftId === s.id ? 'btn--selected' : ''}`}
-              aria-pressed={shiftId === s.id}
-              onClick={() => choose(s.id)}
-            >
-              {s.name}
-              {hasDraft && <small> rozpracované</small>}
-            </button>
-          );
-        })}
-      </div>
-      {shiftId && (
-        <>
-          <label className="field">
-            <span>Meno majstra</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="off" />
-          </label>
-          <button className="btn btn--primary" disabled={!name.trim()} onClick={proceed}>
-            Pokračovať
-          </button>
-        </>
-      )}
     </div>
   );
 }

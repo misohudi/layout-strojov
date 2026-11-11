@@ -3,18 +3,17 @@ import type { Stats } from '../domain/types';
 
 interface Props {
   shiftName: string;
-  foremanName: string;
   stats: Stats;
   onChangeShift(): void;
   onHistory(): void;
   onSettings(): void;
 }
 
-export function Header({ shiftName, foremanName, stats, onChangeShift, onHistory, onSettings }: Props) {
+export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings }: Props) {
   return (
     <header className="header">
       <div className="header__shift">
-        <span className="badge">{`Zmena ${shiftName} · ${foremanName}`}</span>
+        <span className="badge">{`Zmena ${shiftName}`}</span>
         <button className="btn btn--small" onClick={onChangeShift}>Zmeniť zmenu</button>
       </div>
       <div className="header__stats">
