@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { ShiftPicker } from './ui/ShiftPicker';
 import { LayoutView } from './ui/LayoutView';
+import { CloseShiftDialog } from './ui/CloseShiftDialog';
+import { HistoryView } from './ui/HistoryView';
 import './ui/styles.css';
 
-type Screen = 'picker' | 'layout' | 'history' | 'settings' | 'close';
+type Screen = 'picker' | 'layout' | 'close' | 'history' | 'settings';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('picker');
@@ -20,13 +22,27 @@ export default function App() {
     );
   }
 
+  if (screen === 'history') return <HistoryView onBack={() => setScreen('layout')} />;
+
   return (
-    <LayoutView
-      shiftId={shiftId}
-      onChangeShift={() => setScreen('picker')}
-      onHistory={() => setScreen('history')}
-      onSettings={() => setScreen('settings')}
-      onCloseShift={() => setScreen('close')}
-    />
+    <>
+      <LayoutView
+        shiftId={shiftId}
+        onChangeShift={() => setScreen('picker')}
+        onHistory={() => setScreen('history')}
+        onSettings={() => setScreen('settings')}
+        onCloseShift={() => setScreen('close')}
+      />
+      {screen === 'close' && (
+        <CloseShiftDialog
+          shiftId={shiftId}
+          onCancel={() => setScreen('layout')}
+          onClosed={() => {
+            setShiftId(null);
+            setScreen('picker');
+          }}
+        />
+      )}
+    </>
   );
 }

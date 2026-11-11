@@ -9,7 +9,7 @@ export function formatPct(v: number | null): string {
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
-const skDate = (ymd: string) => {
+export const skDate = (ymd: string) => {
   const [y, m, d] = ymd.split('-');
   return `${Number(d)}.${Number(m)}.${y}`;
 };
