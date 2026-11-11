@@ -5,8 +5,9 @@ import type { RecordRow, ShiftRecord } from '../domain/types';
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const FILL = { EXT: 'FF93C5FD', INT: 'FFFCA5A5' } as const;
 
+/** "2,9 %" – one decimal with a Slovak decimal comma; "–" when there is nothing to divide by. */
 export function formatPct(v: number | null): string {
-  return v === null ? '–' : `${v} %`;
+  return v === null ? '–' : `${v.toFixed(1).replace('.', ',')} %`;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');

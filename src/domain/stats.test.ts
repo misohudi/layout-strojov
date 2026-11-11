@@ -15,8 +15,19 @@ test('counts only active machines, ext/int share of occupied', () => {
   });
   expect(s).toEqual({
     total: 4, occupied: 3, ext: 2, int: 1,
-    occupancyPct: 75, extPct: 67, intPct: 33, peopleWithoutType: 0,
+    occupancyPct: 75, extPct: 66.7, intPct: 33.3, peopleWithoutType: 0,
   });
+});
+
+test('percentages keep one decimal so removing a machine from service is visible', () => {
+  const ms = Array.from({ length: 35 }, (_, i) => mk(`m${i}`));
+  const one = { m0: { type: 'EXT' as const, personIds: [] } };
+  expect(computeStats(ms, one).occupancyPct).toBe(2.9); // 1 / 35
+  ms[34] = mk('m34', 'out_of_service');
+  ms[33] = mk('m33', 'out_of_service');
+  expect(computeStats(ms, one).occupancyPct).toBe(3); // 1 / 33 = 3.03
+  ms[32] = mk('m32', 'out_of_service');
+  expect(computeStats(ms, one).occupancyPct).toBe(3.1); // 1 / 32
 });
 
 test('no assignments: occupancy 0, ext/int null', () => {

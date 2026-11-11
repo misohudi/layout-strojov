@@ -28,8 +28,8 @@ test('pick shift, mark machine EXT, header shows stats', async () => {
   expect(await screen.findAllByTestId('machine-tile')).toHaveLength(35);
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C60/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
-  expect(await within(header).findByText('Obsadenosť 3 %')).toBeInTheDocument();
-  expect(within(header).getByText('EXT 100 %')).toBeInTheDocument();
+  expect(await within(header).findByText('Obsadenosť 2,9 %')).toBeInTheDocument();
+  expect(within(header).getByText('EXT 100,0 %')).toBeInTheDocument();
 });
 
 test('backup banner shows when records exist and no recent backup; opens backup settings', async () => {
@@ -91,7 +91,7 @@ test('a machine set out of service in settings is not counted in occupancy', asy
   expect(await within(header).findByText('0 / 34 strojov')).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C42 \/ 4/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
-  expect(await within(header).findByText('Obsadenosť 3 %')).toBeInTheDocument(); // 1 / 34
+  expect(await within(header).findByText('Obsadenosť 2,9 %')).toBeInTheDocument(); // 1 / 34
 });
 
 test('tapping the machine count opens a list of machines with order type and people', async () => {
@@ -114,7 +114,7 @@ test('tapping the machine count opens a list of machines with order type and peo
   expect(rows.find((r) => r.textContent!.includes('HERMLE C42 / 1'))).toHaveTextContent('INT');
   expect(rows.find((r) => r.textContent!.includes('DMU 125'))).toHaveTextContent('voľný');
   expect(within(list).getByRole('table', { name: 'Mimo prevádzky' })).toHaveTextContent('HERMLE C42 / 4');
-  expect(list).toHaveTextContent('Obsadenosť 6 %');
+  expect(list).toHaveTextContent('Obsadenosť 5,9 %');
 
   // tapping a row opens that machine for editing
   await userEvent.click(c60);
@@ -156,5 +156,5 @@ test('tapping a shift with an open draft continues it directly', async () => {
   renderApp();
   await pickShift('A');
   const header = await screen.findByRole('banner');
-  expect(await within(header).findByText('INT 100 %')).toBeInTheDocument();
+  expect(await within(header).findByText('INT 100,0 %')).toBeInTheDocument();
 });

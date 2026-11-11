@@ -1,7 +1,8 @@
 import type { Assignment, Machine, Stats } from './types';
 
+/** Percentage with one decimal (e.g. 2.9), so small changes such as one machine out of service show up. */
 const pct = (part: number, whole: number): number | null =>
-  whole === 0 ? null : Math.round((part / whole) * 100);
+  whole === 0 ? null : Math.round((part / whole) * 1000) / 10;
 
 export function computeStats(machines: Machine[], assignments: Record<string, Assignment>): Stats {
   let total = 0, ext = 0, int = 0, peopleWithoutType = 0;

@@ -36,8 +36,8 @@ test('report header and stats', async () => {
   const text = allText(ws).join('\n');
   expect(text).toContain('Zmena: B');
   expect(text).toContain('Majster: Novák');
-  expect(text).toContain('Obsadené: 3 (75 %)');
-  expect(text).toContain('EXT: 2 (67 %)');
+  expect(text).toContain('Obsadené: 3 (75,0 %)');
+  expect(text).toContain('EXT: 2 (67,0 %)');
 });
 
 test('report table rows with overtime and out of service', async () => {
@@ -67,6 +67,8 @@ test('history workbook has a row per record', async () => {
 
 test('reportFileName and formatPct', () => {
   expect(reportFileName(rec())).toBe('Obsadenost_Frezy_2026-11-11_zmena-B.xlsx');
-  expect(formatPct(75)).toBe('75 %');
+  expect(formatPct(75)).toBe('75,0 %');
+  expect(formatPct(2.9)).toBe('2,9 %');
+  expect(formatPct(100)).toBe('100,0 %');
   expect(formatPct(null)).toBe('–');
 });
