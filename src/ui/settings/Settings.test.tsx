@@ -6,6 +6,7 @@ import { MachineEditor } from './MachineEditor';
 import { PeopleSettings } from './PeopleSettings';
 import { ShiftSettings } from './ShiftSettings';
 import { BackupSettings } from './BackupSettings';
+import { SettingsView } from './SettingsView';
 import { upsertPerson } from '../../db/repo';
 import { shareOrDownload } from '../../report/share';
 import { trackWeights } from '../grid';
@@ -24,6 +25,19 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 const wrap = (ui: React.ReactNode) => render(<DBProvider db={db}>{ui}</DBProvider>);
+
+test('appearance tab switches to dark mode and remembers it', async () => {
+  wrap(<SettingsView onBack={() => {}} />);
+  await userEvent.click(await screen.findByRole('tab', { name: 'Vzhľad' }));
+  const dark = await screen.findByRole('button', { name: 'Tmavý' });
+  expect(await screen.findByRole('button', { name: 'Svetlý' })).toHaveAttribute('aria-pressed', 'true');
+  await userEvent.click(dark);
+  await vi.waitFor(() => expect(document.documentElement.dataset.theme).toBe('dark'));
+  expect(await getMeta(db, 'theme')).toBe('dark');
+  expect(dark).toHaveAttribute('aria-pressed', 'true');
+  await userEvent.click(screen.getByRole('button', { name: 'Podľa zariadenia' }));
+  await vi.waitFor(() => expect(document.documentElement.dataset.theme).toBe('system'));
+});
 
 test('machine editor moves and renames the selected machine', async () => {
   wrap(<MachineEditor />);
