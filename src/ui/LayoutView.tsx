@@ -210,6 +210,27 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
         </div>
       )}
+      {/* above the zone name, over the screen like the zoom button */}
+      {showOffer && (
+        <div className="plan-offer" role="status">
+          <span>Pôdorys je prázdny.</span>
+          <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
+            Prevziať zakázky a priority z poslednej zmeny
+          </button>
+          <button
+            type="button"
+            className="plan-offer__close"
+            aria-label="Zavrieť bez prevzatia"
+            title="Zavrieť bez prevzatia"
+            onClick={() => {
+              if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
+              setOfferClosed(draftKey);
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {multiZone && hall && (
         <div className="zonebar">
           <h2 className="zonebar__name" aria-live="polite">{hall.name}</h2>
@@ -219,26 +240,6 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         </div>
       )}
       <div className="zone" ref={zoneRef} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-        {showOffer && (
-          <div className="plan-offer" role="status">
-            <span>Pôdorys je prázdny.</span>
-            <button className="btn" onClick={() => copyFromLastRecord(db, shiftId)}>
-              Prevziať zakázky a priority z poslednej zmeny
-            </button>
-            <button
-              type="button"
-              className="plan-offer__close"
-              aria-label="Zavrieť bez prevzatia"
-              title="Zavrieť bez prevzatia"
-              onClick={() => {
-                if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
-                setOfferClosed(draftKey);
-              }}
-            >
-              ×
-            </button>
-          </div>
-        )}
         {multiZone && (
           <button
             type="button"
