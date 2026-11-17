@@ -1,7 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { Machine, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
 import { HALL_FREZY, seedMachines, seedShifts } from '../domain/seed';
-import { compactLayout } from '../domain/compact';
+import { hallLayout } from '../domain/compact';
 
 export interface MetaEntry {
   key: string;
@@ -36,10 +36,11 @@ export function openDB(name = 'layout-strojov'): AppDB {
 }
 
 /**
- * Layout versions: 1 = machines of different sizes on the hall grid; 2 = equal cells with aisles
- * (briefly deployed); 3 = equal cells, rows of the hall packed side by side without aisles.
+ * Layout versions: 1 = machines of different sizes on the hall grid; 2 = equal cells keeping the hall's
+ * columns, gaps and aisles; 3 = equal cells packed side by side (no aisles, later reverted);
+ * 4 = the same plan as version 2.
  */
-export const LAYOUT_VERSION = 3;
+export const LAYOUT_VERSION = 4;
 
 export async function ensureSeeded(db: AppDB): Promise<void> {
   await db.transaction('rw', db.machines, db.shifts, db.meta, async () => {
@@ -64,19 +65,25 @@ function originalPositions(machines: Machine[]): Machine[] | null {
 }
 
 /**
- * One-time switch to equally sized cells in packed rows, keeping the order of the hall.
+ * One-time switch to equally sized cells that keep the hall's columns, gaps and aisles.
  * Runs again after restoring a backup made with an older layout.
  * Call inside a transaction that includes `machines` and `meta`.
  */
 export async function ensureCompactLayout(db: AppDB): Promise<void> {
   const version = (await db.meta.get('layoutVersion'))?.value;
   if (typeof version === 'number' && version >= LAYOUT_VERSION) return;
-  let machines = await db.machines.toArray();
-  // Version 2 already lost the original rows (a stacked machine looks like its own row):
-  // start again from the hall positions when the machines were not changed since.
-  if (version === 2) machines = originalPositions(machines) ?? machines;
-  for (const hall of new Set(machines.map((m) => m.hallId))) {
-    await db.machines.bulkPut(compactLayout(machines.filter((m) => m.hallId === hall)));
+  // version 2 is already this plan
+  if (version !== 2) {
+    let machines = await db.machines.toArray();
+    // version 3 packed the rows and lost the hall's columns: start again from the hall positions when
+    // the machines were not changed since; otherwise keep them where they are (already one cell each)
+    const fromHall = version === 3 ? originalPositions(machines) : machines;
+    if (fromHall) {
+      machines = fromHall;
+      for (const hall of new Set(machines.map((m) => m.hallId))) {
+        await db.machines.bulkPut(hallLayout(machines.filter((m) => m.hallId === hall)));
+      }
+    }
   }
   await db.meta.put({ key: 'layoutVersion', value: LAYOUT_VERSION });
 }

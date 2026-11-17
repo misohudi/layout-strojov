@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { gridSize, type GridItem } from './grid';
+import { trackWeights, type GridItem } from './grid';
 
 /** Zooming out shows more of a wide plan at once; zooming in shows details. */
 const MIN_ZOOM = 0.5;
@@ -36,9 +36,10 @@ function midpoint(el: HTMLElement, touches: TouchList) {
   };
 }
 
-/** Tile height at 100 % for a scroll area `areaPx` high showing `rows` rows. */
-export function tileHeight(areaPx: number, rows: number): number {
-  const fit = (areaPx - 2 * GAP - GAP * (rows - 1)) / rows;
+/** Tile height at 100 % for a scroll area `areaPx` high showing rows of the given weights (aisles < 1). */
+export function tileHeight(areaPx: number, rows: number[]): number {
+  const units = rows.reduce((s, w) => s + w, 0);
+  const fit = (areaPx - 2 * GAP - GAP * (rows.length - 1)) / units;
   return Math.round(Math.min(TILE_H_MAX, Math.max(TILE_H_MIN, fit || 0)));
 }
 
@@ -63,7 +64,7 @@ export function Floor({
   const pinch = useRef<Pinch | null>(null);
   /** Scroll position to restore after the zoom re-renders, keeping the focal point under the fingers. */
   const anchor = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null);
-  const size = gridSize(items);
+  const tracks = trackWeights(items);
   const [areaH, setAreaH] = useState(0);
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -75,7 +76,8 @@ export function Floor({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const tileH = tileHeight(areaH, size.rows) * zoom;
+  const tileH = tileHeight(areaH, tracks.rows) * zoom;
+  const tileW = tileH * TILE_RATIO;
 
   const applyZoom = (z: number) => {
     zoomRef.current = z;
@@ -160,8 +162,9 @@ export function Floor({
           className="floor__grid"
           data-zoom={zoom}
           style={{
-            gridTemplateColumns: `repeat(${size.cols}, ${Math.round(tileH * TILE_RATIO)}px)`,
-            gridTemplateRows: `repeat(${size.rows}, ${Math.round(tileH)}px)`,
+            // aisles (empty columns / rows) are narrower than machines
+            gridTemplateColumns: tracks.cols.map((w) => `${Math.round(tileW * w)}px`).join(' '),
+            gridTemplateRows: tracks.rows.map((w) => `${Math.round(tileH * w)}px`).join(' '),
             gap: `${Math.round(GAP * zoom)}px`,
             padding: `${Math.round(GAP * zoom)}px`,
             // texts and icon scale with the tile

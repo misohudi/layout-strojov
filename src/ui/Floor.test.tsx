@@ -26,22 +26,24 @@ const zoom = (grid: HTMLElement) => Number(grid.dataset.zoom);
 test('tiles are equally sized landscape rectangles, readable even without measured height', () => {
   const { grid } = setup();
   // jsdom has no layout (height 0) → the minimum readable tile 84 px high, 2.1× as wide
-  expect(grid.style.gridTemplateColumns).toBe('repeat(2, 176px)');
-  expect(grid.style.gridTemplateRows).toBe('repeat(2, 84px)');
+  expect(grid.style.gridTemplateColumns).toBe('176px 176px');
+  expect(grid.style.gridTemplateRows).toBe('84px 84px');
 });
 
 test('tile height follows the available height so all rows are visible, within limits', () => {
-  expect(tileHeight(600, 4)).toBe(104); // plenty of room → maximum
-  expect(tileHeight(460, 4)).toBe(98); // (460 - 2·14 padding - 3·14 gaps) / 4 = 97.5
-  expect(tileHeight(200, 4)).toBe(84); // not enough room → minimum, the plan scrolls
+  const four = [1, 1, 1, 1];
+  expect(tileHeight(600, four)).toBe(104); // plenty of room → maximum
+  expect(tileHeight(460, four)).toBe(98); // (460 - 2·14 padding - 3·14 gaps) / 4 = 97.5
+  expect(tileHeight(200, four)).toBe(84); // not enough room → minimum, the plan scrolls
+  expect(tileHeight(490, [1, 1, 1, 0.35, 1])).toBe(93); // an aisle row counts 0.35: (490 - 28 - 56) / 4.35
 });
 
 test('zooming scales tiles in both directions', () => {
   const { scroller, grid } = setup();
   pinch(scroller, 100, 200);
   expect(zoom(grid)).toBe(2);
-  expect(grid.style.gridTemplateColumns).toBe('repeat(2, 353px)');
-  expect(grid.style.gridTemplateRows).toBe('repeat(2, 168px)');
+  expect(grid.style.gridTemplateColumns).toBe('353px 353px');
+  expect(grid.style.gridTemplateRows).toBe('168px 168px');
 });
 
 test('at 100 % there are no zoom controls covering the plan', () => {

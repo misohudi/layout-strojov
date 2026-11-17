@@ -6,7 +6,7 @@ import {
 } from './repo';
 import type { ShiftRecord } from '../domain/types';
 import { seedMachines } from '../domain/seed';
-import { isPacked } from '../domain/compact';
+import { hallLayout } from '../domain/compact';
 
 let n = 0;
 let dbName: string;
@@ -35,16 +35,27 @@ test('ensureSeeded is idempotent', async () => {
   expect(await db.shifts.count()).toBe(3);
 });
 
-test('a tablet that already had layout version 2 gets the hall rows back (EDEL next to UNIPORT)', async () => {
-  // version 2 put EDEL alone in a row under UNIPORT 4000
+test('a tablet with the packed rows (layout version 3) gets the hall columns, gaps and aisle back', async () => {
+  // version 3: rows packed side by side, EDEL next to UNIPORT, no aisle
   const edel = (await db.machines.toArray()).find((m) => m.name === 'EDEL')!;
-  await db.machines.update(edel.id, { x: 11, y: 5, status: 'out_of_service' });
-  await db.meta.put({ key: 'layoutVersion', value: 2 });
+  await db.machines.update(edel.id, { x: 4, y: 3, status: 'out_of_service' });
+  await db.meta.put({ key: 'layoutVersion', value: 3 });
   await ensureSeeded(db);
   const ms = await db.machines.toArray();
-  const uniport = ms.find((m) => m.name === 'UNIPORT 4000')!;
-  expect(ms.find((m) => m.name === 'EDEL')).toMatchObject({ y: uniport.y, x: uniport.x + 1, status: 'out_of_service' });
-  expect(Math.max(...ms.map((m) => m.y))).toBe(3);
+  const byName = (n: string) => ms.find((m) => m.name === n)!;
+  expect(byName('EDEL')).toMatchObject({ x: byName('UNIPORT 4000').x, y: 5, status: 'out_of_service' });
+  expect(ms.some((m) => m.y === 3)).toBe(false); // the aisle
+  const pos = (list: { id: string; x: number; y: number }[]) =>
+    Object.fromEntries(list.map(({ id, x, y }) => [id, [x, y]]));
+  expect(pos(ms)).toEqual(pos(hallLayout(seedMachines('frezy'))));
+});
+
+test('version 3 with machines changed since (added one) keeps the current positions', async () => {
+  await db.machines.put({ id: 'extra', hallId: 'frezy', name: 'Nový', x: 7, y: 9, w: 1, h: 1, status: 'active' });
+  await db.meta.put({ key: 'layoutVersion', value: 3 });
+  await ensureSeeded(db);
+  expect(await db.machines.get('extra')).toMatchObject({ x: 7, y: 9 });
+  expect(await db.meta.get('layoutVersion')).toMatchObject({ value: 4 });
 });
 
 test('a new install gets the compact layout: every machine one cell, no two in one cell', async () => {
@@ -60,9 +71,9 @@ test('an existing install with the old layout is compacted once, keeping machine
   await ensureSeeded(db);
   const c60 = (await db.machines.get('m-0'))!;
   const dmu = (await db.machines.get('m-17'))!; // DMU 125, one hall row lower than its neighbours
-  expect(c60).toMatchObject({ x: 0, y: 0, w: 1, h: 1, status: 'out_of_service' });
-  expect(dmu).toMatchObject({ x: 0, y: 1, w: 1, h: 1 });
-  expect(await db.meta.get('layoutVersion')).toMatchObject({ value: 3 });
+  expect(c60).toMatchObject({ x: 1, y: 0, w: 1, h: 1, status: 'out_of_service' }); // SHW's column (A) is first
+  expect(dmu).toMatchObject({ x: c60.x, y: 1, w: 1, h: 1 });
+  expect(await db.meta.get('layoutVersion')).toMatchObject({ value: 4 });
   // a later manual move in the editor is not undone on the next start
   await db.machines.update('m-17', { x: 20 });
   await ensureSeeded(db);
@@ -119,13 +130,14 @@ test('drafts of different shifts are independent', async () => {
   expect((await getDraft(db, 's-B'))?.assignments['m-0']).toBeUndefined();
 });
 
-test('deleting or adding a machine leaves the rows packed as soon as it finishes', async () => {
-  await deleteMachine(db, 'm-1'); // HERMLE C42 / 4 – second in the first row
-  expect(isPacked(await db.machines.toArray())).toBe(true);
-  const id = await addMachine(db, { hallId: 'frezy', name: 'Nový', x: 0, y: 99, w: 1, h: 1, status: 'active' });
-  const all = await db.machines.toArray();
-  expect(isPacked(all)).toBe(true);
-  expect(all.find((m) => m.id === id)).toMatchObject({ x: 0, y: 4 }); // new last row
+test('deleting a machine leaves its cell empty; others keep their places', async () => {
+  const before = await db.machines.toArray();
+  await deleteMachine(db, 'm-1'); // HERMLE C42 / 4
+  const after = await db.machines.toArray();
+  expect(after).toHaveLength(before.length - 1);
+  expect(after).toEqual(before.filter((m) => m.id !== 'm-1'));
+  const id = await addMachine(db, { hallId: 'frezy', name: 'Nový', x: 0, y: 7, w: 1, h: 1, status: 'active' });
+  expect(await db.machines.get(id)).toMatchObject({ x: 0, y: 7 });
 });
 
 test('deleteMachine removes it from all drafts but keeps records', async () => {

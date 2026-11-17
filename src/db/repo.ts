@@ -1,7 +1,6 @@
 import type { AppDB } from './db';
 import { getMeta, setMeta } from './db';
 import type { Assignment, Machine, OrderType, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
-import { packRows } from '../domain/compact';
 
 const newId = () => crypto.randomUUID();
 
@@ -139,26 +138,15 @@ export async function upsertMachine(db: AppDB, m: Omit<Machine, 'id'> & { id?: s
   return id;
 }
 
-/** Packs the rows of a hall again (machines side by side, no empty rows). Call inside a transaction. */
-async function repackHall(db: AppDB, hallId: string): Promise<void> {
-  await db.machines.bulkPut(packRows(await db.machines.where('hallId').equals(hallId).toArray()));
-}
-
-/** Adds a machine and packs its hall in one transaction, so the plan is never seen half-updated. */
 export async function addMachine(db: AppDB, m: Omit<Machine, 'id'>): Promise<string> {
   const id = newId();
-  await db.transaction('rw', db.machines, async () => {
-    await db.machines.put({ ...m, id });
-    await repackHall(db, m.hallId);
-  });
+  await db.machines.put({ ...m, id });
   return id;
 }
 
 export async function deleteMachine(db: AppDB, id: string): Promise<void> {
   await db.transaction('rw', db.machines, db.drafts, async () => {
-    const hallId = (await db.machines.get(id))?.hallId;
     await db.machines.delete(id);
-    if (hallId) await repackHall(db, hallId);
     await removeFromDrafts(db, (as) => {
       const { [id]: _removed, ...rest } = as;
       return rest;

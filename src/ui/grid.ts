@@ -15,10 +15,19 @@ export function gridSize(items: GridItem[]): { cols: number; rows: number } {
   };
 }
 
-/** Relative size of each column and row – all machines are equally sized cells, so all 1. */
+/** An empty column or row (an aisle of the hall) is drawn narrower than a machine. */
+export const AISLE_WEIGHT = 0.35;
+
+function weights(items: GridItem[], pos: 'x' | 'y', size: 'w' | 'h', count: number): number[] {
+  const used = new Array<boolean>(count).fill(false);
+  for (const i of items) for (let k = i[pos]; k < i[pos] + i[size]; k++) used[k] = true;
+  return used.map((u) => (u ? 1 : AISLE_WEIGHT));
+}
+
+/** Relative size of each column and row: 1 where a machine stands, narrower for empty tracks (aisles). */
 export function trackWeights(items: GridItem[]): { cols: number[]; rows: number[] } {
   const { cols, rows } = gridSize(items);
-  return { cols: new Array(cols).fill(1), rows: new Array(rows).fill(1) };
+  return { cols: weights(items, 'x', 'w', cols), rows: weights(items, 'y', 'h', rows) };
 }
 
 /**
