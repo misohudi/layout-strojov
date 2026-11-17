@@ -22,18 +22,21 @@ export function MachineList({ machines, assignments, stats, nameOf, onPick, onCl
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet sheet--tall" role="dialog" aria-label="Zoznam strojov" onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__head">
-          <h2>Zoznam strojov</h2>
-          <button className="btn" onClick={onClose}>Zavrieť</button>
+        {/* title and summary stay in place while the list scrolls */}
+        <div className="sheet__top">
+          <div className="sheet__head">
+            <h2>Zoznam strojov</h2>
+            <button className="btn" onClick={onClose}>Zavrieť</button>
+          </div>
+          <p>
+            <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
+            {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0} · Viacobsluha ${stats.multiPeople ?? 0} ľ / ${stats.multiMachines ?? 0} str`}
+            <br />
+            <span className="muted">
+              {`Vyťaženie strojov ${formatPct(stats.occupancyPct)} (${stats.occupied}) · EXT ${stats.ext} · INT ${stats.int}`}
+            </span>
+          </p>
         </div>
-        <p>
-          <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
-          {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0} · Viacobsluha ${stats.multiPeople ?? 0} ľ / ${stats.multiMachines ?? 0} str`}
-          <br />
-          <span className="muted">
-            {`Vyťaženie strojov ${formatPct(stats.occupancyPct)} (${stats.occupied}) · EXT ${stats.ext} · INT ${stats.int}`}
-          </span>
-        </p>
         <div className="table-wrap">
           <table aria-label="V prevádzke" className="machine-list">
             <thead>

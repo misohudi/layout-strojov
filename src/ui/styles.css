@@ -293,6 +293,12 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   border-radius: 16px 16px 0 0; padding: 20px; display: flex; flex-direction: column; gap: 16px;
 }
 .sheet__head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+/* Top of a sheet (name, buttons) locked in place while the rest scrolls underneath. */
+.sheet__top {
+  position: sticky; top: -20px; z-index: 2; margin: -20px -20px 0; padding: 20px 20px 12px;
+  display: flex; flex-direction: column; gap: 12px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.sheet__top > p { margin: 0; }
 .sheet__head h2 { margin: 0; }
 
 .people-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -313,6 +319,8 @@ table { width: 100%; border-collapse: collapse; font-size: 15px; }
 th, td { padding: 10px 8px; text-align: left; border-bottom: 1px solid var(--border); }
 tr.clickable { cursor: pointer; }
 .tabs { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+/* Settings: the back button and tabs stay at the top while the page scrolls. */
+.settings__bar { position: sticky; top: 0; z-index: 6; margin: -16px -16px 0; padding: 12px 16px; background: var(--bg); }
 /* round icon-only chip (Späť in settings) */
 .chip.chip--round { width: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex: none; }
 .chip--round .hicon { width: 22px; height: 22px; flex: none; }
