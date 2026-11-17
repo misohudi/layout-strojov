@@ -1,14 +1,6 @@
 /** Line icons drawn in the text colour (header, start screen, settings). */
 export const svg = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;
 
-/** Two opposite arrows – switch to another shift. */
-export const SwapIcon = () => (
-  <svg {...svg} className="hicon">
-    <path d="M4 8h15M15 4l4 4-4 4" />
-    <path d="M20 16H5M9 12l-4 4 4 4" />
-  </svg>
-);
-
 /** Gear – settings. */
 export const GearIcon = () => (
   <svg {...svg} className="hicon">

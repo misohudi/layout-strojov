@@ -69,6 +69,8 @@ export function MachineTile({
       <MachineIcon figure={figure} />
       <span className="tile__nick" aria-hidden="true">{short}</span>
       <span className="visually-hidden">{name}</span>
+      {/* the person line is always there (empty when free), so icon and nick never move */}
+      {!first && <span className="tile__person" aria-hidden="true">{' '}</span>}
       {first && (
         <span className="tile__person">
           <span className="tile__person-name">{` ${first.name}`}</span>
