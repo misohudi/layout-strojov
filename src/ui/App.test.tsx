@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { DBProvider } from './useDB';
@@ -11,7 +11,11 @@ beforeEach(async () => {
   db = openDB(`app-${++n}-${Math.random()}`);
   await ensureSeeded(db);
 });
-afterEach(() => db.close());
+// Unmount first: live queries of still-mounted components must not hit a closed database.
+afterEach(() => {
+  cleanup();
+  db.close();
+});
 
 const renderApp = () => render(<DBProvider db={db}><App /></DBProvider>);
 

@@ -4,7 +4,7 @@ import { useDB } from '../useDB';
 import { Floor } from '../Floor';
 import { MachineTile } from '../MachineTile';
 import { cellIndex, trackWeights } from '../grid';
-import { deleteMachine, upsertMachine } from '../../db/repo';
+import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
 import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
 import { packRows } from '../../domain/compact';
 import { HALL_FREZY } from '../../domain/seed';
@@ -106,16 +106,13 @@ export function MachineEditor() {
 
   async function add() {
     const pos = freeSpotBelow(machines);
-    const id = await upsertMachine(db, { hallId: HALL_FREZY, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' });
-    await db.machines.bulkPut(packRows(await db.machines.where('hallId').equals(HALL_FREZY).toArray()));
-    setSelId(id);
+    setSelId(await addMachine(db, { hallId: HALL_FREZY, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' }));
   }
 
   async function remove() {
     if (!sel) return;
     if (!window.confirm(`Odstrániť stroj „${sel.name}“? Radšej zvážte ‚mimo prevádzky‘ – odstránenie nevráti späť.`)) return;
-    await deleteMachine(db, sel.id);
-    await db.machines.bulkPut(packRows(await db.machines.where('hallId').equals(HALL_FREZY).toArray()));
+    await deleteMachine(db, sel.id); // also packs the row the machine leaves
     setSelId(null);
   }
 
