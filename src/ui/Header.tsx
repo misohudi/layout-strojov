@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { formatPct } from '../report/xlsx';
-import { GearIcon, HistoryIcon, svg } from './icons';
+import { AutoThemeIcon, GearIcon, HistoryIcon, MoonIcon, SunIcon, svg } from './icons';
+import { useDB } from './useDB';
+import { loadTheme, nextTheme, saveTheme, themeLabel } from './theme';
 import type { Stats } from '../domain/types';
 
 interface Props {
@@ -39,6 +42,22 @@ function IconButton({ name, icon, onClick }: { name: string; icon: ReactNode; on
     <button type="button" className="hcell hcell--btn hcell--icon" aria-label={name} title={name} onClick={onClick}>
       {icon}
     </button>
+  );
+}
+
+/** Appearance: the icon shows the current mode, a tap switches to the next one. */
+function ThemeButton() {
+  const db = useDB();
+  const maskId = `theme-a-${useId().replace(/:/g, '')}`;
+  const theme = useLiveQuery(() => loadTheme(db), [db]) ?? 'light';
+  const next = nextTheme(theme);
+  const icon = theme === 'dark' ? <MoonIcon /> : theme === 'system' ? <AutoThemeIcon id={maskId} /> : <SunIcon />;
+  return (
+    <IconButton
+      name={`Vzhľad: ${themeLabel(theme)} – prepnúť na ${themeLabel(next)}`}
+      icon={icon}
+      onClick={() => saveTheme(db, next)}
+    />
   );
 }
 
@@ -109,6 +128,7 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
         />
       </Section>
       <Section title="Aplikácia" place="end">
+        <ThemeButton />
         <IconButton name="História" icon={<HistoryIcon />} onClick={onHistory} />
         <IconButton name="Nastavenia" icon={<GearIcon />} onClick={onSettings} />
       </Section>

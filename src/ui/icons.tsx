@@ -18,6 +18,40 @@ export const GearIcon = () => (
   </svg>
 );
 
+/** Sun – light appearance. */
+export const SunIcon = () => (
+  <svg {...svg} className="hicon" data-testid="icon-theme-light">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </svg>
+);
+
+/** Moon – dark appearance. */
+export const MoonIcon = () => (
+  <svg {...svg} className="hicon" data-testid="icon-theme-dark">
+    <path d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.6 6.6 0 0 0 9.7 9.7z" />
+  </svg>
+);
+
+/**
+ * Half sun (rays on the left), half moon (filled right half) with an "A" inside – appearance
+ * follows the device. The letter is cut out of the filled half, so it reads in both themes.
+ */
+export const AutoThemeIcon = ({ id }: { id: string }) => (
+  <svg {...svg} className="hicon" data-testid="icon-theme-system">
+    <defs>
+      <mask id={id}>
+        <rect x="0" y="0" width="24" height="24" fill="#fff" />
+        <path d="M10.2 16.4L13 8.6l2.8 7.8M11.1 13.8h3.8" stroke="#000" strokeWidth="3.4" fill="none" />
+      </mask>
+    </defs>
+    <circle cx="13" cy="12" r="7.6" />
+    <path d="M13 4.4a7.6 7.6 0 0 1 0 15.2z" fill="currentColor" stroke="none" mask={`url(#${id})`} />
+    <path d="M1.5 12h2M5.2 4.2l1.4 1.4M5.2 19.8l1.4-1.4" />
+    <path d="M10.2 16.4L13 8.6l2.8 7.8M11.1 13.8h3.8" strokeWidth="1.8" />
+  </svg>
+);
+
 /** Arrow pointing left – back. */
 export const BackIcon = () => (
   <svg {...svg} className="hicon">
