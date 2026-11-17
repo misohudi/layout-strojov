@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
-import { trackWeights } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
@@ -46,7 +45,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
   // Records closed with machines of different sizes are shown with equally sized cells like the plan.
   const layout = isUniform(record.layout) ? record.layout : hallLayout(record.layout);
   const peopleByMachine = new Map(record.rows.map((r) => [r.machineName, r.people]));
-  // one plan per zone (older records: one plan); same tile size in every zone
+  // one plan per zone (older records: one plan)
   const zones: { id: string; name: string; items: typeof layout }[] = [];
   for (const l of layout) {
     const id = l.hallId ?? '';
@@ -54,10 +53,6 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
     if (!z) zones.push((z = { id, name: l.hallName ?? '', items: [] }));
     z.items.push(l);
   }
-  const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
-  const sizeTracks = zones
-    .map((z) => trackWeights(z.items))
-    .reduce((acc, t) => ({ cols: sum(t.cols) > sum(acc.cols) ? t.cols : acc.cols, rows: sum(t.rows) > sum(acc.rows) ? t.rows : acc.rows }), { cols: [1], rows: [1] });
   const withZones = zones.length > 1 || record.rows.some((r) => r.hallName);
   return (
     <div className="page">
@@ -98,7 +93,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       {zones.map((z) => (
         <section key={z.id} className="record-zone" aria-label={z.name || undefined}>
           {zones.length > 1 && <h3 className="record-zone__name">{z.name}</h3>}
-          <Floor items={z.items} sizeTracks={zones.length > 1 ? sizeTracks : undefined}>
+          <Floor items={z.items}>
             {z.items.map((l) => (
               <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
             ))}
