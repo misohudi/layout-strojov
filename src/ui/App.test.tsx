@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { DBProvider } from './useDB';
 import { openDB, ensureSeeded, type AppDB } from '../db/db';
-import { startDraft, setMachineType, togglePerson, upsertPerson } from '../db/repo';
+import { startDraft, setMachinePriority, setMachineType, togglePerson, upsertPerson } from '../db/repo';
 
 let db: AppDB;
 let n = 0;
@@ -382,4 +382,48 @@ test('zones: the name is shown under the header; arrows and a swipe switch betwe
   fireEvent.touchStart(zone, { touches: [{ clientX: 300, clientY: 100 }] });
   fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 220, clientY: 400 }] });
   expect(screen.getByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument();
+});
+
+const lastRecord = () =>
+  db.records.put({
+    id: 'r', shiftId: 's-A', shiftName: 'A', foremanName: 'X', date: '2026-11-10',
+    startedAt: '2026-11-10T06:00:00Z', closedAt: '2026-11-10T14:00:00Z',
+    stats: { total: 37, occupied: 1, ext: 1, int: 0, occupancyPct: 2.7, extPct: 100, intPct: 0, peopleWithoutType: 0 },
+    rows: [{ machineName: 'HERMLE C60', type: 'EXT', priority: true, outOfService: false, people: [{ name: 'Kováč', homeShiftName: 'A', overtime: false }] }],
+    layout: [],
+  });
+
+test('an empty plan offers the orders of the last shift on a card over the plan; it can be closed without taking over', async () => {
+  await lastRecord();
+  renderApp();
+  await pickShift('B');
+  const card = await screen.findByRole('status');
+  expect(card.closest('.zone')).not.toBeNull(); // over the plan, not above it
+  await userEvent.click(within(card).getByRole('button', { name: 'Zavrieť bez prevzatia' }));
+  expect(screen.queryByRole('button', { name: /Prevziať/ })).toBeNull();
+  expect((await db.drafts.get('s-B'))!.assignments).toEqual({});
+});
+
+test('taking over copies order types and priorities, not the people', async () => {
+  await lastRecord();
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(await screen.findByRole('button', { name: 'Prevziať zakázky a priority z poslednej zmeny' }));
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-0']).toEqual({ type: 'EXT', personIds: [], priority: true }));
+  await vi.waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+});
+
+test('the arrow to a zone not looked at yet pulses (yellow with a priority order) until the zone is opened', async () => {
+  await startDraft(db, 's-B', 'Y', new Date());
+  await setMachineType(db, 's-B', 'm-hsc-1', 'INT');
+  await setMachinePriority(db, 's-B', 'm-hsc-1', true);
+  renderApp();
+  await pickShift('B');
+  const next = await screen.findByRole('button', { name: 'Ďalšie oddelenie – HSC' });
+  await vi.waitFor(() => expect(next).toHaveClass('zone__arrow--pulse', 'zone__arrow--prio'));
+  await userEvent.click(next);
+  const back = await screen.findByRole('button', { name: 'Predchádzajúce oddelenie – Frézovňa' });
+  expect(back).not.toHaveClass('zone__arrow--pulse'); // the milling hall was already seen
+  await userEvent.click(back);
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Ďalšie oddelenie – HSC' })).not.toHaveClass('zone__arrow--pulse'));
 });

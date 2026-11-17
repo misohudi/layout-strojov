@@ -1,4 +1,4 @@
-import { useRef, useState, type TouchEvent } from 'react';
+import { useEffect, useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { PLAN_FRAME, cropped } from './grid';
@@ -25,6 +25,23 @@ function readZone(): string | null {
 function storeZone(id: string) {
   try {
     localStorage.setItem(ZONE_KEY, id);
+  } catch {
+    /* not remembered – fine */
+  }
+}
+
+/** Small per-device notes for one open shift (storage may be unavailable – then they just reset). */
+function readNote<T>(key: string, fallback: T): T {
+  try {
+    const v = localStorage.getItem(key);
+    return v === null ? fallback : (JSON.parse(v) as T);
+  } catch {
+    return fallback;
+  }
+}
+function writeNote(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
   } catch {
     /* not remembered – fine */
   }
@@ -68,6 +85,19 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   /** A machine opened from the machine list returns to the list when closed. */
   const [backToList, setBackToList] = useState(false);
   const egg = useEasterEgg();
+  // per open shift: whether the "take over from the last shift" card was closed, and which zones the
+  // foreman has already looked at (the arrows towards the others pulse)
+  const draftKey = draftResult ? `layout-strojov.shift.${shiftId}.${draftResult.startedAt}` : null;
+  const [offerClosed, setOfferClosed] = useState<string | null>(null);
+  const [seen, setSeen] = useState<{ key: string | null; ids: string[] }>({ key: null, ids: [] });
+  const currentZone = halls[Math.max(0, halls.findIndex((h) => h.id === zoneId))]?.id;
+  useEffect(() => {
+    if (!draftKey || !currentZone) return;
+    const ids = readNote<string[]>(`${draftKey}.seen`, []);
+    const next = ids.includes(currentZone) ? ids : [...ids, currentZone];
+    if (next !== ids) writeNote(`${draftKey}.seen`, next);
+    setSeen({ key: draftKey, ids: next });
+  }, [draftKey, currentZone]);
 
   if (draftResult === null) {
     return (
@@ -122,6 +152,22 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
     goZone(dx < 0 ? 1 : -1);
   };
   const isEmpty = Object.keys(draft.assignments).length === 0;
+  const showOffer =
+    isEmpty && recordCount > 0 && offerClosed !== draftKey && !(draftKey && readNote(`${draftKey}.offerClosed`, false));
+  /**
+   * Arrow towards zones the foreman has not looked at yet in this shift: it pulses, and turns yellow
+   * when one of those zones has a priority order.
+   */
+  const seenIds = seen.key === draftKey ? seen.ids : [];
+  const arrowClass = (dir: -1 | 1) => {
+    const ahead = dir < 0 ? halls.slice(0, zoneIdx) : halls.slice(zoneIdx + 1);
+    const unseen = ahead.filter((h) => !seenIds.includes(h.id));
+    if (unseen.length === 0) return '';
+    const prio = machines.some(
+      (m) => unseen.some((h) => h.id === m.hallId) && m.status === 'active' && !!draft.assignments[m.id]?.type && !!draft.assignments[m.id]?.priority,
+    );
+    return `zone__arrow--pulse ${prio ? 'zone__arrow--prio' : ''}`;
+  };
 
   return (
     <div className="screen">
@@ -134,14 +180,6 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onMachineList={() => setListOpen(true)}
       />
       {banner}
-      {isEmpty && recordCount > 0 && (
-        <div className="notice">
-          Pôdorys je prázdny.
-          <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
-            Prevziať stav z poslednej zmeny
-          </button>
-        </div>
-      )}
       {stats.peopleWithoutType > 0 && (
         <div className="notice notice--warn">
           {stats.peopleWithoutType === 1
@@ -158,10 +196,30 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         </div>
       )}
       <div className="zone" ref={zoneRef} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        {showOffer && (
+          <div className="plan-offer" role="status">
+            <span>Pôdorys je prázdny.</span>
+            <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
+              Prevziať zakázky a priority z poslednej zmeny
+            </button>
+            <button
+              type="button"
+              className="plan-offer__close"
+              aria-label="Zavrieť bez prevzatia"
+              title="Zavrieť bez prevzatia"
+              onClick={() => {
+                if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
+                setOfferClosed(draftKey);
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
         {multiZone && (
           <button
             type="button"
-            className="zone__arrow"
+            className={`zone__arrow ${arrowClass(-1)}`}
             aria-label={`Predchádzajúce oddelenie${halls[zoneIdx - 1] ? ` – ${halls[zoneIdx - 1].name}` : ''}`}
             disabled={zoneIdx === 0}
             onClick={() => goZone(-1)}
@@ -200,7 +258,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         {multiZone && (
           <button
             type="button"
-            className="zone__arrow"
+            className={`zone__arrow ${arrowClass(1)}`}
             aria-label={`Ďalšie oddelenie${halls[zoneIdx + 1] ? ` – ${halls[zoneIdx + 1].name}` : ''}`}
             disabled={zoneIdx === halls.length - 1}
             onClick={() => goZone(1)}
