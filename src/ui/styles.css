@@ -17,6 +17,8 @@
   --oos-a: #d1d5db;
   --oos-b: #f3f4f6;
   --selected: #f59e0b;
+  --priority: #facc15;
+  --priority-ring: #713f12;
   --overlay-bg: rgba(255, 255, 255, 0.6);
   --overlay-text: #111827;
   --overlay-border: rgba(17, 24, 39, 0.25);
@@ -176,6 +178,22 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   color: var(--muted);
 }
 .tile--selected { outline: 3px solid var(--selected); outline-offset: 1px; }
+/* Priority order: thick yellow frame with a thin dark edge so it reads on blue, red and grey tiles. */
+.tile--priority { box-shadow: inset 0 0 0 1px var(--priority-ring), inset 0 0 0 5px var(--priority); }
+.sw.tile--priority { box-shadow: inset 0 0 0 1px var(--priority-ring), inset 0 0 0 4px var(--priority); }
+.btn--priority { width: 100%; margin: 8px 0; }
+.btn--priority-on { background: var(--priority); color: #422006; border-color: var(--priority-ring); font-weight: 700; }
+.priority-mark { color: #ca8a04; }
+.header__orders { display: inline-flex; gap: 8px; align-items: center; color: var(--muted); font-size: 0.9em; }
+.header__orders .stat { padding: 2px 8px; }
+.stat--role { background: var(--free); color: var(--text); }
+.person__role { color: var(--muted); }
+.role-badge { font-size: 0.85em; padding: 2px 8px; border-radius: 6px; background: var(--free); }
+.role-badge--operator { background: var(--warn-bg); color: var(--warn-text); }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 
 .legend { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 10px 16px 20px; }
 .legend .btn { margin-left: auto; }

@@ -67,8 +67,15 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       {savedTo && <div className="notice notice--ok">{savedTo}</div>}
       {error && <div className="notice notice--warn">{error}</div>}
       <div className="card">
-        Majster: <strong>{record.foremanName}</strong> · Obsadenosť <strong>{formatPct(s.occupancyPct)}</strong> (
-        {s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT {s.int} ({formatPct(s.intPct)})
+        Majster: <strong>{record.foremanName}</strong>
+        {s.staffed != null && (
+          <>
+            {' '}· Obsadenosť <strong>{formatPct(s.staffedPct)}</strong> ({s.staffed} / {s.total}) · Frézari{' '}
+            {s.frezari ?? 0} · Operátori {s.operatori ?? 0}
+          </>
+        )}
+        {' '}· Zákazky {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}
+        {s.int} ({formatPct(s.intPct)})
       </div>
       {record.layout.length > 0 && (
         <Floor items={record.layout}>
@@ -80,13 +87,14 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       <div className="card table-wrap">
         <table>
           <thead>
-            <tr><th>Stroj</th><th>Zakázka</th><th>Ľudia</th></tr>
+            <tr><th>Stroj</th><th>Zakázka</th><th>Priorita</th><th>Ľudia</th></tr>
           </thead>
           <tbody>
             {record.rows.map((r) => (
               <tr key={r.machineName}>
                 <td>{r.machineName}</td>
                 <td>{r.outOfService ? 'mimo prevádzky' : (r.type ?? '–')}</td>
+                <td>{r.priority ? '★' : ''}</td>
                 <td>{r.people.map((p) => (p.overtime ? `${p.name} (${p.homeShiftName})` : p.name)).join(', ')}</td>
               </tr>
             ))}

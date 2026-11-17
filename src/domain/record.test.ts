@@ -8,7 +8,7 @@ const [A, B] = shifts;
 const machines = seedMachines('frezy').map((m) => (m.id === 'm-1' ? { ...m, status: 'out_of_service' as const } : m));
 const people: Person[] = [
   { id: 'p1', name: 'Kováč', shiftId: B.id, active: true },
-  { id: 'p2', name: 'Horváth', shiftId: A.id, active: true },
+  { id: 'p2', name: 'Horváth', shiftId: A.id, active: true, role: 'operator' },
 ];
 const draft: ShiftDraft = {
   shiftId: B.id,
@@ -30,8 +30,8 @@ test('date is the local date the shift started', () => {
 test('people from other shifts are marked as overtime; missing people are skipped', () => {
   const row = build().rows.find((r) => r.machineName === 'HERMLE C60')!;
   expect(row.people).toEqual([
-    { name: 'Kováč', homeShiftName: 'B', overtime: false },
-    { name: 'Horváth', homeShiftName: 'A', overtime: true },
+    { name: 'Kováč', homeShiftName: 'B', overtime: false, role: 'frezar' },
+    { name: 'Horváth', homeShiftName: 'A', overtime: true, role: 'operator' },
   ]);
 });
 
@@ -46,7 +46,7 @@ test('people from the pool ("Ostatní") are not counted as overtime', () => {
     now: new Date(),
     id: 'r3',
   });
-  expect(r.rows[0].people).toEqual([{ name: 'Ondrej', homeShiftName: 'Ostatní', overtime: false }]);
+  expect(r.rows[0].people).toEqual([{ name: 'Ondrej', homeShiftName: 'Ostatní', overtime: false, role: 'frezar' }]);
 });
 
 test('out-of-service machines are last with no type and no people', () => {
@@ -56,7 +56,9 @@ test('out-of-service machines are last with no type and no people', () => {
 });
 
 test('stats equal computeStats of the draft', () => {
-  expect(build().stats).toEqual(computeStats(machines, draft.assignments));
+  const s = build().stats;
+  expect(s).toEqual(computeStats(machines, draft.assignments, people));
+  expect(s).toMatchObject({ staffed: 1, frezari: 1, operatori: 1 });
 });
 
 test('header fields and layout', () => {
@@ -73,4 +75,14 @@ test('record is a snapshot independent of later edits', () => {
   const r = buildShiftRecord({ draft, shift: B, machines, people: ppl, shifts, now: new Date(), id: 'r2' });
   ppl[0].name = 'Premenovaný';
   expect(r.rows[0].people[0].name).toBe('Kováč');
+});
+
+test('priority order is kept in rows and layout of active machines', () => {
+  const r = buildShiftRecord({
+    draft: { ...draft, assignments: { ...draft.assignments, 'm-0': { type: 'EXT', personIds: [], priority: true } } },
+    shift: B, machines, people, shifts, now: new Date(), id: 'r4',
+  });
+  expect(r.rows.find((x) => x.machineName === 'HERMLE C60')!.priority).toBe(true);
+  expect(r.layout.find((l) => l.name === 'HERMLE C60')!.priority).toBe(true);
+  expect(r.layout.find((l) => l.name === 'DMU 125')!.priority).toBe(false);
 });

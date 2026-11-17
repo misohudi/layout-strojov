@@ -46,7 +46,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   if (!machines || !draftResult) return <p className="muted pad">Načítavam…</p>;
   const draft = draftResult;
   const shift = shifts.find((s) => s.id === shiftId);
-  const stats = computeStats(machines, draft.assignments);
+  const stats = computeStats(machines, draft.assignments, people);
   const counts: Record<string, number> = {};
   for (const m of machines) {
     if (m.status !== 'active') continue;
@@ -91,6 +91,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
               {...m}
               type={a?.type ?? null}
               outOfService={m.status !== 'active'}
+              priority={!!a?.priority}
               people={(a?.personIds ?? []).map((id) => nameOf.get(id) ?? '?')}
               onClick={() => setOpenId(m.id)}
             />
@@ -102,6 +103,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         <span><i className="sw tile--int" /> INT – interná</span>
         <span><i className="sw tile--free" /> voľný</span>
         <span><i className="sw tile--oos" /> mimo prevádzky</span>
+        <span><i className="sw tile--free tile--priority" /> prioritná zákazka</span>
         <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
       </div>
       {listOpen && (

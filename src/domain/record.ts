@@ -1,5 +1,5 @@
 import { computeStats } from './stats';
-import { isPool, type Machine, type Person, type RecordRow, type Shift, type ShiftDraft, type ShiftRecord } from './types';
+import { isPool, roleOf, type Machine, type Person, type RecordRow, type Shift, type ShiftDraft, type ShiftRecord } from './types';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
@@ -35,6 +35,7 @@ export function buildShiftRecord(input: {
         machineName: m.name,
         type: a?.type ?? null,
         outOfService: false,
+        priority: !!a?.priority,
         people: (a?.personIds ?? [])
           .map((pid) => personById.get(pid))
           .filter((p): p is Person => !!p)
@@ -42,6 +43,7 @@ export function buildShiftRecord(input: {
             name: p.name,
             homeShiftName: shiftName.get(p.shiftId) ?? '',
             overtime: p.shiftId !== draft.shiftId && !poolIds.has(p.shiftId),
+            role: roleOf(p),
           })),
       };
     }),
@@ -56,7 +58,7 @@ export function buildShiftRecord(input: {
     date: localDate(draft.startedAt),
     startedAt: draft.startedAt,
     closedAt: now.toISOString(),
-    stats: computeStats(machines, draft.assignments),
+    stats: computeStats(machines, draft.assignments, people),
     rows,
     layout: machines.map((m) => ({
       name: m.name,
@@ -66,6 +68,7 @@ export function buildShiftRecord(input: {
       h: m.h,
       type: m.status === 'active' ? (draft.assignments[m.id]?.type ?? null) : null,
       outOfService: m.status !== 'active',
+      priority: m.status === 'active' && !!draft.assignments[m.id]?.priority,
     })),
   };
 }

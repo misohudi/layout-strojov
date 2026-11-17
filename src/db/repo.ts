@@ -46,6 +46,10 @@ export function setMachineType(db: AppDB, shiftId: string, machineId: string, ty
   return updateAssignment(db, shiftId, machineId, (a) => ({ ...a, type }));
 }
 
+export function setMachinePriority(db: AppDB, shiftId: string, machineId: string, priority: boolean) {
+  return updateAssignment(db, shiftId, machineId, (a) => ({ ...a, priority }));
+}
+
 export function togglePerson(db: AppDB, shiftId: string, machineId: string, personId: string) {
   return updateAssignment(db, shiftId, machineId, (a) => ({
     ...a,
@@ -76,7 +80,7 @@ export async function copyFromLastRecord(db: AppDB, shiftId: string): Promise<bo
         const p = matches.find((x) => shiftName.get(x.shiftId) === rp.homeShiftName) ?? matches[0];
         if (p && !personIds.includes(p.id)) personIds.push(p.id);
       }
-      assignments[m.id] = { type: row.type, personIds };
+      assignments[m.id] = { type: row.type, personIds, ...(row.priority ? { priority: true } : {}) };
     }
     await db.drafts.put({ ...draft, assignments });
     return true;

@@ -67,7 +67,7 @@ export function HistoryView({ onBack }: { onBack(): void }) {
           <table>
             <thead>
               <tr>
-                <th>Dátum</th><th>Zmena</th><th>Majster</th><th>Obsadenosť</th><th>EXT</th><th>INT</th>
+                <th>Dátum</th><th>Zmena</th><th>Majster</th><th>Obsadenosť</th><th>Frézari / Operátori</th><th>Zákazky</th><th>EXT</th><th>INT</th>
               </tr>
             </thead>
             <tbody>
@@ -76,6 +76,8 @@ export function HistoryView({ onBack }: { onBack(): void }) {
                   <td>{skDate(r.date)}</td>
                   <td>{r.shiftName}</td>
                   <td>{r.foremanName}</td>
+                  <td>{r.stats.staffed == null ? '–' : `${formatPct(r.stats.staffedPct)} (${r.stats.staffed}/${r.stats.total})`}</td>
+                  <td>{r.stats.frezari == null ? '–' : `${r.stats.frezari} / ${r.stats.operatori ?? 0}`}</td>
                   <td>{`${formatPct(r.stats.occupancyPct)} (${r.stats.occupied}/${r.stats.total})`}</td>
                   <td>{`${r.stats.ext} (${formatPct(r.stats.extPct)})`}</td>
                   <td>{`${r.stats.int} (${formatPct(r.stats.intPct)})`}</td>

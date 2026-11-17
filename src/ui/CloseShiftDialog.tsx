@@ -38,11 +38,12 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   const [folder, setFolder] = useState<FolderHandle | null>(null);
   const [savedTo, setSavedTo] = useState<string | null>(null);
   const live = useLiveQuery(async () => {
-    const [draft, machines] = await Promise.all([
+    const [draft, machines, people] = await Promise.all([
       db.drafts.get(shiftId),
       db.machines.where('hallId').equals(HALL_FREZY).toArray(),
+      db.people.toArray(),
     ]);
-    return { draft, machines };
+    return { draft, machines, people };
   }, [db, shiftId]);
 
   // Warm up the Excel library while the foreman reads the summary.
@@ -120,7 +121,7 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   const stats: Stats | null = closed
     ? closed.record.stats
     : live?.draft
-      ? computeStats(live.machines, live.draft.assignments)
+      ? computeStats(live.machines, live.draft.assignments, live.people)
       : null;
   if (!stats) return null;
 
@@ -129,14 +130,19 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
       <div className="sheet" role="dialog" aria-label="Uzavrieť zmenu">
         <h2>{closed ? 'Zmena uzavretá' : 'Uzavrieť zmenu'}</h2>
         <p>
-          Obsadenosť <strong>{formatPct(stats.occupancyPct)}</strong> ({stats.occupied} / {stats.total} strojov) ·
-          EXT {stats.ext} ({formatPct(stats.extPct)}) · INT {stats.int} ({formatPct(stats.intPct)})
+          Obsadenosť <strong>{formatPct(stats.staffedPct)}</strong> ({stats.staffed ?? 0} / {stats.total} strojov s ľuďmi) ·
+          Frézari {stats.frezari ?? 0} · Operátori {stats.operatori ?? 0}
+          <br />
+          <span className="muted">
+            Zákazky {formatPct(stats.occupancyPct)} ({stats.occupied}) · EXT {stats.ext} ({formatPct(stats.extPct)}) ·
+            INT {stats.int} ({formatPct(stats.intPct)})
+          </span>
         </p>
         {!closed && stats.peopleWithoutType > 0 && (
           <div className="notice notice--warn">
             {stats.peopleWithoutType === 1
-              ? '1 stroj má ľudí bez farby – nebude započítaný ako obsadený.'
-              : `${stats.peopleWithoutType} strojov má ľudí bez farby – nebudú započítané ako obsadené.`}
+              ? '1 stroj má ľudí bez farby – nebude započítaný medzi zákazky.'
+              : `${stats.peopleWithoutType} strojov má ľudí bez farby – nebudú započítané medzi zákazky.`}
           </div>
         )}
         {closed ? (

@@ -22,16 +22,26 @@ export interface Shift {
 
 export const isPool = (s: Pick<Shift, 'kind'> | undefined) => s?.kind === 'pool';
 
+export type PersonRole = 'frezar' | 'operator';
+
+export const ROLE_LABEL: Record<PersonRole, string> = { frezar: 'Frézar', operator: 'Operátor' };
+
 export interface Person {
   id: string;
   name: string;
   shiftId: string;
   active: boolean;
+  /** Missing in data from older versions – treated as 'frezar'. */
+  role?: PersonRole;
 }
+
+export const roleOf = (p: Pick<Person, 'role'>): PersonRole => p.role ?? 'frezar';
 
 export interface Assignment {
   type: OrderType | null;
   personIds: string[];
+  /** Priority order on this machine for the shift – highlighted with a frame. */
+  priority?: boolean;
 }
 
 export interface ShiftDraft {
@@ -44,6 +54,13 @@ export interface ShiftDraft {
 
 export interface Stats {
   total: number;
+  /** Active machines with at least one person – the main occupancy figure. Missing in old records. */
+  staffed?: number;
+  staffedPct?: number | null;
+  /** People assigned to active machines (each counted once), by role. Missing in old records. */
+  frezari?: number;
+  operatori?: number;
+  /** Machines with an order type (EXT/INT) – order occupancy, secondary. */
   occupied: number;
   ext: number;
   int: number;
@@ -57,12 +74,14 @@ export interface RecordPerson {
   name: string;
   homeShiftName: string;
   overtime: boolean;
+  role?: PersonRole;
 }
 
 export interface RecordRow {
   machineName: string;
   type: OrderType | null;
   outOfService: boolean;
+  priority?: boolean;
   people: RecordPerson[];
 }
 
@@ -74,6 +93,7 @@ export interface RecordLayoutItem {
   h: number;
   type: OrderType | null;
   outOfService: boolean;
+  priority?: boolean;
 }
 
 export interface ShiftRecord {
