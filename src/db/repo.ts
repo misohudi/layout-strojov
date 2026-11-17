@@ -60,6 +60,15 @@ export function togglePerson(db: AppDB, shiftId: string, machineId: string, pers
   }));
 }
 
+/** Empties the shift's plan: no order types, no people, no priority. The shift stays open. */
+export async function clearDraft(db: AppDB, shiftId: string): Promise<void> {
+  await db.transaction('rw', db.drafts, async () => {
+    const d = await db.drafts.get(shiftId);
+    if (!d) throw new Error('Zmena nie je otvorená');
+    await db.drafts.put({ ...d, assignments: {} });
+  });
+}
+
 /** Copies types and people from the most recent record (any shift) into the shift's draft. */
 export async function copyFromLastRecord(db: AppDB, shiftId: string): Promise<boolean> {
   return db.transaction('rw', [db.records, db.machines, db.people, db.shifts, db.drafts], async () => {

@@ -8,7 +8,7 @@ import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
-import { copyFromLastRecord } from '../db/repo';
+import { clearDraft, copyFromLastRecord } from '../db/repo';
 import { HALL_FREZY } from '../domain/seed';
 
 interface Props {
@@ -105,7 +105,19 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         <span><i className="sw tile--free" /> voľný</span>
         <span><i className="sw tile--oos" /> mimo prevádzky</span>
         <span><i className="sw tile--free tile--priority" /> prioritná zákazka</span>
-        <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
+        <span className="legend__actions">
+          <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
+          <button
+            className="btn btn--danger-outline"
+            disabled={isEmpty}
+            onClick={() =>
+              window.confirm('Vyčistiť celý pôdorys? Zmažú sa zakázky, ľudia aj priority na všetkých strojoch tejto zmeny.') &&
+              clearDraft(db, shiftId)
+            }
+          >
+            Vyčistiť
+          </button>
+        </span>
       </div>
       {listOpen && (
         <MachineList

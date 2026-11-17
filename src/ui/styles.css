@@ -128,24 +128,35 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 /* The plan screen is pinned to the window: header and footer never move, even when a swipe
    runs past the edge of the plan (mobile browsers would otherwise scroll the page). */
 .screen { position: fixed; inset: 0; display: flex; flex-direction: column; overflow: hidden; }
-/* Header: equally sized fields in one aligned grid (wraps to a second row only on narrow screens). */
+/* Header: sections of related fields (shift, occupancy by people, orders, app). Section widths follow
+   their number of fields, so every field has the same size; sections wrap only on narrow screens. */
 .header {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 8px;
-  padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 12px;
+  padding: 8px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 5;
 }
+.hsection {
+  min-width: 150px; padding: 4px 6px 6px; border-radius: 16px;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.hsection__title {
+  margin: 0 0 4px 4px; font-size: 10px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
+}
+.hsection__cells { display: flex; gap: 6px; }
+.hsection__cells > * { flex: 1 1 0; }
 .hcell {
-  height: 58px; min-width: 0; padding: 4px 6px; border-radius: 14px; border: 1px solid var(--border);
-  background: var(--bg); color: var(--text); font: inherit;
+  height: 54px; min-width: 0; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); font: inherit;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-align: center;
 }
 .hcell__label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; }
-.hcell__value { font-size: 17px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.hcell__value { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .hcell--btn { cursor: pointer; background: var(--surface); box-shadow: 0 1px 3px var(--shadow); }
 .hcell--btn:active { background: var(--free); }
 .hcell--shift, .hcell--main { background: var(--primary); border-color: var(--primary); }
 .hcell--shift .hcell__label, .hcell--main .hcell__label { color: var(--primary-text); opacity: 0.75; }
-.hcell--shift .hcell__value, .hcell--main .hcell__value { color: var(--primary-text); font-size: 19px; }
+.hcell--shift .hcell__value, .hcell--main .hcell__value { color: var(--primary-text); font-size: 17px; }
 .hcell--ext { background: var(--ext); border-color: var(--ext); }
 .hcell--int { background: var(--int); border-color: var(--int); }
 .hcell--ext .hcell__label, .hcell--int .hcell__label, .hcell--ext .hcell__value, .hcell--int .hcell__value { color: #fff; }
@@ -218,7 +229,9 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 }
 
 .legend { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; padding: 10px 16px 20px; }
-.legend .btn { margin-left: auto; }
+.legend__actions { margin-left: auto; display: flex; gap: 10px; align-items: center; }
+.btn--danger-outline { background: var(--surface); color: var(--int); border: 2px solid var(--int); font-weight: 700; }
+.btn--danger-outline:disabled { opacity: 0.4; }
 .sw { display: inline-block; width: 18px; height: 18px; border-radius: 4px; vertical-align: middle; border: 1px solid var(--tile-border); }
 
 /* Bottom sheet */
