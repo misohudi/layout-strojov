@@ -212,3 +212,15 @@ export async function deleteHall(db: AppDB, id: string): Promise<void> {
     await db.halls.delete(id);
   });
 }
+
+/** Moves a zone one place up (-1) or down (+1); the main screen shows the zones in this order. */
+export async function moveHall(db: AppDB, id: string, delta: -1 | 1): Promise<void> {
+  await db.transaction('rw', db.halls, async () => {
+    const halls = await db.halls.orderBy('order').toArray();
+    const i = halls.findIndex((h) => h.id === id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= halls.length) return;
+    [halls[i], halls[j]] = [halls[j], halls[i]];
+    await db.halls.bulkPut(halls.map((h, k) => ({ ...h, order: k })));
+  });
+}

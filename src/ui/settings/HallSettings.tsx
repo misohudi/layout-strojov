@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from '../useDB';
-import { addHall, deleteHall, renameHall } from '../../db/repo';
+import { addHall, deleteHall, moveHall, renameHall } from '../../db/repo';
 import type { Hall } from '../../domain/types';
 
-function HallRow({ h, machines, last }: { h: Hall; machines: number; last: boolean }) {
+function HallRow({ h, machines, last, first, final }: { h: Hall; machines: number; last: boolean; first: boolean; final: boolean }) {
   const db = useDB();
   const [name, setName] = useState(h.name);
   const canDelete = machines === 0 && !last;
   return (
-    <li className="row person-row">
+    <li className="hall-row">
+      <span className="hall-row__move">
+        <button className="btn btn--small" aria-label={`Posunúť ${h.name} hore`} title="Hore" disabled={first} onClick={() => moveHall(db, h.id, -1)}>↑</button>
+        <button className="btn btn--small" aria-label={`Posunúť ${h.name} dole`} title="Dole" disabled={final} onClick={() => moveHall(db, h.id, 1)}>↓</button>
+      </span>
       <input aria-label={`Názov oddelenia ${h.name}`} value={name} onChange={(e) => setName(e.target.value)} />
       <span className="muted">{`${machines} ${machines === 1 ? 'stroj' : machines >= 2 && machines <= 4 ? 'stroje' : 'strojov'}`}</span>
       <button
@@ -47,7 +51,9 @@ export function HallSettings() {
         oddelenia upravíte v záložke Stroje.
       </p>
       <ul className="plain-list">
-        {halls.map((h) => <HallRow key={h.id} h={h} machines={count(h.id)} last={halls.length === 1} />)}
+        {halls.map((h, i) => (
+          <HallRow key={h.id} h={h} machines={count(h.id)} last={halls.length === 1} first={i === 0} final={i === halls.length - 1} />
+        ))}
       </ul>
       <div className="row row--bottom">
         <label className="field">

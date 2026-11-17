@@ -1,6 +1,15 @@
 /** Line icons drawn in the text colour (header, start screen, settings). */
 export const svg = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;
 
+/** Clock with an arrow turning back in time – history. */
+export const HistoryIcon = () => (
+  <svg {...svg} className="hicon">
+    <path d="M3 12a9 9 0 1 0 2.64-6.36L3 8.3" />
+    <path d="M3 3.5v4.8h4.8" />
+    <path d="M12 7.5V12l3.2 2" />
+  </svg>
+);
+
 /** Gear – settings. */
 export const GearIcon = () => (
   <svg {...svg} className="hicon">

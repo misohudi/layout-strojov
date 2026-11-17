@@ -46,9 +46,12 @@ const clampPx = (v: number, min: number, max: number) => Math.min(max, Math.max(
 const fit = (areaPx: number, weights: number[]) =>
   (areaPx - 2 * GAP - GAP * (weights.length - 1)) / weights.reduce((s, w) => s + w, 0);
 
-/** Tile size at 100 % for a scroll area `areaW` × `areaH` showing the given columns and rows. */
-export function tileSize(areaW: number, areaH: number, tracks: { cols: number[]; rows: number[] }) {
-  let h = clampPx(fit(areaH, tracks.rows), TILE_MIN, TILE_H_MAX);
+/**
+ * Tile size at 100 % for a scroll area `areaW` × `areaH` showing the given columns and rows.
+ * `fill`: a zone with only a few machines – they grow to fill the whole area (no maximum height).
+ */
+export function tileSize(areaW: number, areaH: number, tracks: { cols: number[]; rows: number[] }, fill = false) {
+  let h = clampPx(fit(areaH, tracks.rows), TILE_MIN, fill ? Infinity : TILE_H_MAX);
   const w = clampPx(fit(areaW, tracks.cols), TILE_MIN, h * MAX_RATIO);
   if (w < h * MIN_RATIO) h = Math.max(TILE_MIN, w / MIN_RATIO);
   return { w: Math.floor(w), h: Math.floor(h) };
@@ -63,12 +66,15 @@ export function tileSize(areaW: number, areaH: number, tracks: { cols: number[];
 export function Floor({
   items,
   sizeTracks,
+  fill = false,
   children,
   onPlanClick,
 }: {
   items: GridItem[];
   /** Tracks to size the tiles by (the largest zone), so every zone has the same tile size. */
   sizeTracks?: { cols: number[]; rows: number[] };
+  /** Few machines: enlarge them to fill the whole area, centred. */
+  fill?: boolean;
   children: ReactNode;
   /** Any tap inside the plan area (machines included – the handler filters). */
   onPlanClick?(e: MouseEvent): void;
@@ -91,7 +97,7 @@ export function Floor({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const size = tileSize(area.w, area.h, sizeTracks ?? tracks);
+  const size = tileSize(area.w, area.h, sizeTracks ?? tracks, fill);
   const tileH = size.h * zoom;
   const tileW = size.w * zoom;
 
@@ -168,7 +174,7 @@ export function Floor({
         </button>
       )}
       <div
-        className="floor__scroll"
+        className={`floor__scroll ${fill ? 'floor__scroll--fill' : ''}`}
         data-testid="floor-scroll"
         ref={scrollRef}
         style={{ touchAction: 'pan-x pan-y' }}
