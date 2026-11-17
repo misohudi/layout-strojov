@@ -235,3 +235,14 @@ test('zones can be moved up and down; the first cannot go up, the last cannot go
   await vi.waitFor(async () => expect((await db.halls.orderBy('order').toArray()).map((h) => h.name)).toEqual(['HSC', 'Frézovňa']));
   expect(await screen.findByRole('button', { name: 'Posunúť HSC hore' })).toBeDisabled();
 });
+
+test('a new machine is placed on a free cell inside the 13 × 6 plan', async () => {
+  wrap(<MachineEditor />);
+  await userEvent.click(await screen.findByRole('button', { name: 'Pridať stroj' }));
+  await vi.waitFor(async () => expect((await db.machines.toArray()).filter((m) => m.name === 'Nový stroj')).toHaveLength(1));
+  const added = (await db.machines.toArray()).find((m) => m.name === 'Nový stroj')!;
+  expect(added.x).toBeLessThan(13);
+  expect(added.y).toBeLessThan(6);
+  const others = (await db.machines.where('hallId').equals(added.hallId).toArray()).filter((m) => m.id !== added.id);
+  expect(others.some((m) => m.x === added.x && m.y === added.y)).toBe(false);
+});
