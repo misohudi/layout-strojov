@@ -2,12 +2,13 @@
  * CNC machine icons from the supplied catalogue (outline machining centre in 3/4 view):
  * - no one on the machine: the machine alone;
  * - frézar: a standing operator at the control panel;
- * - operátor: a seated operator in front of the machine.
+ * - operátor: a seated operator in front of the machine;
+ * - out of service: the machine in grey with a minus sign.
  * Lines use `currentColor` (the tile's text colour); fills and the thin cut-out around the figure use
  * `--icon-bg` (the tile's background), so the icon reads on grey, blue and red tiles alike.
  */
 
-export type IconFigure = 'none' | 'frezar' | 'operator';
+export type IconFigure = 'none' | 'frezar' | 'operator' | 'oos';
 
 const SW = 2.5;
 const INK = 'currentColor';
@@ -132,6 +133,12 @@ export function MachineIcon({ figure }: { figure: IconFigure }) {
       <Machine dx={figure === 'frezar' ? -6 : 0} />
       {figure === 'frezar' && <Standing />}
       {figure === 'operator' && <Seated />}
+      {figure === 'oos' && (
+        <g>
+          <circle cx="96" cy="94" r="15" fill={BG} stroke={INK} strokeWidth={SW + 0.5} />
+          <line x1="88" y1="94" x2="104" y2="94" stroke={INK} strokeWidth={SW + 1.5} strokeLinecap="round" />
+        </g>
+      )}
     </svg>
   );
 }

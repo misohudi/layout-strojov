@@ -6,7 +6,7 @@ const rec = (over: Partial<ShiftRecord> = {}): ShiftRecord => ({
   id: 'r1', shiftId: 's-B', shiftName: 'B', foremanName: 'Novák', date: '2026-11-11',
   startedAt: '2026-11-11T13:00:00.000Z', closedAt: '2026-11-11T21:05:00.000Z',
   stats: {
-    total: 4, staffed: 2, staffedPct: 50, frezari: 2, operatori: 1,
+    total: 4, staffed: 2, staffedPct: 50, frezari: 2, operatori: 1, multiPeople: 1, multiMachines: 2,
     occupied: 3, ext: 2, int: 1, occupancyPct: 75, extPct: 67, intPct: 33, peopleWithoutType: 0,
   },
   rows: [
@@ -42,7 +42,8 @@ test('report header and stats', async () => {
   expect(text).toContain('Obsadené ľuďmi: 2 (50,0 %)');
   expect(text).toContain('Frézari: 2');
   expect(text).toContain('Operátori: 1');
-  expect(text).toContain('Zákazky: 3 (75,0 %)');
+  expect(text).toContain('Vyťaženie strojov: 3 (75,0 %)');
+  expect(text).toContain('Viacobsluha: 1 ľudí / 2 strojov');
   expect(text).toContain('EXT: 2 (67,0 %)');
 });
 
@@ -69,9 +70,9 @@ test('history workbook has a row per record', async () => {
   expect(ws.rowCount).toBe(3);
   expect(ws.getRow(1).values).toEqual([
     , 'Dátum', 'Zmena', 'Majster', 'Strojov', 'Obsadené ľuďmi', 'Obsadenosť %', 'Frézari', 'Operátori',
-    'Zákazky', 'Zákazky %', 'EXT', 'INT', 'EXT %', 'INT %',
+    'Viacobsluha ľudia', 'Viacobsluha stroje', 'So zákazkou', 'Vyťaženie strojov %', 'EXT', 'INT', 'EXT %', 'INT %',
   ]);
-  expect(ws.getRow(2).values).toEqual([, '11.11.2026', 'B', 'Novák', 4, 2, 50, 2, 1, 3, 75, 2, 1, 67, 33]);
+  expect(ws.getRow(2).values).toEqual([, '11.11.2026', 'B', 'Novák', 4, 2, 50, 2, 1, 1, 2, 3, 75, 2, 1, 67, 33]);
   expect(ws.getRow(3).getCell(2).value).toBe('A');
 });
 

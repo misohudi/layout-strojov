@@ -6,6 +6,7 @@ import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
 import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
+import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
@@ -30,6 +31,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const recordCount = useLiveQuery(() => db.records.count(), [db]) ?? 0;
   const [openId, setOpenId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  /** Legend item whose machines are highlighted on the plan. */
+  const [legendKey, setLegendKey] = useState<LegendKey | null>(null);
   /** A machine opened from the machine list returns to the list when closed. */
   const [backToList, setBackToList] = useState(false);
   const egg = useEasterEgg();
@@ -86,6 +89,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
       <Floor items={machines} onPlanClick={egg.onPlanClick}>
         {machines.map((m) => {
           const a = draft.assignments[m.id];
+          const hit = legendKey ? matchesLegend(legendKey, m, a) : null;
           return (
             <MachineTile
               key={m.id}
@@ -93,32 +97,30 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
               type={a?.type ?? null}
               outOfService={m.status !== 'active'}
               priority={!!a?.priority}
-              people={(a?.personIds ?? []).map((id) => personOf.get(id) ?? { name: '?' })}
+              people={(a?.personIds ?? []).map((id) => {
+                const p = personOf.get(id);
+                return { name: p?.name ?? '?', role: p?.role, machines: counts[id] ?? 1 };
+              })}
+              highlighted={hit === true}
+              dimmed={hit === false}
               onClick={() => setOpenId(m.id)}
             />
           );
         })}
       </Floor>
-      <div className="legend">
-        <span><i className="sw tile--ext" /> EXT – externá</span>
-        <span><i className="sw tile--int" /> INT – interná</span>
-        <span><i className="sw tile--free" /> voľný</span>
-        <span><i className="sw tile--oos" /> mimo prevádzky</span>
-        <span><span className="prio-badge prio-badge--inline">PRIO</span> prioritná zákazka</span>
-        <span className="legend__actions">
-          <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
-          <button
-            className="btn btn--danger-outline"
-            disabled={isEmpty}
-            onClick={() =>
-              window.confirm('Vyčistiť celý pôdorys? Zmažú sa zakázky, ľudia aj priority na všetkých strojoch tejto zmeny.') &&
-              clearDraft(db, shiftId)
-            }
-          >
-            Vyčistiť
-          </button>
-        </span>
-      </div>
+      <Legend stats={stats} selected={legendKey} onSelect={setLegendKey}>
+        <button
+          className="btn btn--danger-outline"
+          disabled={isEmpty}
+          onClick={() =>
+            window.confirm('Vyčistiť celý pôdorys? Zmažú sa zakázky, ľudia aj priority na všetkých strojoch tejto zmeny.') &&
+            clearDraft(db, shiftId)
+          }
+        >
+          Vyčistiť
+        </button>
+        <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
+      </Legend>
       {listOpen && (
         <MachineList
           machines={machines}

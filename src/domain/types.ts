@@ -60,7 +60,14 @@ export interface Stats {
   /** People assigned to active machines (each counted once), by role. Missing in old records. */
   frezari?: number;
   operatori?: number;
-  /** Machines with an order type (EXT/INT) – order occupancy, secondary. */
+  /** Viacobsluha: people working on 2+ active machines, and how many machines they cover. */
+  multiPeople?: number;
+  multiMachines?: number;
+  /** Legend counts: active machines without an order type, machines out of service, priority orders. */
+  free?: number;
+  oos?: number;
+  prio?: number;
+  /** Machines with an order type (EXT/INT) – "vyťaženie strojov". */
   occupied: number;
   ext: number;
   int: number;

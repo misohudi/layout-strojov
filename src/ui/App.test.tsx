@@ -35,8 +35,9 @@ test('pick shift, mark machine EXT, header shows order stats as secondary', asyn
   expect(await screen.findAllByTestId('machine-tile')).toHaveLength(35);
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C60/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
-  expect(await within(header).findByRole('group', { name: 'Zákazky 2,9 %' })).toBeInTheDocument();
-  expect(within(header).getByRole('group', { name: 'EXT 100,0 %' })).toBeInTheDocument();
+  // order figures live in the legend now
+  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,9 %' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'EXT – externá: 1, 100,0 %' })).toBeInTheDocument();
   // no people yet – occupancy by people stays at zero
   expect(within(header).getByRole('group', { name: 'Obsadenosť 0,0 %' })).toBeInTheDocument();
 });
@@ -55,7 +56,7 @@ test('header occupancy counts machines with people and people by role', async ()
   expect(within(header).getByRole('button', { name: '2 / 35 strojov' })).toBeInTheDocument();
   expect(within(header).getByRole('group', { name: 'Frézari 1' })).toBeInTheDocument();
   expect(within(header).getByRole('group', { name: 'Operátori 1' })).toBeInTheDocument();
-  expect(within(header).getByRole('group', { name: 'Zákazky 0,0 %' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Vyťaženie strojov 0,0 %' })).toBeInTheDocument();
 });
 
 test('all machines are equally sized cells with a machine icon; the figure follows the role of the person', async () => {
@@ -85,7 +86,8 @@ test('header groups related fields into sections', async () => {
   expect(within(section('Zmena')).getByRole('button', { name: 'Zmeniť zmenu' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Frézari 0' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 35 strojov' })).toBeInTheDocument();
-  expect(within(section('Zákazky')).getByRole('group', { name: 'EXT –' })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
+  expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
 });
 
@@ -110,11 +112,46 @@ test('"Vyčistiť" empties the whole plan of the shift after confirmation', asyn
   confirm.mockRestore();
 });
 
+test('legend shows counts and shares; tapping an item highlights its machines and greys out the rest', async () => {
+  const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await db.machines.update('m-5', { status: 'out_of_service' });
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-0', 'EXT');
+  await setMachineType(db, 's-B', 'm-1', 'EXT');
+  await setMachineType(db, 's-B', 'm-2', 'INT');
+  await togglePerson(db, 's-B', 'm-0', p);
+  await togglePerson(db, 's-B', 'm-1', p); // viacobsluha
+  renderApp();
+  await pickShift('B');
+  const ext = await screen.findByRole('button', { name: 'EXT – externá: 2, 66,7 %' });
+  expect(screen.getByRole('button', { name: 'INT – interná: 1, 33,3 %' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'voľný: 31' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'mimo prevádzky: 1' })).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'Vyťaženie strojov 8,8 %' })).toBeInTheDocument(); // 3 / 34
+  expect(within(screen.getByRole('banner')).getByRole('group', { name: 'Viacobsluha 1 ľudí na 2 strojoch' })).toBeInTheDocument();
+
+  await userEvent.click(ext);
+  expect(ext).toHaveAttribute('aria-pressed', 'true');
+  const tiles = screen.getAllByTestId('machine-tile');
+  expect(tiles.filter((t) => t.classList.contains('tile--hl'))).toHaveLength(2);
+  expect(tiles.filter((t) => t.classList.contains('tile--dim'))).toHaveLength(33);
+  await userEvent.click(ext); // again → back to normal
+  expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim)/.test(t.className))).toBe(false);
+});
+
+test('"Vyčistiť" stands before "Uzavrieť zmenu"', async () => {
+  renderApp();
+  await pickShift('B');
+  const clear = await screen.findByRole('button', { name: 'Vyčistiť' });
+  const close = screen.getByRole('button', { name: 'Uzavrieť zmenu a vytvoriť report' });
+  expect(clear.compareDocumentPosition(close) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+});
+
 test('priority needs an order type; the tile gets a PRIO tag; a free machine loses it', async () => {
   renderApp();
   await pickShift('B');
   await userEvent.click(await screen.findByRole('button', { name: /^DMU 125/ }));
-  const prio = () => screen.getByRole('button', { name: /prioritn/i });
+  const prio = () => within(screen.getByRole('dialog')).getByRole('button', { name: /prioritn/i });
   // no order type yet → priority can't be chosen
   expect(prio()).toBeDisabled();
   expect(screen.getByText('Prioritu môžete zvoliť až po výbere EXT alebo INT.')).toBeInTheDocument();
@@ -193,7 +230,7 @@ test('a machine set out of service in settings is not counted in occupancy', asy
   expect(await within(header).findByRole('button', { name: '0 / 34 strojov' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C42 \/ 4/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
-  expect(await within(header).findByRole('group', { name: 'Zákazky 2,9 %' })).toBeInTheDocument(); // 1 / 34
+  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,9 %' })).toBeInTheDocument(); // 1 / 34
 });
 
 test('tapping the machine count opens a list of machines with order type and people', async () => {
@@ -217,7 +254,7 @@ test('tapping the machine count opens a list of machines with order type and peo
   expect(rows.find((r) => r.textContent!.includes('DMU 125'))).toHaveTextContent('voľný');
   expect(within(list).getByRole('table', { name: 'Mimo prevádzky' })).toHaveTextContent('HERMLE C42 / 4');
   expect(list).toHaveTextContent('Obsadenosť 2,9 %'); // 1 machine with people / 34
-  expect(list).toHaveTextContent('Zákazky 5,9 %');
+  expect(list).toHaveTextContent('Vyťaženie strojov 5,9 %');
 
   // tapping a row opens that machine for editing
   await userEvent.click(c60);
@@ -291,6 +328,5 @@ test('tapping a shift with an open draft continues it directly', async () => {
   await setMachineType(db, 's-A', 'm-0', 'INT');
   renderApp();
   await pickShift('A');
-  const header = await screen.findByRole('banner');
-  expect(await within(header).findByRole('group', { name: 'INT 100,0 %' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'INT – interná: 1, 100,0 %' })).toBeInTheDocument();
 });

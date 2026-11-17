@@ -28,10 +28,10 @@ export function MachineList({ machines, assignments, stats, nameOf, onPick, onCl
         </div>
         <p>
           <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
-          {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0}`}
+          {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0} · Viacobsluha ${stats.multiPeople ?? 0} ľ / ${stats.multiMachines ?? 0} str`}
           <br />
           <span className="muted">
-            {`Zákazky ${formatPct(stats.occupancyPct)} (${stats.occupied}) · EXT ${stats.ext} · INT ${stats.int}`}
+            {`Vyťaženie strojov ${formatPct(stats.occupancyPct)} (${stats.occupied}) · EXT ${stats.ext} · INT ${stats.int}`}
           </span>
         </p>
         <div className="table-wrap">

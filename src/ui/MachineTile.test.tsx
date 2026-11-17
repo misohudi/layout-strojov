@@ -58,3 +58,26 @@ test('priority order: PRIO tag only with an order type and not out of service', 
   expect(tile).not.toHaveClass('tile--priority');
   expect(tile.querySelector('.prio-badge')).toBeNull();
 });
+
+test('priority order without anyone on the machine shows a warning triangle', () => {
+  const { rerender } = render(<MachineTile {...base} type="EXT" name="HERMLE C60" priority />);
+  expect(screen.getByTitle('Prioritná zákazka bez obsluhy')).toBeInTheDocument();
+  rerender(<MachineTile {...base} type="EXT" name="HERMLE C60" priority people={[{ name: 'Kováč' }]} />);
+  expect(screen.queryByTitle('Prioritná zákazka bez obsluhy')).toBeNull();
+  rerender(<MachineTile {...base} type="EXT" name="HERMLE C60" />); // no priority, no warning
+  expect(screen.queryByTitle('Prioritná zákazka bez obsluhy')).toBeNull();
+});
+
+test('viacobsluha: a person on several machines gets a "2×" badge', () => {
+  render(<MachineTile {...base} name="HERMLE C60" people={[{ name: 'Kováč', machines: 2 }]} />);
+  expect(screen.getByTestId('machine-tile').querySelector('.tile__multi')).toHaveTextContent('2×');
+});
+
+test('machine out of service: grey icon with a minus sign; legend highlight classes', () => {
+  const { rerender } = render(<MachineTile {...base} name="ZAYER" outOfService />);
+  expect(within(screen.getByTestId('machine-tile')).getByTestId('icon-oos')).toBeInTheDocument();
+  rerender(<MachineTile {...base} name="ZAYER" highlighted />);
+  expect(screen.getByTestId('machine-tile')).toHaveClass('tile--hl');
+  rerender(<MachineTile {...base} name="ZAYER" dimmed />);
+  expect(screen.getByTestId('machine-tile')).toHaveClass('tile--dim');
+});
