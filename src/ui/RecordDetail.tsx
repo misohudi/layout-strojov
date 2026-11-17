@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
+import { compactLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
 import {
@@ -41,6 +42,8 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       alive = false;
     };
   }, [record]);
+  // Records closed before machines got equally sized cells are shown compacted the same way.
+  const layout = isUniform(record.layout) ? record.layout : compactLayout(record.layout);
   const peopleByMachine = new Map(record.rows.map((r) => [r.machineName, r.people.map((p) => p.name)]));
   return (
     <div className="page">
@@ -77,9 +80,9 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
         {' '}· Zákazky {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}
         {s.int} ({formatPct(s.intPct)})
       </div>
-      {record.layout.length > 0 && (
-        <Floor items={record.layout}>
-          {record.layout.map((l) => (
+      {layout.length > 0 && (
+        <Floor items={layout}>
+          {layout.map((l) => (
             <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
           ))}
         </Floor>

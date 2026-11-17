@@ -167,9 +167,9 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.15em;
   overflow: hidden; cursor: pointer; font: inherit; line-height: 1.1; text-align: center; min-width: 0; min-height: 0;
 }
-.tile__name { font-weight: 700; overflow-wrap: normal; word-break: normal; }
-.tile--narrow { font-size: 0.82em; padding: 0.1em; }
-.tile__people { font-size: 0.85em; opacity: 0.95; word-break: break-word; }
+.tile__icon { flex: 1 1 0; min-height: 1.2em; max-height: 3.4em; width: 100%; }
+.tile__name { flex: none; font-weight: 700; font-size: 0.8em; overflow-wrap: anywhere; }
+.tile__people { flex: none; font-size: 0.72em; opacity: 0.95; word-break: break-word; }
 .tile--ext { background: var(--ext); color: var(--ext-text); }
 .tile--int { background: var(--int); color: var(--int-text); }
 .tile--free { background: var(--free); color: var(--text); }

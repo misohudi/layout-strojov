@@ -5,7 +5,7 @@ import { Floor } from '../Floor';
 import { MachineTile } from '../MachineTile';
 import { cellIndex, trackWeights } from '../grid';
 import { deleteMachine, upsertMachine } from '../../db/repo';
-import { freeSpotBelow, moveMachine, resizeMachine } from '../../domain/layoutEdit';
+import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
 import { HALL_FREZY } from '../../domain/seed';
 import type { Machine } from '../../domain/types';
 
@@ -88,7 +88,7 @@ export function MachineEditor() {
 
   async function add() {
     const pos = freeSpotBelow(machines);
-    const id = await upsertMachine(db, { hallId: HALL_FREZY, name: 'Nový stroj', ...pos, w: 2, h: 2, status: 'active' });
+    const id = await upsertMachine(db, { hallId: HALL_FREZY, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' });
     setSelId(id);
   }
 
@@ -121,11 +121,6 @@ export function MachineEditor() {
               <button className="btn" aria-label="Posunúť hore" onClick={() => save(moveMachine(sel, 0, -1))}>↑</button>
               <button className="btn" aria-label="Posunúť dole" onClick={() => save(moveMachine(sel, 0, 1))}>↓</button>
               <button className="btn" aria-label="Posunúť doprava" onClick={() => save(moveMachine(sel, 1, 0))}>→</button>
-              <span className="muted">Veľkosť:</span>
-              <button className="btn" onClick={() => save(resizeMachine(sel, 1, 0))}>Širší</button>
-              <button className="btn" onClick={() => save(resizeMachine(sel, -1, 0))}>Užší</button>
-              <button className="btn" onClick={() => save(resizeMachine(sel, 0, 1))}>Vyšší</button>
-              <button className="btn" onClick={() => save(resizeMachine(sel, 0, -1))}>Nižší</button>
             </div>
             <div className="row">
               {sel.status === 'active' ? (
