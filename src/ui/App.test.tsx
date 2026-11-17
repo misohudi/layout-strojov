@@ -456,3 +456,11 @@ test('legend: with such machines here and in another zone, the arrow to that zon
   expect(screen.getByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument(); // stays: C60 is here
   expect(next).toHaveClass('zone__arrow--hl', 'zone__arrow--hl-prio');
 });
+
+test('the shift button is as wide as the longest shift name, whichever shift is open', async () => {
+  await db.shifts.update('s-C', { name: 'Ferdinand Novotný' });
+  renderApp();
+  await pickShift('B');
+  const value = within(await screen.findByRole('button', { name: /^Zmena B/ })).getByText('B');
+  expect(value.style.minWidth).toBe('23ch'); // 17 letters × 1.2 + 2 reserve
+});

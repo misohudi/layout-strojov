@@ -5,6 +5,8 @@ import type { Stats } from '../domain/types';
 
 interface Props {
   shiftName: string;
+  /** Length of the longest shift (foreman) name: the shift button is that wide for every shift. */
+  longestShiftName?: number;
   stats: Stats;
   onChangeShift(): void;
   onHistory(): void;
@@ -68,12 +70,19 @@ function Section({ title, place, children }: { title: string; place: 'start' | '
   );
 }
 
-export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
+export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
   return (
     <header className="header">
       <Section title="Zmena" place="start">
         {/* tap the shift to switch to another one */}
-        <CellButton label="Zmena" value={shiftName} variant="hcell--shift" name={`Zmena ${shiftName} – zmeniť zmenu`} onClick={onChangeShift} />
+        <CellButton
+          label="Zmena"
+          // wide enough for the longest name even in capitals (bold capitals are ~1.2 × a digit) plus a reserve
+          value={<span style={{ minWidth: `${Math.ceil(Math.max(longestShiftName, shiftName.length) * 1.2) + 2}ch` }}>{shiftName}</span>}
+          variant="hcell--shift"
+          name={`Zmena ${shiftName} – zmeniť zmenu`}
+          onClick={onChangeShift}
+        />
       </Section>
       <Section title="Obsadenosť ľuďmi" place="center">
         <Cell label="Obsadenosť" value={formatPct(stats.staffedPct)} variant="hcell--main" />

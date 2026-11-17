@@ -11,7 +11,7 @@ import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
-import type { Hall } from '../domain/types';
+import { isPool, type Hall } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
 const ZONE_KEY = 'layout-strojov.zone';
@@ -196,6 +196,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
     <div className="screen">
       <Header
         shiftName={shift?.name ?? '?'}
+        longestShiftName={Math.max(1, ...shifts.filter((s) => !isPool(s)).map((s) => s.name.length))}
         stats={stats}
         onChangeShift={onChangeShift}
         onHistory={onHistory}
