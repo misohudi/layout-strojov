@@ -427,3 +427,31 @@ test('the arrow to a zone not looked at yet pulses (yellow with a priority order
   await userEvent.click(back);
   await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Ďalšie oddelenie – HSC' })).not.toHaveClass('zone__arrow--pulse'));
 });
+
+test('legend: when only another zone has such machines, the view switches there', async () => {
+  await startDraft(db, 's-B', 'Y', new Date());
+  await setMachineType(db, 's-B', 'm-hsc-2', 'INT'); // the only INT machine is in HSC
+  renderApp();
+  await pickShift('B');
+  expect(await screen.findByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /^INT – interná/ }));
+  expect(await screen.findByRole('heading', { name: 'HSC' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^MIKRON \/ 2/ })).toHaveClass('tile--hl');
+});
+
+test('legend: with such machines here and in another zone, the arrow to that zone lights up', async () => {
+  await startDraft(db, 's-B', 'Y', new Date());
+  for (const id of ['m-0', 'm-hsc-1']) {
+    await setMachineType(db, 's-B', id, 'EXT');
+    await setMachinePriority(db, 's-B', id, true);
+  }
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(await screen.findByRole('button', { name: 'Ďalšie oddelenie – HSC' })); // seen
+  await userEvent.click(await screen.findByRole('button', { name: 'Predchádzajúce oddelenie – Frézovňa' }));
+  const next = await screen.findByRole('button', { name: 'Ďalšie oddelenie – HSC' });
+  await vi.waitFor(() => expect(next).not.toHaveClass('zone__arrow--pulse'));
+  await userEvent.click(screen.getByRole('button', { name: /^prioritná zákazka/ }));
+  expect(screen.getByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument(); // stays: C60 is here
+  expect(next).toHaveClass('zone__arrow--hl', 'zone__arrow--hl-prio');
+});
