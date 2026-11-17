@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Floor, tileHeight } from './Floor';
+import { Floor, tileSize } from './Floor';
 
 const items = [{ x: 0, y: 0, w: 2, h: 2 }];
 const RESET = 'Späť na 100 %';
@@ -23,27 +23,30 @@ function pinch(el: HTMLElement, d0: number, d1: number) {
 
 const zoom = (grid: HTMLElement) => Number(grid.dataset.zoom);
 
-test('tiles are equally sized landscape rectangles, readable even without measured height', () => {
+test('tiles are equally sized, a finger-sized minimum even without a measured area', () => {
   const { grid } = setup();
-  // jsdom has no layout (height 0) → the minimum readable tile 84 px high, 2.1× as wide
-  expect(grid.style.gridTemplateColumns).toBe('176px 176px');
-  expect(grid.style.gridTemplateRows).toBe('84px 84px');
+  // jsdom has no layout (size 0) → the minimum 64 × 64 px
+  expect(grid.style.gridTemplateColumns).toBe('64px 64px');
+  expect(grid.style.gridTemplateRows).toBe('64px 64px');
 });
 
-test('tile height follows the available height so all rows are visible, within limits', () => {
-  const four = [1, 1, 1, 1];
-  expect(tileHeight(600, four)).toBe(104); // plenty of room → maximum
-  expect(tileHeight(460, four)).toBe(98); // (460 - 2·14 padding - 3·14 gaps) / 4 = 97.5
-  expect(tileHeight(200, four)).toBe(84); // not enough room → minimum, the plan scrolls
-  expect(tileHeight(490, [1, 1, 1, 0.35, 1])).toBe(93); // an aisle row counts 0.35: (490 - 28 - 56) / 4.35
+test('the hall fills the screen: 13 columns and 5 rows + aisle fit a 1280 × 800 tablet', () => {
+  const hall = { cols: Array(13).fill(1), rows: [1, 1, 1, 0.35, 1, 1] };
+  // 1264 px wide: (1264 - 20 - 120) / 13 = 86.4; 470 px high: (470 - 20 - 50) / 5.35 = 74.7
+  expect(tileSize(1264, 470, hall)).toEqual({ w: 86, h: 74 });
+  // big screen: not taller than 120 px, not wider than 1.5 × the height
+  expect(tileSize(4000, 2000, hall)).toEqual({ w: 180, h: 120 });
+  // narrow screen: the tile is never much narrower than high, never below 64 px → the plan scrolls
+  expect(tileSize(900, 800, hall)).toEqual({ w: 64, h: 80 });
+  expect(tileSize(300, 200, hall)).toEqual({ w: 64, h: 64 });
 });
 
 test('zooming scales tiles in both directions', () => {
   const { scroller, grid } = setup();
   pinch(scroller, 100, 200);
   expect(zoom(grid)).toBe(2);
-  expect(grid.style.gridTemplateColumns).toBe('353px 353px');
-  expect(grid.style.gridTemplateRows).toBe('168px 168px');
+  expect(grid.style.gridTemplateColumns).toBe('128px 128px');
+  expect(grid.style.gridTemplateRows).toBe('128px 128px');
 });
 
 test('at 100 % there are no zoom controls covering the plan', () => {

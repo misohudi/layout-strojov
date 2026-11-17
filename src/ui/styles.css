@@ -169,7 +169,7 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .notice { margin: 10px 16px 0; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .notice--warn { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
 
-.floor { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 10px 16px; }
+.floor { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 4px 6px; }
 /* Shown only while zoomed: semi-transparent "back to 100 %" in the top-right corner. */
 .floor__reset {
   position: absolute; top: 18px; right: 26px; z-index: 4; min-height: 44px; min-width: 64px; padding: 0 14px;
@@ -188,22 +188,19 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .page .floor__scroll { height: 70vh; height: 70dvh; }
 .floor__grid { display: grid; width: max-content; min-width: 0; min-height: 0; }
 
-/* Machine tile: landscape rectangle, icon always on the left and always the same size, texts on the right. */
+/* Machine tile: portrait, so the whole hall fits a tablet – icon on top, nick, person below. */
 .tile {
-  position: relative; border: 1px solid var(--tile-border); border-radius: 1.15em; padding: 0.45em 0.6em 0.45em 0.5em;
-  display: flex; flex-direction: row; align-items: center; gap: 0.55em;
-  cursor: pointer; font: inherit; line-height: 1.15; text-align: left; min-width: 0; min-height: 0;
+  position: relative; border: 1px solid var(--tile-border); border-radius: 0.95em; padding: 0.3em 0.15em 0.25em;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.1em;
+  cursor: pointer; font: inherit; line-height: 1.1; text-align: center; min-width: 0; min-height: 0; overflow: visible;
   box-shadow: 0 1px 3px var(--shadow);
 }
-.tile__icon { flex: none; width: 4.2em; height: 4.2em; }
-.tile__text { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 0.12em; }
-.tile__name, .tile__name-sub, .tile__person-name, .tile__role { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile__name { font-weight: 700; font-size: 1em; letter-spacing: -0.01em; }
-.tile__name-sub { font-weight: 700; font-size: 0.78em; margin-top: -0.1em; }
-.tile__person { display: flex; align-items: center; gap: 0.3em; min-width: 0; margin-top: 0.15em; font-size: 0.9em; font-weight: 600; }
+.tile__icon { flex: none; width: 3em; height: 2.9em; }
+.tile__nick, .tile__person-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tile__nick { font-weight: 800; font-size: 1.02em; letter-spacing: -0.03em; }
+.tile__person { display: flex; align-items: center; justify-content: center; gap: 0.12em; max-width: 100%; min-width: 0; font-size: 0.86em; font-weight: 600; }
 .tile__person-name { min-width: 0; }
-.tile__more { flex: none; font-size: 0.78em; font-weight: 700; padding: 0.05em 0.45em; border-radius: 999px; background: rgba(127, 127, 127, 0.28); }
-.tile__role { font-size: 0.74em; opacity: 0.8; }
+.tile__more { flex: none; font-size: 0.8em; font-weight: 700; padding: 0 0.25em; border-radius: 999px; background: rgba(127, 127, 127, 0.28); }
 /* Icon colours follow the tile: lines = text colour, fills and cut-outs = tile background. */
 .tile { --icon-bg: var(--free); }
 .tile--ext { --icon-bg: var(--ext); }
@@ -211,12 +208,12 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .tile--oos { --icon-bg: var(--oos-b); }
 /* Priority order: dark "PRIO" tag sitting on the top edge – neutral on blue and red alike. */
 .prio-badge {
-  position: absolute; top: -0.75em; right: 0.9em; z-index: 1;
-  padding: 0.12em 0.6em; border-radius: 999px; border: 2px solid var(--surface);
+  position: absolute; top: -0.7em; left: 50%; transform: translateX(-50%); z-index: 1;
+  padding: 0.08em 0.5em; border-radius: 999px; border: 2px solid var(--surface);
   background: var(--prio-bg); color: var(--prio-text);
-  font-size: 0.72em; font-weight: 800; letter-spacing: 0.06em; line-height: 1.3;
+  font-size: 0.62em; font-weight: 800; letter-spacing: 0.06em; line-height: 1.3;
 }
-.prio-badge--inline { position: static; display: inline-block; vertical-align: middle; font-size: 11px; margin-right: 6px; }
+.prio-badge--inline { position: static; transform: none; display: inline-block; vertical-align: middle; font-size: 11px; margin-right: 6px; }
 .tile--ext { background: var(--ext); color: var(--ext-text); }
 .tile--int { background: var(--int); color: var(--int-text); }
 .tile--free { background: var(--free); color: var(--text); }
@@ -231,11 +228,11 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .tile--hl { transform: scale(1.06); z-index: 2; box-shadow: 0 8px 20px rgba(0, 0, 0, 0.28); }
 .tile--dim { filter: grayscale(1); opacity: 0.35; }
 /* Priority order without anyone on the machine: small yellow warning triangle in the corner. */
-.tile__warn { position: absolute; right: 0.45em; bottom: 0.35em; width: 1.45em; height: 1.35em; line-height: 0; }
+.tile__warn { position: absolute; right: 0.3em; top: 0.3em; width: 1.2em; height: 1.1em; line-height: 0; }
 .tile__warn svg { width: 100%; height: 100%; }
 /* Viacobsluha: the person works on several machines. */
 .tile__multi {
-  flex: none; padding: 0.05em 0.4em; border-radius: 999px; font-size: 0.72em; font-weight: 800;
+  flex: none; padding: 0 0.25em; border-radius: 999px; font-size: 0.8em; font-weight: 800;
   background: var(--prio-bg); color: var(--prio-text);
 }
 .btn--priority { width: 100%; margin: 8px 0; }

@@ -80,6 +80,29 @@ test('machine editor moves and renames the selected machine', async () => {
   await vi.waitFor(async () => expect((await db.machines.get(before.id))!.name).toBe('DMC 1035 V'));
 });
 
+test('machine editor sets a nick for the tile', async () => {
+  wrap(<MachineEditor />);
+  const before = (await db.machines.toArray()).find((m) => m.name === 'HERMLE C60')!;
+  await userEvent.click(await screen.findByRole('button', { name: /HERMLE C60/ }));
+  const input = screen.getByLabelText(/Prezývka na dlaždici/);
+  expect(input).toHaveAttribute('placeholder', 'C60'); // empty = automatic nick
+  await userEvent.type(input, 'Šesťd.');
+  await userEvent.click(screen.getByRole('button', { name: 'Uložiť názov' }));
+  await vi.waitFor(async () => expect((await db.machines.get(before.id))!.nick).toBe('Šesťd.'));
+});
+
+test('machine editor: an emptied nick goes back to the automatic one', async () => {
+  const c60 = (await db.machines.toArray()).find((m) => m.name === 'HERMLE C60')!;
+  await db.machines.put({ ...c60, nick: 'Šesťd.' });
+  wrap(<MachineEditor />);
+  await userEvent.click(await screen.findByRole('button', { name: /HERMLE C60/ }));
+  const input = screen.getByLabelText(/Prezývka na dlaždici/);
+  expect(input).toHaveValue('Šesťd.');
+  fireEvent.change(input, { target: { value: '' } });
+  await userEvent.click(screen.getByRole('button', { name: 'Uložiť názov' }));
+  await vi.waitFor(async () => expect((await db.machines.get(c60.id))!.nick).toBeUndefined());
+});
+
 test('the selected machine can be dragged with a finger', async () => {
   wrap(<MachineEditor />);
   const machines = await db.machines.toArray();
