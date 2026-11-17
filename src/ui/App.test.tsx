@@ -206,8 +206,19 @@ test('settings open from the header and go back', async () => {
   await pickShift('B');
   await userEvent.click(await screen.findByRole('button', { name: 'Nastavenia' }));
   expect(await screen.findByRole('heading', { name: 'Nastavenia' })).toBeInTheDocument();
-  await userEvent.click(screen.getByRole('button', { name: '← Späť' }));
+  // round back button with an arrow, in one row with the tabs
+  const back = screen.getByRole('button', { name: 'Späť' });
+  expect(back).toHaveTextContent(/^$/);
+  expect(back.parentElement).toContainElement(screen.getByRole('tablist'));
+  await userEvent.click(back);
   expect(await screen.findAllByTestId('machine-tile')).toHaveLength(35);
+});
+
+test('the start screen has the same icon-only gear button for settings', async () => {
+  renderApp();
+  const gear = await screen.findByRole('button', { name: 'Nastavenia' });
+  expect(gear).toHaveTextContent(/^$/);
+  expect(gear.querySelector('svg')).not.toBeNull();
 });
 
 test('if the open shift draft disappears (shift deleted / backup restored) the user can get back to the picker', async () => {
@@ -234,7 +245,7 @@ test('a machine set out of service in settings is not counted in occupancy', asy
   await userEvent.click(await screen.findByRole('button', { name: /HERMLE C60/ }));
   await userEvent.click(screen.getByRole('button', { name: 'Mimo prevádzky' }));
   await vi.waitFor(async () => expect((await db.machines.get('m-0'))!.status).toBe('out_of_service'));
-  await userEvent.click(screen.getByRole('button', { name: '← Späť' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Späť' }));
   await pickShift('B');
   const header = await screen.findByRole('banner');
   expect(await within(header).findByRole('button', { name: '0 / 34 strojov' })).toBeInTheDocument();
@@ -321,7 +332,7 @@ test('settings are reachable from the start screen and a renamed shift shows the
   await userEvent.clear(input);
   await userEvent.type(input, 'Kráľ');
   await userEvent.click(screen.getAllByRole('button', { name: 'Uložiť' })[0]);
-  await userEvent.click(screen.getByRole('button', { name: '← Späť' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Späť' }));
   expect(await screen.findByText('Vyber svoju zmenu')).toBeInTheDocument();
   expect(await screen.findByRole('button', { name: /^Kráľ/ })).toBeInTheDocument();
 });
