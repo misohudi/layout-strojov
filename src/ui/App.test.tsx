@@ -160,14 +160,14 @@ test('priority needs an order type; the tile gets a PRIO tag; a free machine los
   expect(await screen.findByRole('button', { name: /PRIO/, pressed: true })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Hotovo' }));
   const tile = screen.getByRole('button', { name: /^DMU 125/ });
-  expect(tile).toHaveClass('tile--priority');
+  await vi.waitFor(() => expect(tile).toHaveClass('tile--priority'));
   expect(within(tile).getByText('PRIO')).toBeInTheDocument();
   // switching the machine to free drops the priority
   await userEvent.click(tile);
   await userEvent.click(screen.getByRole('button', { name: 'Voľný' }));
-  expect(prio()).toBeDisabled();
+  await vi.waitFor(() => expect(prio()).toBeDisabled()); // the change is saved asynchronously
   await userEvent.click(screen.getByRole('button', { name: 'Hotovo' }));
-  expect(screen.getByRole('button', { name: /^DMU 125/ })).not.toHaveClass('tile--priority');
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: /^DMU 125/ })).not.toHaveClass('tile--priority'));
   expect((await db.drafts.get('s-B'))!.assignments['m-17'].priority).toBeUndefined();
 });
 
