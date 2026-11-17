@@ -46,12 +46,15 @@ export function MachinePanel({ machine, assignment, shiftId, people, shifts, cou
               ))}
             </div>
             <button
-              className={`btn btn--priority ${assignment?.priority ? 'btn--priority-on' : ''}`}
-              aria-pressed={!!assignment?.priority}
+              className={`btn btn--priority ${type && assignment?.priority ? 'btn--priority-on' : ''}`}
+              aria-pressed={!!type && !!assignment?.priority}
+              disabled={!type}
+              aria-describedby={type ? undefined : 'priority-hint'}
               onClick={() => setMachinePriority(db, shiftId, machine.id, !assignment?.priority)}
             >
-              {assignment?.priority ? '★ Prioritná zákazka' : '☆ Označiť ako prioritnú zákazku'}
+              {type && assignment?.priority ? 'PRIO · prioritná zákazka' : 'Označiť ako prioritnú zákazku'}
             </button>
+            {!type && <p id="priority-hint" className="muted priority-hint">Prioritu môžete zvoliť až po výbere EXT alebo INT.</p>}
             <PeoplePicker
               people={people}
               shifts={shifts}

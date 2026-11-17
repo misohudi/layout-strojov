@@ -15,7 +15,7 @@ interface Props {
   h: number;
   type: OrderType | null;
   outOfService: boolean;
-  /** Priority order – the tile glows and gets a star. */
+  /** Priority order – a dark "PRIO" tag on the top edge (only with an order type). */
   priority?: boolean;
   people?: TilePerson[];
   selected?: boolean;
@@ -45,7 +45,8 @@ export function MachineTile({
 }: Props) {
   const [main, sub] = splitName(name);
   const first = people[0];
-  const isPriority = !!priority && !outOfService;
+  const isPriority = !!priority && !outOfService && type !== null;
+  const figure = !first ? 'none' : first.role === 'operator' ? 'operator' : 'frezar';
   return (
     <button
       type="button"
@@ -60,7 +61,7 @@ export function MachineTile({
       onClick={onClick}
       {...dragProps}
     >
-      <MachineIcon staffed={people.length > 0} />
+      <MachineIcon figure={figure} />
       <span className="tile__text">
         <span className="tile__name">{main}</span>
         {sub && <span className="tile__name-sub">{` ${sub}`}</span>}
@@ -73,10 +74,9 @@ export function MachineTile({
         {first && <span className="tile__role">{` ${ROLE_LABEL[first.role ?? 'frezar']}`}</span>}
       </span>
       {isPriority && (
-        <>
-          <span className="tile__star" aria-hidden="true">★</span>
-          <span className="visually-hidden"> Prioritná zákazka</span>
-        </>
+        <span className="prio-badge" title="Prioritná zákazka">
+          PRIO<span className="visually-hidden"> – prioritná zákazka</span>
+        </span>
       )}
     </button>
   );
