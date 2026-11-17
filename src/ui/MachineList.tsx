@@ -27,8 +27,12 @@ export function MachineList({ machines, assignments, stats, nameOf, onPick, onCl
           <button className="btn" onClick={onClose}>Zavrieť</button>
         </div>
         <p>
-          <strong>{`Obsadenosť ${formatPct(stats.occupancyPct)}`}</strong>
-          {` · ${stats.occupied} / ${stats.total} strojov v prevádzke · EXT ${stats.ext} · INT ${stats.int}`}
+          <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
+          {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0}`}
+          <br />
+          <span className="muted">
+            {`Zákazky ${formatPct(stats.occupancyPct)} (${stats.occupied}) · EXT ${stats.ext} · INT ${stats.int}`}
+          </span>
         </p>
         <div className="table-wrap">
           <table aria-label="V prevádzke" className="machine-list">
@@ -42,7 +46,10 @@ export function MachineList({ machines, assignments, stats, nameOf, onPick, onCl
                 const people = (a?.personIds ?? []).map((id) => nameOf.get(id) ?? '?');
                 return (
                   <tr key={m.id} className="clickable" onClick={() => onPick(m.id)}>
-                    <td>{m.name}</td>
+                    <td>
+                      {a?.priority && <span className="priority-mark" title="Prioritná zákazka">★ </span>}
+                      {m.name}
+                    </td>
                     <td><span className={`type-badge ${tileClass(type, false)}`}>{type ?? 'voľný'}</span></td>
                     <td>{people.join(', ')}</td>
                   </tr>

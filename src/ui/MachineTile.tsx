@@ -9,6 +9,8 @@ interface Props {
   h: number;
   type: OrderType | null;
   outOfService: boolean;
+  /** Priority order – the tile gets a frame. */
+  priority?: boolean;
   people?: string[];
   selected?: boolean;
   dragging?: boolean;
@@ -24,12 +26,12 @@ export function tileClass(type: OrderType | null, outOfService: boolean) {
   return 'tile--free';
 }
 
-export function MachineTile({ name, x, y, w, h, type, outOfService, people = [], selected, dragging, onClick, dragProps }: Props) {
+export function MachineTile({ name, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, onClick, dragProps }: Props) {
   return (
     <button
       type="button"
       data-testid="machine-tile"
-      className={`tile ${tileClass(type, outOfService)} ${w === 1 ? 'tile--narrow' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''}`}
+      className={`tile ${tileClass(type, outOfService)} ${w === 1 ? 'tile--narrow' : ''} ${priority && !outOfService ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''}`}
       style={{
         gridColumn: `${x + 1} / span ${w}`,
         gridRow: `${y + 1} / span ${h}`,
@@ -40,6 +42,7 @@ export function MachineTile({ name, x, y, w, h, type, outOfService, people = [],
       {...dragProps}
     >
       <span className="tile__name">{name}</span>
+      {priority && !outOfService && <span className="visually-hidden">Prioritná zákazka</span>}
       {people.length > 0 && <span className="tile__people">{people.join(', ')}</span>}
     </button>
   );

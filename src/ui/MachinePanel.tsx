@@ -1,5 +1,5 @@
 import { useDB } from './useDB';
-import { setMachineType, togglePerson } from '../db/repo';
+import { setMachinePriority, setMachineType, togglePerson } from '../db/repo';
 import { PeoplePicker } from './PeoplePicker';
 import type { Assignment, Machine, OrderType, Person, Shift } from '../domain/types';
 
@@ -45,6 +45,13 @@ export function MachinePanel({ machine, assignment, shiftId, people, shifts, cou
                 </button>
               ))}
             </div>
+            <button
+              className={`btn btn--priority ${assignment?.priority ? 'btn--priority-on' : ''}`}
+              aria-pressed={!!assignment?.priority}
+              onClick={() => setMachinePriority(db, shiftId, machine.id, !assignment?.priority)}
+            >
+              {assignment?.priority ? '★ Prioritná zákazka' : '☆ Označiť ako prioritnú zákazku'}
+            </button>
             <PeoplePicker
               people={people}
               shifts={shifts}

@@ -3,13 +3,16 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from '../useDB';
 import { deletePerson, setPersonActive, upsertPerson } from '../../db/repo';
 import { applyPeopleImport, parsePeopleFile, type PeopleImportResult } from '../../import/peopleImport';
-import { isPool, type Person } from '../../domain/types';
+import { isPool, ROLE_LABEL, roleOf, type Person, type PersonRole } from '../../domain/types';
+
+const ROLES = Object.entries(ROLE_LABEL) as [PersonRole, string][];
 
 function PersonRow({ p, shifts }: { p: Person; shifts: { id: string; name: string }[] }) {
   const db = useDB();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(p.name);
   const [shiftId, setShiftId] = useState(p.shiftId);
+  const [role, setRole] = useState<PersonRole>(roleOf(p));
 
   if (editing) {
     return (
@@ -18,11 +21,14 @@ function PersonRow({ p, shifts }: { p: Person; shifts: { id: string; name: strin
         <select aria-label={`Zmena – ${p.name}`} value={shiftId} onChange={(e) => setShiftId(e.target.value)}>
           {shifts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
+        <select aria-label={`Rola – ${p.name}`} value={role} onChange={(e) => setRole(e.target.value as PersonRole)}>
+          {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
         <button
           className="btn btn--small"
           disabled={!name.trim()}
           onClick={async () => {
-            await upsertPerson(db, { ...p, name: name.trim(), shiftId });
+            await upsertPerson(db, { ...p, name: name.trim(), shiftId, role });
             setEditing(false);
           }}
         >
@@ -35,6 +41,7 @@ function PersonRow({ p, shifts }: { p: Person; shifts: { id: string; name: strin
   return (
     <li className={`row person-row ${p.active ? '' : 'muted'}`}>
       <span className="person-row__name">{p.name}{!p.active && ' (neaktívny)'}</span>
+      <span className={`role-badge role-badge--${roleOf(p)}`}>{ROLE_LABEL[roleOf(p)]}</span>
       <button className="btn btn--small" aria-label={`Upraviť ${p.name}`} onClick={() => setEditing(true)}>Upraviť</button>
       <button
         className="btn btn--small"
@@ -60,6 +67,7 @@ export function PeopleSettings() {
   const people = useLiveQuery(() => db.people.toArray(), [db]) ?? [];
   const [name, setName] = useState('');
   const [shiftId, setShiftId] = useState('');
+  const [role, setRole] = useState<PersonRole>('frezar');
   const [result, setResult] = useState<PeopleImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [removeUnused, setRemoveUnused] = useState(true);
@@ -67,7 +75,7 @@ export function PeopleSettings() {
   async function add() {
     const sid = shiftId || shifts[0]?.id;
     if (!name.trim() || !sid) return;
-    await upsertPerson(db, { name: name.trim(), shiftId: sid, active: true });
+    await upsertPerson(db, { name: name.trim(), shiftId: sid, active: true, role });
     setName('');
   }
 
@@ -93,6 +101,12 @@ export function PeopleSettings() {
           <span>Zmena</span>
           <select value={shiftId || shifts[0]?.id || ''} onChange={(e) => setShiftId(e.target.value)}>
             {shifts.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </label>
+        <label className="field">
+          <span>Rola</span>
+          <select value={role} onChange={(e) => setRole(e.target.value as PersonRole)}>
+            {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         </label>
         <button className="btn btn--primary" disabled={!name.trim()} onClick={add}>Pridať</button>

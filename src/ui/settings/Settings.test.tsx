@@ -126,6 +126,24 @@ test('people settings add a person to a shift', async () => {
   expect((await db.people.toArray()).map((p) => [p.name, p.shiftId])).toEqual([['Kováč', 's-A']]);
 });
 
+test('people settings set the role (frézar / operátor) when adding and editing', async () => {
+  await upsertPerson(db, { name: 'Starý', shiftId: 's-B', active: true }); // no role from older data
+  wrap(<PeopleSettings />);
+  await userEvent.type(await screen.findByLabelText('Meno'), 'Horváth');
+  await userEvent.selectOptions(screen.getByLabelText('Rola'), 'Operátor');
+  await userEvent.click(screen.getByRole('button', { name: 'Pridať' }));
+  await vi.waitFor(async () =>
+    expect((await db.people.toArray()).find((p) => p.name === 'Horváth')?.role).toBe('operator'));
+
+  const group = await screen.findByRole('region', { name: 'Zmena B' });
+  expect(within(group).getByText('Frézar')).toBeInTheDocument(); // missing role shows as frézar
+  await userEvent.click(within(group).getByRole('button', { name: 'Upraviť Starý' }));
+  await userEvent.selectOptions(within(group).getByLabelText('Rola – Starý'), 'Operátor');
+  await userEvent.click(within(group).getByRole('button', { name: 'Uložiť' }));
+  await vi.waitFor(async () =>
+    expect((await db.people.toArray()).find((p) => p.name === 'Starý')?.role).toBe('operator'));
+});
+
 test('people import of a per-shift sheet creates shifts and removes empty default ones', async () => {
   const csv = 'Smena Alfa;Smena Beta;Vsetci\nAdam;Cyril;Adam\n;;Fero\n';
   wrap(<PeopleSettings />);

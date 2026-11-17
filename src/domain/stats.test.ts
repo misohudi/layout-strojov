@@ -1,5 +1,5 @@
 import { computeStats } from './stats';
-import type { Machine } from './types';
+import type { Machine, Person } from './types';
 
 const mk = (id: string, status: Machine['status'] = 'active'): Machine => ({
   id, hallId: 'frezy', name: id, x: 0, y: 0, w: 1, h: 1, status,
@@ -14,7 +14,7 @@ test('counts only active machines, ext/int share of occupied', () => {
     oos: { type: 'EXT', personIds: [] },
   });
   expect(s).toEqual({
-    total: 4, occupied: 3, ext: 2, int: 1,
+    total: 4, staffed: 0, staffedPct: 0, frezari: 0, operatori: 0, occupied: 3, ext: 2, int: 1,
     occupancyPct: 75, extPct: 66.7, intPct: 33.3, peopleWithoutType: 0,
   });
 });
@@ -51,4 +51,29 @@ test('assignment for unknown machine is ignored', () => {
   const s = computeStats(machines, { zzz: { type: 'EXT', personIds: ['p'] } });
   expect(s.occupied).toBe(0);
   expect(s.peopleWithoutType).toBe(0);
+});
+
+const person = (id: string, role?: Person['role']): Person => ({ id, name: id, shiftId: 's', active: true, role });
+
+test('main occupancy counts active machines with at least one person, regardless of order type', () => {
+  const s = computeStats(machines, {
+    a: { type: 'EXT', personIds: ['p1'] },
+    b: { type: null, personIds: ['p2'] },
+    c: { type: 'INT', personIds: [] },
+    oos: { type: 'EXT', personIds: ['p3'] },
+  }, [person('p1'), person('p2'), person('p3')]);
+  expect(s.staffed).toBe(2);
+  expect(s.staffedPct).toBe(50);
+  expect(s.occupancyPct).toBe(50); // orders: a + c
+});
+
+test('people are counted once per role; missing role means frézar', () => {
+  const s = computeStats(machines, {
+    a: { type: 'EXT', personIds: ['f1', 'o1'] },
+    b: { type: 'EXT', personIds: ['f1', 'old'] },
+    c: { type: null, personIds: ['o2', 'gone'] },
+    oos: { type: null, personIds: ['o3'] },
+  }, [person('f1', 'frezar'), person('o1', 'operator'), person('o2', 'operator'), person('o3', 'operator'), person('old')]);
+  expect(s.frezari).toBe(2);
+  expect(s.operatori).toBe(2);
 });

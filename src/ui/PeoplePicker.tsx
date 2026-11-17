@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isPool, type Person, type Shift } from '../domain/types';
+import { isPool, roleOf, type Person, type Shift } from '../domain/types';
 
 interface Props {
   people: Person[];
@@ -20,6 +20,7 @@ function PersonCheck({ p, checked, count, onToggle }: { p: Person; checked: bool
     <label className={`person ${checked ? 'person--on' : ''}`}>
       <input type="checkbox" checked={checked} onChange={() => onToggle(p.id)} />
       <span>{p.name}</span>
+      {roleOf(p) === 'operator' && <small className="person__role">operátor</small>}
       {count > 0 && <small className="person__count">{machinesLabel(count)}</small>}
     </label>
   );

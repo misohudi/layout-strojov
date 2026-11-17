@@ -4,10 +4,11 @@ import type { RecordRow, ShiftRecord } from '../domain/types';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const FILL = { EXT: 'FF93C5FD', INT: 'FFFCA5A5' } as const;
+const PRIORITY_FILL = 'FFFDE047';
 
 /** "2,9 %" – one decimal with a Slovak decimal comma; "–" when there is nothing to divide by. */
-export function formatPct(v: number | null): string {
-  return v === null ? '–' : `${v.toFixed(1).replace('.', ',')} %`;
+export function formatPct(v: number | null | undefined): string {
+  return v == null ? '–' : `${v.toFixed(1).replace('.', ',')} %`;
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -42,39 +43,50 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
   ws.getCell('A2').value =
     `Dátum: ${skDate(r.date)}   Zmena: ${r.shiftName}   Majster: ${r.foremanName}   Uzavreté: ${hhmm(r.closedAt)}`;
   ws.getCell('A3').value =
-    `Strojov: ${s.total}   Obsadené: ${s.occupied} (${formatPct(s.occupancyPct)})   ` +
+    `Strojov: ${s.total}   Obsadené ľuďmi: ${s.staffed ?? '–'} (${formatPct(s.staffedPct)})   ` +
+    `Frézari: ${s.frezari ?? '–'}   Operátori: ${s.operatori ?? '–'}`;
+  ws.getCell('A4').value =
+    `Zákazky: ${s.occupied} (${formatPct(s.occupancyPct)})   ` +
     `EXT: ${s.ext} (${formatPct(s.extPct)})   INT: ${s.int} (${formatPct(s.intPct)})`;
   const oos = r.rows.filter((x) => x.outOfService).length;
-  if (oos > 0) ws.getCell('A4').value = `Mimo prevádzky: ${oos}`;
+  if (oos > 0) ws.getCell('A5').value = `Mimo prevádzky: ${oos}`;
 
   const header = ws.getRow(6);
-  header.values = ['Stroj', 'Zakázka', 'Ľudia', 'Nadčas'];
+  header.values = ['Stroj', 'Zakázka', 'Priorita', 'Ľudia', 'Nadčas'];
   header.font = { bold: true };
   r.rows.forEach((row, i) => {
     const xr = ws.getRow(7 + i);
     xr.values = [
       row.machineName,
       typeLabel(row),
+      row.priority ? 'áno' : '',
       peopleLabel(row),
       row.people.some((p) => p.overtime) ? 'áno' : '',
     ];
     if (row.type && !row.outOfService) {
       xr.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL[row.type] } };
     }
+    if (row.priority) {
+      xr.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIORITY_FILL } };
+    }
   });
-  ws.columns.forEach((c, i) => (c.width = [24, 16, 40, 10][i]));
+  ws.columns.forEach((c, i) => (c.width = [24, 16, 10, 40, 10][i]));
   return toBlob(wb);
 }
 
 export async function buildHistoryXlsx(records: ShiftRecord[]): Promise<Blob> {
   const wb = new (await loadExcel()).Workbook();
   const ws = wb.addWorksheet('História');
-  ws.addRow(['Dátum', 'Zmena', 'Majster', 'Strojov', 'Obsadené', 'Obsadenosť %', 'EXT', 'INT', 'EXT %', 'INT %']).font = { bold: true };
+  ws.addRow([
+    'Dátum', 'Zmena', 'Majster', 'Strojov', 'Obsadené ľuďmi', 'Obsadenosť %', 'Frézari', 'Operátori',
+    'Zákazky', 'Zákazky %', 'EXT', 'INT', 'EXT %', 'INT %',
+  ]).font = { bold: true };
   for (const r of records) {
     const s = r.stats;
     ws.addRow([
-      skDate(r.date), r.shiftName, r.foremanName, s.total, s.occupied,
-      s.occupancyPct ?? '–', s.ext, s.int, s.extPct ?? '–', s.intPct ?? '–',
+      skDate(r.date), r.shiftName, r.foremanName, s.total, s.staffed ?? '–', s.staffedPct ?? '–',
+      s.frezari ?? '–', s.operatori ?? '–',
+      s.occupied, s.occupancyPct ?? '–', s.ext, s.int, s.extPct ?? '–', s.intPct ?? '–',
     ]);
   }
   ws.columns.forEach((c) => (c.width = 14));
