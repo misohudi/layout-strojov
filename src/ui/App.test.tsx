@@ -31,7 +31,7 @@ test('pick shift, mark machine EXT, header shows order stats as secondary', asyn
   renderApp();
   await pickShift('B');
   const header = await screen.findByRole('banner');
-  expect(within(header).getByRole('group', { name: 'Zmena B' })).toBeInTheDocument();
+  expect(within(header).getByRole('button', { name: 'Zmena B – zmeniť zmenu' })).toBeInTheDocument();
   expect(await screen.findAllByTestId('machine-tile')).toHaveLength(35);
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C60/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
@@ -83,18 +83,18 @@ test('header groups related fields into sections', async () => {
   await pickShift('B');
   const header = await screen.findByRole('banner');
   const section = (name: string) => within(header).getByRole('region', { name });
-  expect(within(section('Zmena')).getByRole('button', { name: 'Zmeniť zmenu' })).toBeInTheDocument();
+  // the shift itself is the button for switching shifts – no separate button
+  expect(within(section('Zmena')).getAllByRole('button')).toHaveLength(1);
+  expect(within(section('Zmena')).getByRole('button', { name: /^Zmena B/ })).toHaveTextContent('B');
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Frézari 0' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 35 strojov' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
-  // Zmeniť zmenu and Nastavenia are icon-only buttons; viacobsluha shows a person and a machine icon
-  for (const name of ['Zmeniť zmenu', 'Nastavenia']) {
-    const btn = within(header).getByRole('button', { name });
-    expect(btn).toHaveTextContent(/^$/);
-    expect(btn.querySelector('svg')).not.toBeNull();
-  }
+  // Nastavenia is an icon-only button; viacobsluha shows a person and a machine icon
+  const gear = within(header).getByRole('button', { name: 'Nastavenia' });
+  expect(gear).toHaveTextContent(/^$/);
+  expect(gear.querySelector('svg')).not.toBeNull();
   const multi = within(header).getByRole('group', { name: /^Viacobsluha/ });
   expect(within(multi).getByTestId('icon-people')).toBeInTheDocument();
   expect(within(multi).getByTestId('icon-machines')).toBeInTheDocument();

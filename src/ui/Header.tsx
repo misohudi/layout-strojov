@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { formatPct } from '../report/xlsx';
-import { GearIcon, SwapIcon, svg } from './icons';
+import { GearIcon, svg } from './icons';
 import type { Stats } from '../domain/types';
 
 interface Props {
@@ -22,9 +22,9 @@ function Cell({ label, value, variant = '', name }: { label: string; value: Reac
   );
 }
 
-function CellButton({ label, value, name, onClick }: { label: string; value: ReactNode; name: string; onClick(): void }) {
+function CellButton({ label, value, name, variant = '', onClick }: { label: string; value: ReactNode; name: string; variant?: string; onClick(): void }) {
   return (
-    <button type="button" className="hcell hcell--btn" aria-label={name} onClick={onClick}>
+    <button type="button" className={`hcell hcell--btn ${variant}`} aria-label={name} title={name} onClick={onClick}>
       <span className="hcell__label">{label}</span>
       <strong className="hcell__value">{value}</strong>
     </button>
@@ -78,9 +78,9 @@ function Section({ title, count, icons = 0, children }: { title: string; count: 
 export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
   return (
     <header className="header">
-      <Section title="Zmena" count={1} icons={1}>
-        <Cell label="Zmena" value={shiftName} variant="hcell--shift" name={`Zmena ${shiftName}`} />
-        <IconButton name="Zmeniť zmenu" icon={<SwapIcon />} onClick={onChangeShift} />
+      <Section title="Zmena" count={1}>
+        {/* tap the shift to switch to another one */}
+        <CellButton label="Zmena" value={shiftName} variant="hcell--shift" name={`Zmena ${shiftName} – zmeniť zmenu`} onClick={onChangeShift} />
       </Section>
       <Section title="Obsadenosť ľuďmi" count={5}>
         <Cell label="Obsadenosť" value={formatPct(stats.staffedPct)} variant="hcell--main" />

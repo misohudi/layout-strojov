@@ -92,7 +92,7 @@ export function PeopleSettings() {
 
   return (
     <div className="stack">
-      <div className="card row">
+      <div className="card row row--bottom">
         <label className="field">
           <span>Meno</span>
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
