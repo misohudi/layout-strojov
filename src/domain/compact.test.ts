@@ -1,48 +1,52 @@
-import { compactLayout, isUniform } from './compact';
+import { compactLayout, isPacked, packRows } from './compact';
 import { seedMachines } from './seed';
 
 const seed = seedMachines('frezy');
 const compact = compactLayout(seed);
-const at = (name: string) => {
-  const m = compact.find((x) => x.name === name)!;
-  return [m.x, m.y];
-};
+const row = (y: number) => compact.filter((m) => m.y === y).sort((a, b) => a.x - b.x).map((m) => m.name);
 
-test('every machine takes one cell and no two machines share a cell', () => {
+test('every machine takes one cell, rows are packed without gaps, ids and order kept', () => {
   expect(compact).toHaveLength(seed.length);
-  expect(isUniform(compact)).toBe(true);
-  expect(new Set(compact.map((m) => `${m.x},${m.y}`)).size).toBe(seed.length);
-  expect(compact.map((m) => m.id)).toEqual(seed.map((m) => m.id)); // same order, ids kept
+  expect(isPacked(compact)).toBe(true);
+  expect(compact.map((m) => m.id)).toEqual(seed.map((m) => m.id));
 });
 
-test('the plan keeps its rows and the order of machines in them', () => {
-  // first row of the hall, left to right
-  const row0 = compact.filter((m) => m.y === 0).sort((a, b) => a.x - b.x).map((m) => m.name);
-  expect(row0).toEqual([
+test('rows of the hall stay, machines follow left to right next to each other', () => {
+  expect(row(0)).toEqual([
     'HERMLE C60', 'HERMLE C42 / 4', 'HERMLE C42 / 1', 'DMU 80P HI-DYN', 'DMU 80P DUO BLOCK / 1',
     'DMU 60P DUO BLOCK', 'HERMLE C40 U / 1', 'HERMLE C40 U / 2', 'DMC 1035', 'CHIRON 800',
   ]);
-  // DMU 125 and DMC 1150 / 2 start one row lower but belong to the second row of machines
-  expect(at('DMU 125')[1]).toBe(1);
-  expect(at('DMC 1150 / 2')[1]).toBe(1);
-  expect(at('DMF 220 LINEAR')[1]).toBe(2);
-  // machines in one column of the hall stay in one column
-  expect(at('HERMLE C60')[0]).toBe(at('DMU 125')[0]);
-  expect(at('HERMLE C42 / 4')[0]).toBe(at('HERMLE C42 / 2')[0]);
+  expect(row(1)).toEqual([
+    'DMU 125', 'HERMLE C42 / 2', 'HERMLE C42 / 3', 'DMU 60P HIDYN', 'DMU 80P DUO BLOCK / 2',
+    'DMU 80P DUO BLOCK / 3', 'HERMLE 1200 V', 'DMC 65H', 'DMC 1150 / 2',
+  ]);
+  expect(row(2)).toEqual([
+    'DMC 80 U', 'HERMLE C32 / 1', 'HERMLE C32 / 2', 'HERMLE C32 / 3', 'HERMLE C32 / 4', 'HERMLE C32 / 5',
+    'HERMLE C32 / 6', 'HERMLE C42 / 5', 'HERMLE C42 / 6', 'DMF 220 LINEAR', 'DMC 1150 / 1',
+  ]);
+  expect(row(3)).toEqual(['SHW', 'ZAYER', 'DMF 360', 'UNIPORT 4000', 'EDEL']);
+  expect(compact.some((m) => m.y > 3)).toBe(false);
 });
 
-test('the aisle in front of the big machines stays as one empty row; machines in one spot get stacked', () => {
-  const bigRow = at('SHW')[1];
-  expect(bigRow).toBe(4); // rows 0–2 machines, row 3 aisle
-  expect(compact.some((m) => m.y === 3)).toBe(false);
-  expect(at('ZAYER')[1]).toBe(bigRow);
-  expect(at('UNIPORT 4000')).toEqual([at('EDEL')[0], bigRow]);
-  expect(at('EDEL')[1]).toBe(bigRow + 1);
-  expect(at('SHW')[0]).toBe(0);
+const cell = (id: string, x: number, y: number) => ({ id, x, y, w: 1, h: 1 });
+
+test('packRows: moving right onto a neighbour swaps them, moving left too', () => {
+  const r = [cell('a', 0, 0), cell('b', 1, 0), cell('c', 2, 0)];
+  const right = packRows([{ ...r[0], x: 1 }, r[1], r[2]], { id: 'a', dx: 1 });
+  expect(right.map((i) => [i.id, i.x])).toEqual([['a', 1], ['b', 0], ['c', 2]]);
+  const left = packRows([r[0], r[1], { ...r[2], x: 1 }], { id: 'c', dx: -1 });
+  expect(left.map((i) => [i.id, i.x])).toEqual([['a', 0], ['b', 2], ['c', 1]]);
 });
 
-test('empty input and an already compact plan', () => {
+test('packRows: moving down inserts into the next row, empty rows disappear, a new row can be made', () => {
+  const r = [cell('a', 0, 0), cell('b', 0, 1), cell('c', 1, 1)];
+  const down = packRows([{ ...r[0], y: 1 }, r[1], r[2]], { id: 'a', dx: 0 });
+  expect(down.map((i) => [i.id, i.x, i.y])).toEqual([['a', 0, 0], ['b', 1, 0], ['c', 2, 0]]);
+  const newRow = packRows([r[0], r[1], { ...r[2], y: 2, x: 5 }], { id: 'c', dx: 0 });
+  expect(newRow.map((i) => [i.id, i.x, i.y])).toEqual([['a', 0, 0], ['b', 0, 1], ['c', 0, 2]]);
+});
+
+test('compactLayout of an already packed plan keeps it; empty input', () => {
+  expect(compactLayout(compact)).toEqual(compact);
   expect(compactLayout([])).toEqual([]);
-  const row = [{ x: 0, y: 0, w: 1, h: 1 }, { x: 1, y: 0, w: 1, h: 1 }];
-  expect(compactLayout(row)).toEqual(row);
 });

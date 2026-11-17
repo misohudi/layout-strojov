@@ -5,6 +5,7 @@ import {
   upsertShift, deleteShift, saveRecordAndReset, listRecords,
 } from './repo';
 import type { ShiftRecord } from '../domain/types';
+import { seedMachines } from '../domain/seed';
 
 let n = 0;
 let dbName: string;
@@ -33,6 +34,18 @@ test('ensureSeeded is idempotent', async () => {
   expect(await db.shifts.count()).toBe(3);
 });
 
+test('a tablet that already had layout version 2 gets the hall rows back (EDEL next to UNIPORT)', async () => {
+  // version 2 put EDEL alone in a row under UNIPORT 4000
+  const edel = (await db.machines.toArray()).find((m) => m.name === 'EDEL')!;
+  await db.machines.update(edel.id, { x: 11, y: 5, status: 'out_of_service' });
+  await db.meta.put({ key: 'layoutVersion', value: 2 });
+  await ensureSeeded(db);
+  const ms = await db.machines.toArray();
+  const uniport = ms.find((m) => m.name === 'UNIPORT 4000')!;
+  expect(ms.find((m) => m.name === 'EDEL')).toMatchObject({ y: uniport.y, x: uniport.x + 1, status: 'out_of_service' });
+  expect(Math.max(...ms.map((m) => m.y))).toBe(3);
+});
+
 test('a new install gets the compact layout: every machine one cell, no two in one cell', async () => {
   const ms = await db.machines.toArray();
   expect(ms.every((m) => m.w === 1 && m.h === 1)).toBe(true);
@@ -40,15 +53,15 @@ test('a new install gets the compact layout: every machine one cell, no two in o
 });
 
 test('an existing install with the old layout is compacted once, keeping machine ids and status', async () => {
-  // simulate the data of the previous version: big machines, no layout version
-  await db.machines.update('m-0', { x: 6, y: 0, w: 3, h: 3, status: 'out_of_service' });
-  await db.machines.update('m-17', { x: 6, y: 4, w: 3, h: 2 }); // DMU 125 below HERMLE C60
+  // simulate the data of the first version: machines of different sizes on the hall grid
+  await db.machines.bulkPut(seedMachines('frezy').map((m) => (m.id === 'm-0' ? { ...m, status: 'out_of_service' as const } : m)));
   await db.meta.delete('layoutVersion');
   await ensureSeeded(db);
   const c60 = (await db.machines.get('m-0'))!;
-  const dmu = (await db.machines.get('m-17'))!;
-  expect(c60).toMatchObject({ w: 1, h: 1, status: 'out_of_service' });
-  expect(dmu).toMatchObject({ w: 1, h: 1, x: c60.x });
+  const dmu = (await db.machines.get('m-17'))!; // DMU 125, one hall row lower than its neighbours
+  expect(c60).toMatchObject({ x: 0, y: 0, w: 1, h: 1, status: 'out_of_service' });
+  expect(dmu).toMatchObject({ x: 0, y: 1, w: 1, h: 1 });
+  expect(await db.meta.get('layoutVersion')).toMatchObject({ value: 3 });
   // a later manual move in the editor is not undone on the next start
   await db.machines.update('m-17', { x: 20 });
   await ensureSeeded(db);

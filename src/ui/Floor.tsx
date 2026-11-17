@@ -1,10 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react';
-import { gridTracks, type GridItem } from './grid';
+import { gridSize, type GridItem } from './grid';
 
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 4;
-/** Pinching back to just above 100 % snaps to exactly 100 %. */
-const SNAP_BELOW = 1.08;
+/** Zooming out shows more of a wide plan at once; zooming in shows details. */
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+/** Pinching back to within 8 % of 100 % snaps to exactly 100 %. */
+const SNAP = 0.08;
+
+/** Tile height at 100 %: from the available height (all rows visible), but always readable. */
+const TILE_H_MIN = 84;
+const TILE_H_MAX = 104;
+/** Tiles are landscape rectangles: icon on the left, texts on the right. */
+const TILE_RATIO = 2.1;
+const GAP = 14;
 
 const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
@@ -28,10 +36,16 @@ function midpoint(el: HTMLElement, touches: TouchList) {
   };
 }
 
+/** Tile height at 100 % for a scroll area `areaPx` high showing `rows` rows. */
+export function tileHeight(areaPx: number, rows: number): number {
+  const fit = (areaPx - 2 * GAP - GAP * (rows - 1)) / rows;
+  return Math.round(Math.min(TILE_H_MAX, Math.max(TILE_H_MIN, fit || 0)));
+}
+
 /**
- * Scalable floor-plan grid. One finger pans the plan in any direction (native scrolling of its own
- * area); two fingers zoom it around the point between them. While zoomed, a semi-transparent
- * "100 %" button in the top-right corner returns to the full view and then disappears.
+ * Floor plan of equally sized landscape tiles. Rows wider than the screen pan sideways with one
+ * finger (native scrolling of its own area); two fingers zoom around the point between them. While
+ * zoomed, a semi-transparent "100 %" button in the top-right corner returns to the normal size.
  */
 export function Floor({
   items,
@@ -49,7 +63,19 @@ export function Floor({
   const pinch = useRef<Pinch | null>(null);
   /** Scroll position to restore after the zoom re-renders, keeping the focal point under the fingers. */
   const anchor = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null);
-  const t = gridTracks(items);
+  const size = gridSize(items);
+  const [areaH, setAreaH] = useState(0);
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const measure = () => setAreaH(el.clientHeight);
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const tileH = tileHeight(areaH, size.rows) * zoom;
 
   const applyZoom = (z: number) => {
     zoomRef.current = z;
@@ -82,7 +108,7 @@ export function Floor({
     const onEnd = (e: TouchEvent) => {
       if (e.touches.length >= 2) return;
       pinch.current = null;
-      if (zoomRef.current < SNAP_BELOW && zoomRef.current !== 1) applyZoom(1);
+      if (Math.abs(zoomRef.current - 1) < SNAP && zoomRef.current !== 1) applyZoom(1);
     };
 
     el.addEventListener('touchstart', onStart, { passive: true });
@@ -118,7 +144,7 @@ export function Floor({
 
   return (
     <div className="floor">
-      {zoom > 1 && (
+      {zoom !== 1 && (
         <button className="floor__reset" aria-label="Späť na 100 %" onClick={reset}>
           100 %
         </button>
@@ -132,13 +158,14 @@ export function Floor({
       >
         <div
           className="floor__grid"
+          data-zoom={zoom}
           style={{
-            // At 100 % the plan is stretched to exactly fill its area; zoom scales both directions.
-            width: `${Math.round(zoom * 100)}%`,
-            height: `${Math.round(zoom * 100)}%`,
-            gridTemplateColumns: t.columns,
-            gridTemplateRows: t.rows,
-            fontSize: `min(${(zoom * 21) / t.widthUnits}vw, ${(zoom * 30) / t.heightUnits}vh)`,
+            gridTemplateColumns: `repeat(${size.cols}, ${Math.round(tileH * TILE_RATIO)}px)`,
+            gridTemplateRows: `repeat(${size.rows}, ${Math.round(tileH)}px)`,
+            gap: `${Math.round(GAP * zoom)}px`,
+            padding: `${Math.round(GAP * zoom)}px`,
+            // texts and icon scale with the tile
+            fontSize: `${(tileH * 0.135).toFixed(1)}px`,
           }}
         >
           {children}

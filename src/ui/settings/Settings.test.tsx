@@ -84,6 +84,8 @@ test('the selected machine can be dragged with a finger', async () => {
   const before = machines.find((m) => m.name === 'DMU 125')!; // x 6, y 4
   const tile = await screen.findByRole('button', { name: /DMU 125/ });
   const grid = tile.parentElement!;
+  grid.style.gap = '0px';
+  grid.style.padding = '0px';
   // Give the grid a real size: every column/row 10 px wide/high, so 1 unit = 10 px and no gaps.
   const { cols, rows } = trackWeights(machines);
   const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);

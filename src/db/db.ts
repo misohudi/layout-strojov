@@ -35,8 +35,11 @@ export function openDB(name = 'layout-strojov'): AppDB {
   return new AppDB(name);
 }
 
-/** 2 = every machine takes one equally sized cell of a compacted plan. */
-export const LAYOUT_VERSION = 2;
+/**
+ * Layout versions: 1 = machines of different sizes on the hall grid; 2 = equal cells with aisles
+ * (briefly deployed); 3 = equal cells, rows of the hall packed side by side without aisles.
+ */
+export const LAYOUT_VERSION = 3;
 
 export async function ensureSeeded(db: AppDB): Promise<void> {
   await db.transaction('rw', db.machines, db.shifts, db.meta, async () => {
@@ -49,15 +52,29 @@ export async function ensureSeeded(db: AppDB): Promise<void> {
   });
 }
 
+/** Original hall positions, when the machines are still exactly the seeded ones (ids and names). */
+function originalPositions(machines: Machine[]): Machine[] | null {
+  const seed = new Map(seedMachines(HALL_FREZY).map((m) => [m.id, m]));
+  if (machines.length !== seed.size) return null;
+  if (!machines.every((m) => seed.get(m.id)?.name === m.name && m.hallId === HALL_FREZY)) return null;
+  return machines.map((m) => {
+    const s = seed.get(m.id)!;
+    return { ...m, x: s.x, y: s.y, w: s.w, h: s.h };
+  });
+}
+
 /**
- * One-time switch from machines of different sizes to equally sized cells, keeping their positions
- * relative to each other. Runs again after restoring a backup made before the switch.
+ * One-time switch to equally sized cells in packed rows, keeping the order of the hall.
+ * Runs again after restoring a backup made with an older layout.
  * Call inside a transaction that includes `machines` and `meta`.
  */
 export async function ensureCompactLayout(db: AppDB): Promise<void> {
   const version = (await db.meta.get('layoutVersion'))?.value;
   if (typeof version === 'number' && version >= LAYOUT_VERSION) return;
-  const machines = await db.machines.toArray();
+  let machines = await db.machines.toArray();
+  // Version 2 already lost the original rows (a stacked machine looks like its own row):
+  // start again from the hall positions when the machines were not changed since.
+  if (version === 2) machines = originalPositions(machines) ?? machines;
   for (const hall of new Set(machines.map((m) => m.hallId))) {
     await db.machines.bulkPut(compactLayout(machines.filter((m) => m.hallId === hall)));
   }

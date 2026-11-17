@@ -6,6 +6,7 @@ import { MachineTile } from '../MachineTile';
 import { cellIndex, trackWeights } from '../grid';
 import { deleteMachine, upsertMachine } from '../../db/repo';
 import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
+import { packRows } from '../../domain/compact';
 import { HALL_FREZY } from '../../domain/seed';
 import type { Machine } from '../../domain/types';
 
@@ -19,6 +20,18 @@ export function MachineEditor() {
   useEffect(() => setName(sel?.name ?? ''), [sel?.id, sel?.name]);
 
   const save = (m: Machine) => upsertMachine(db, m);
+
+  /** Moves a machine and packs the rows again, so machines always stand side by side. */
+  async function place(m: Machine, x: number, y: number) {
+    // same row: ← / → swap with the neighbour; another row: the machine takes the cell it was moved to
+    const dx = y === m.y ? Math.sign(x - m.x) : 0;
+    const next = packRows(machines.map((o) => (o.id === m.id ? { ...o, x, y } : o)), { id: m.id, dx });
+    await db.machines.bulkPut(next);
+  }
+  const step = (m: Machine, dx: number, dy: number) => {
+    const t = moveMachine(m, dx, dy);
+    return place(m, t.x, t.y);
+  };
 
   // ---- dragging the selected machine with a finger (or mouse) ----
   interface Drag {
@@ -51,8 +64,13 @@ export function MachineEditor() {
     if (!grid) return;
     const css = getComputedStyle(grid);
     const { cols, rows } = trackWeights(machines);
+    // tracks start inside the grid's padding
+    const r = grid.getBoundingClientRect();
+    const pad = (v: string) => parseFloat(v) || 0;
+    const [pl, pr, pt, pb] = [css.paddingLeft, css.paddingRight, css.paddingTop, css.paddingBottom].map(pad);
+    const rect = new DOMRect(r.left + pl, r.top + pt, r.width - pl - pr, r.height - pt - pb);
     const d: Drag = {
-      pointerId: e.pointerId, machine: m, startCol: 0, startRow: 0, rect: grid.getBoundingClientRect(),
+      pointerId: e.pointerId, machine: m, startCol: 0, startRow: 0, rect,
       cols, rows, colGap: parseFloat(css.columnGap) || 0, rowGap: parseFloat(css.rowGap) || 0,
       target: { x: m.x, y: m.y },
     };
@@ -77,7 +95,7 @@ export function MachineEditor() {
     if (!d || e.pointerId !== d.pointerId) return;
     drag.current = null;
     const { x, y } = d.target;
-    if (x !== d.machine.x || y !== d.machine.y) await save({ ...d.machine, x, y });
+    if (x !== d.machine.x || y !== d.machine.y) await place(d.machine, x, y);
     setPreview(null);
   }
 
@@ -89,6 +107,7 @@ export function MachineEditor() {
   async function add() {
     const pos = freeSpotBelow(machines);
     const id = await upsertMachine(db, { hallId: HALL_FREZY, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' });
+    await db.machines.bulkPut(packRows(await db.machines.where('hallId').equals(HALL_FREZY).toArray()));
     setSelId(id);
   }
 
@@ -96,6 +115,7 @@ export function MachineEditor() {
     if (!sel) return;
     if (!window.confirm(`Odstrániť stroj „${sel.name}“? Radšej zvážte ‚mimo prevádzky‘ – odstránenie nevráti späť.`)) return;
     await deleteMachine(db, sel.id);
+    await db.machines.bulkPut(packRows(await db.machines.where('hallId').equals(HALL_FREZY).toArray()));
     setSelId(null);
   }
 
@@ -117,10 +137,10 @@ export function MachineEditor() {
             </div>
             <div className="row">
               <span className="muted">Posun:</span>
-              <button className="btn" aria-label="Posunúť doľava" onClick={() => save(moveMachine(sel, -1, 0))}>←</button>
-              <button className="btn" aria-label="Posunúť hore" onClick={() => save(moveMachine(sel, 0, -1))}>↑</button>
-              <button className="btn" aria-label="Posunúť dole" onClick={() => save(moveMachine(sel, 0, 1))}>↓</button>
-              <button className="btn" aria-label="Posunúť doprava" onClick={() => save(moveMachine(sel, 1, 0))}>→</button>
+              <button className="btn" aria-label="Posunúť doľava" onClick={() => step(sel, -1, 0)}>←</button>
+              <button className="btn" aria-label="Posunúť hore" onClick={() => step(sel, 0, -1)}>↑</button>
+              <button className="btn" aria-label="Posunúť dole" onClick={() => step(sel, 0, 1)}>↓</button>
+              <button className="btn" aria-label="Posunúť doprava" onClick={() => step(sel, 1, 0)}>→</button>
             </div>
             <div className="row">
               {sel.status === 'active' ? (
