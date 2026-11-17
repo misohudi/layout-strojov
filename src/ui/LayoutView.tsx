@@ -53,6 +53,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
     for (const pid of draft.assignments[m.id]?.personIds ?? []) counts[pid] = (counts[pid] ?? 0) + 1;
   }
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
+  const personOf = new Map(people.map((p) => [p.id, p]));
   const open = machines.find((m) => m.id === openId);
   const isEmpty = Object.keys(draft.assignments).length === 0;
 
@@ -92,7 +93,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
               type={a?.type ?? null}
               outOfService={m.status !== 'active'}
               priority={!!a?.priority}
-              people={(a?.personIds ?? []).map((id) => nameOf.get(id) ?? '?')}
+              people={(a?.personIds ?? []).map((id) => personOf.get(id) ?? { name: '?' })}
               onClick={() => setOpenId(m.id)}
             />
           );

@@ -5,33 +5,20 @@ export interface GridItem {
   h: number;
 }
 
-const GAP_WEIGHT = 0.35;
-
-function weights(items: GridItem[], pos: 'x' | 'y', size: 'w' | 'h'): number[] {
-  const count = Math.max(1, ...items.map((i) => i[pos] + i[size]));
-  const used = new Array<boolean>(count).fill(false);
-  for (const i of items) for (let k = i[pos]; k < i[pos] + i[size]; k++) used[k] = true;
-  return used.map((u) => (u ? 1 : GAP_WEIGHT));
-}
-
 const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
 
-/** Relative size of each column and row: cells no machine occupies (aisles) are narrower. */
-export function trackWeights(items: GridItem[]): { cols: number[]; rows: number[] } {
-  return { cols: weights(items, 'x', 'w'), rows: weights(items, 'y', 'h') };
+/** Number of columns and rows of the plan. */
+export function gridSize(items: GridItem[]): { cols: number; rows: number } {
+  return {
+    cols: Math.max(1, ...items.map((i) => i.x + i.w)),
+    rows: Math.max(1, ...items.map((i) => i.y + i.h)),
+  };
 }
 
-/** CSS grid tracks for the floor plan. */
-export function gridTracks(items: GridItem[]) {
-  const { cols, rows } = trackWeights(items);
-  return {
-    // minmax(0, …) lets a track shrink below its content, so a long machine name can never
-    // make the plan wider or taller than the area it is given.
-    columns: cols.map((w) => `minmax(0, ${w}fr)`).join(' '),
-    rows: rows.map((w) => `minmax(0, ${w}fr)`).join(' '),
-    widthUnits: sum(cols),
-    heightUnits: sum(rows),
-  };
+/** Relative size of each column and row – all machines are equally sized cells, so all 1. */
+export function trackWeights(items: GridItem[]): { cols: number[]; rows: number[] } {
+  const { cols, rows } = gridSize(items);
+  return { cols: new Array(cols).fill(1), rows: new Array(rows).fill(1) };
 }
 
 /**
