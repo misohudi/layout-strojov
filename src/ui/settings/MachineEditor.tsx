@@ -30,10 +30,6 @@ export function MachineEditor() {
     const changed = moveToCell(machines, m.id, x, y);
     if (changed.length) await db.machines.bulkPut(changed);
   }
-  const step = (m: Machine, dx: number, dy: number) => {
-    const t = moveMachine(m, dx, dy);
-    return place(m, t.x, t.y);
-  };
 
   // ---- dragging the selected machine with a finger (or mouse) ----
   interface Drag {
@@ -122,50 +118,43 @@ export function MachineEditor() {
     <div className="editor">
       <div className="card editor__tools">
         {!sel ? (
-          <p className="muted">Ťuknite na stroj v pôdoryse, ktorý chcete upraviť. Vybraný stroj potom posuniete ťahaním prstom alebo šípkami.</p>
+          <p className="muted">Ťuknite na stroj v pôdoryse, ktorý chcete upraviť. Vybraný stroj potom posuniete ťahaním prstom.</p>
         ) : (
-          <>
-            <div className="row">
-              <label className="field">
-                <span>Názov stroja</span>
-                <input value={name} onChange={(e) => setName(e.target.value)} />
-              </label>
-              <label className="field field--nick">
-                <span>{`Prezývka na dlaždici (max. ${NICK_MAX} znakov)`}</span>
-                <input
-                  value={nick}
-                  maxLength={NICK_MAX + 2}
-                  placeholder={autoNick(name || sel.name)}
-                  onChange={(e) => setNick(e.target.value)}
-                />
-              </label>
-              <button
-                className="btn"
-                disabled={!name.trim() || !nameChanged}
-                onClick={() => save({ ...sel, name: name.trim(), nick: nick.trim() || undefined })}
-              >
-                Uložiť názov
-              </button>
-            </div>
-            <div className="row">
-              <span className="muted">Posun:</span>
-              <button className="btn" aria-label="Posunúť doľava" onClick={() => step(sel, -1, 0)}>←</button>
-              <button className="btn" aria-label="Posunúť hore" onClick={() => step(sel, 0, -1)}>↑</button>
-              <button className="btn" aria-label="Posunúť dole" onClick={() => step(sel, 0, 1)}>↓</button>
-              <button className="btn" aria-label="Posunúť doprava" onClick={() => step(sel, 1, 0)}>→</button>
-            </div>
-            <div className="row">
+          <div className="row row--bottom">
+            <label className="field">
+              <span>Názov stroja</span>
+              <input value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+            <label className="field field--nick">
+              <span>{`Prezývka na dlaždici (max. ${NICK_MAX} znakov)`}</span>
+              <input
+                value={nick}
+                maxLength={NICK_MAX + 2}
+                placeholder={autoNick(name || sel.name)}
+                onChange={(e) => setNick(e.target.value)}
+              />
+            </label>
+            <button
+              className="btn"
+              disabled={!name.trim() || !nameChanged}
+              onClick={() => save({ ...sel, name: name.trim(), nick: nick.trim() || undefined })}
+            >
+              Uložiť názov
+            </button>
+          </div>
+        )}
+        <div className="row">
+          <button className="btn btn--primary" onClick={add}>Pridať stroj</button>
+          {sel && (
+            <>
               {sel.status === 'active' ? (
                 <button className="btn" onClick={() => save({ ...sel, status: 'out_of_service' })}>Mimo prevádzky</button>
               ) : (
                 <button className="btn" onClick={() => save({ ...sel, status: 'active' })}>Vrátiť do prevádzky</button>
               )}
               <button className="btn btn--danger" onClick={remove}>Odstrániť stroj</button>
-            </div>
-          </>
-        )}
-        <div className="row">
-          <button className="btn btn--primary" onClick={add}>Pridať stroj</button>
+            </>
+          )}
         </div>
       </div>
       <Floor items={machines}>
