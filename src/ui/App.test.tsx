@@ -464,3 +464,28 @@ test('the shift button is as wide as the longest shift name, whichever shift is 
   const value = within(await screen.findByRole('button', { name: /^Zmena B/ })).getByText('B');
   expect(value.style.minWidth).toBe('23ch'); // 17 letters × 1.2 + 2 reserve
 });
+
+test('the theme button next to "História" cycles light → dark → by device and shows the mode as an icon', async () => {
+  renderApp();
+  await pickShift('A');
+  const header = screen.getByRole('banner');
+  const app = within(header).getByRole('region', { name: 'Aplikácia' });
+  const buttons = within(app).getAllByRole('button');
+  const theme = await within(app).findByRole('button', { name: 'Vzhľad: Svetlý – prepnúť na Tmavý' });
+  expect(buttons.indexOf(theme)).toBe(buttons.findIndex((b) => b.getAttribute('aria-label') === 'História') - 1);
+  expect(within(theme).getByTestId('icon-theme-light')).toBeInTheDocument();
+
+  await userEvent.click(theme);
+  const dark = await within(app).findByRole('button', { name: 'Vzhľad: Tmavý – prepnúť na Podľa zariadenia' });
+  expect(within(dark).getByTestId('icon-theme-dark')).toBeInTheDocument();
+  expect(document.documentElement.dataset.theme).toBe('dark');
+
+  await userEvent.click(dark);
+  const auto = await within(app).findByRole('button', { name: 'Vzhľad: Podľa zariadenia – prepnúť na Svetlý' });
+  expect(within(auto).getByTestId('icon-theme-system')).toBeInTheDocument();
+  expect(document.documentElement.dataset.theme).toBe('system');
+
+  await userEvent.click(auto);
+  expect(await within(app).findByRole('button', { name: 'Vzhľad: Svetlý – prepnúť na Tmavý' })).toBeInTheDocument();
+  expect(document.documentElement.dataset.theme).toBe('light');
+});
