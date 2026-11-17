@@ -1,11 +1,12 @@
 import { openDB, ensureSeeded, type AppDB } from './db';
 import {
   getDraft, startDraft, continueDraft, getLastForeman, setMachineType, togglePerson, copyFromLastRecord,
-  upsertPerson, deletePerson, setPersonActive, upsertMachine, deleteMachine,
+  upsertPerson, deletePerson, setPersonActive, upsertMachine, addMachine, deleteMachine,
   upsertShift, deleteShift, saveRecordAndReset, listRecords,
 } from './repo';
 import type { ShiftRecord } from '../domain/types';
 import { seedMachines } from '../domain/seed';
+import { isPacked } from '../domain/compact';
 
 let n = 0;
 let dbName: string;
@@ -103,6 +104,15 @@ test('drafts of different shifts are independent', async () => {
   await startDraft(db, 's-B', 'Y', NOW);
   await setMachineType(db, 's-A', 'm-0', 'INT');
   expect((await getDraft(db, 's-B'))?.assignments['m-0']).toBeUndefined();
+});
+
+test('deleting or adding a machine leaves the rows packed as soon as it finishes', async () => {
+  await deleteMachine(db, 'm-1'); // HERMLE C42 / 4 – second in the first row
+  expect(isPacked(await db.machines.toArray())).toBe(true);
+  const id = await addMachine(db, { hallId: 'frezy', name: 'Nový', x: 0, y: 99, w: 1, h: 1, status: 'active' });
+  const all = await db.machines.toArray();
+  expect(isPacked(all)).toBe(true);
+  expect(all.find((m) => m.id === id)).toMatchObject({ x: 0, y: 4 }); // new last row
 });
 
 test('deleteMachine removes it from all drafts but keeps records', async () => {

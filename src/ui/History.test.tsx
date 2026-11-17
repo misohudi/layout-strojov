@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HistoryView } from './HistoryView';
 import { DBProvider } from './useDB';
@@ -27,7 +27,11 @@ beforeEach(async () => {
   await saveRecordAndReset(db, rec('r2', 's-B', 'B', '2026-11-10'));
   render(<DBProvider db={db}><HistoryView onBack={() => {}} /></DBProvider>);
 });
-afterEach(() => db.close());
+// Unmount first: live queries of still-mounted components must not hit a closed database.
+afterEach(() => {
+  cleanup();
+  db.close();
+});
 
 const bodyRows = () => within(screen.getByRole('table')).getAllByRole('row').slice(1);
 

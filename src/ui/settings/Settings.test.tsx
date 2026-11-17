@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { DBProvider } from '../useDB';
 import { openDB, ensureSeeded, getMeta, type AppDB } from '../../db/db';
@@ -20,7 +20,9 @@ beforeEach(async () => {
   await ensureSeeded(db);
   vi.spyOn(window, 'confirm').mockReturnValue(true);
 });
+// Unmount first: live queries of still-mounted components must not hit a closed database.
 afterEach(() => {
+  cleanup();
   db.close();
   vi.restoreAllMocks();
 });

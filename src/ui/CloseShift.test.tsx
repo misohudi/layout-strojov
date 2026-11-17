@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { DBProvider } from './useDB';
@@ -20,7 +20,11 @@ beforeEach(async () => {
   await setMachineType(db, 's-B', 'm-0', 'EXT');
   await togglePerson(db, 's-B', 'm-1', p); // people without type
 });
-afterEach(() => db.close());
+// Unmount first: live queries of still-mounted components must not hit a closed database.
+afterEach(() => {
+  cleanup();
+  db.close();
+});
 
 async function openLayout() {
   render(<DBProvider db={db}><App /></DBProvider>);
