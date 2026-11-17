@@ -52,10 +52,10 @@ test('a tablet with the packed rows (layout version 3) gets the hall columns, ga
 });
 
 test('version 3 with machines changed since (added one) keeps the current positions', async () => {
-  await db.machines.put({ id: 'extra', hallId: 'frezy', name: 'Nový', x: 7, y: 9, w: 1, h: 1, status: 'active' });
+  await db.machines.put({ id: 'extra', hallId: 'frezy', name: 'Nový', x: 7, y: 2, w: 1, h: 1, status: 'active' });
   await db.meta.put({ key: 'layoutVersion', value: 3 });
   await ensureSeeded(db);
-  expect(await db.machines.get('extra')).toMatchObject({ x: 7, y: 9 });
+  expect(await db.machines.get('extra')).toMatchObject({ x: 7, y: 2 });
   expect(await db.meta.get('layoutVersion')).toMatchObject({ value: 4 });
 });
 
@@ -77,9 +77,21 @@ test('an existing install with the old layout is compacted once, keeping machine
   expect(dmu).toMatchObject({ x: c60.x, y: 1, w: 1, h: 1 });
   expect(await db.meta.get('layoutVersion')).toMatchObject({ value: 4 });
   // a later manual move in the editor is not undone on the next start
-  await db.machines.update('m-17', { x: 20 });
+  await db.machines.update('m-17', { x: 0, y: 1 });
   await ensureSeeded(db);
-  expect((await db.machines.get('m-17'))!.x).toBe(20);
+  expect(await db.machines.get('m-17')).toMatchObject({ x: 0, y: 1 });
+});
+
+test('machines added below the 13 × 6 plan (one under another in the first column) are moved inside it', async () => {
+  await db.machines.bulkPut([7, 9, 11].map((y, i) => ({ id: `new-${i}`, hallId: 'frezy', name: `Nový ${i}`, x: 0, y, w: 1, h: 1, status: 'active' as const })));
+  await ensureSeeded(db);
+  const all = await db.machines.where('hallId').equals('frezy').toArray();
+  expect(all.every((m) => m.x < 13 && m.y < 6)).toBe(true);
+  expect(new Set(all.map((m) => `${m.x},${m.y}`)).size).toBe(all.length);
+  // free cells left to right, top to bottom: the gaps of the first row come first
+  const added = await Promise.all(['new-0', 'new-1', 'new-2'].map((id) => db.machines.get(id)));
+  expect(added.map((m) => m!.y)).toEqual([0, 0, 0]);
+  expect(added[0]!.x).toBeLessThan(added[1]!.x);
 });
 
 test('priority can be set only on a machine with an order type and is dropped when it becomes free', async () => {

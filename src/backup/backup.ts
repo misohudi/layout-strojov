@@ -1,4 +1,4 @@
-import { TABLES, ensureCompactLayout, ensureHalls, setMeta, type AppDB } from '../db/db';
+import { TABLES, ensureCompactLayout, ensureHalls, ensureInFrame, setMeta, type AppDB } from '../db/db';
 
 const APP = 'layout-strojov';
 const VERSION = 1;
@@ -40,6 +40,7 @@ export async function importBackup(db: AppDB, file: Blob): Promise<void> {
     await setMeta(db, 'lastBackupAt', new Date().toISOString());
     await ensureCompactLayout(db); // backups from before equally sized machines
     await ensureHalls(db);
+    await ensureInFrame(db);
   });
 }
 

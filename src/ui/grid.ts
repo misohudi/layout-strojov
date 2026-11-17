@@ -27,7 +27,7 @@ export function gridSize(items: GridItem[]): { cols: number; rows: number } {
  * The largest plan: 13 × 6 machine cards. Its cards fill the screen; every zone uses cards of the same
  * size (and the same gaps), a zone with fewer machines is then zoomed in on them.
  */
-export const PLAN_FRAME = { cols: 13, rows: 6 } as const;
+export { PLAN_FRAME } from '../domain/layoutEdit';
 
 /**
  * Size of an empty column or row (an aisle of the hall) relative to a machine: a whole tile for now

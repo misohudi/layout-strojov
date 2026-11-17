@@ -47,6 +47,15 @@ function writeNote(key: string, value: unknown) {
   }
 }
 
+/** "i" in a circle at the start of an info bar. */
+const InfoIcon = () => (
+  <svg className="plan-offer__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="9.5" />
+    <path d="M12 11v6" />
+    <circle cx="12" cy="7.5" r="0.6" fill="currentColor" />
+  </svg>
+);
+
 /** A swipe: one finger, mostly sideways, at least this far. */
 const SWIPE_PX = 60;
 
@@ -204,33 +213,41 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onMachineList={() => setListOpen(true)}
       />
       {banner}
-      {stats.peopleWithoutType > 0 && (
-        <div className="notice notice--warn">
-          {stats.peopleWithoutType === 1
-            ? '1 stroj má ľudí, ale nemá určený typ zakázky.'
-            : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
-        </div>
-      )}
       <div className="plan-area">
-        {/* a see-through layer over the zone name (like the zoom button), not pushing the plan down */}
-        {showOffer && (
-          <div className="plan-offer" role="status">
-            <span>Pôdorys je prázdny.</span>
-            <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
-              Prevziať zakázky a priority z poslednej zmeny
-            </button>
-            <button
-              type="button"
-              className="plan-offer__close"
-              aria-label="Zavrieť bez prevzatia"
-              title="Zavrieť bez prevzatia"
-              onClick={() => {
-                if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
-                setOfferClosed(draftKey);
-              }}
-            >
-              ×
-            </button>
+        {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
+        {(showOffer || stats.peopleWithoutType > 0) && (
+          <div className="plan-notes">
+            {stats.peopleWithoutType > 0 && (
+              <div className="plan-offer" role="alert">
+                <InfoIcon />
+                <span>
+                  {stats.peopleWithoutType === 1
+                    ? '1 stroj má ľudí, ale nemá určený typ zakázky.'
+                    : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
+                </span>
+              </div>
+            )}
+            {showOffer && (
+              <div className="plan-offer" role="status">
+                <InfoIcon />
+                <span>Pôdorys je prázdny.</span>
+                <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
+                  Prevziať zakázky a priority z poslednej zmeny
+                </button>
+                <button
+                  type="button"
+                  className="plan-offer__close"
+                  aria-label="Zavrieť bez prevzatia"
+                  title="Zavrieť bez prevzatia"
+                  onClick={() => {
+                    if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
+                    setOfferClosed(draftKey);
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )}
           </div>
         )}
         {multiZone && hall && (
