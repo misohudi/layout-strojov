@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react';
 import type { OrderType } from '../domain/types';
+import { MachineIcon } from './MachineIcon';
 
 interface Props {
   name: string;
@@ -31,7 +32,7 @@ export function MachineTile({ name, x, y, w, h, type, outOfService, priority, pe
     <button
       type="button"
       data-testid="machine-tile"
-      className={`tile ${tileClass(type, outOfService)} ${w === 1 ? 'tile--narrow' : ''} ${priority && !outOfService ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''}`}
+      className={`tile ${tileClass(type, outOfService)} ${priority && !outOfService ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''}`}
       style={{
         gridColumn: `${x + 1} / span ${w}`,
         gridRow: `${y + 1} / span ${h}`,
@@ -41,6 +42,7 @@ export function MachineTile({ name, x, y, w, h, type, outOfService, priority, pe
       onClick={onClick}
       {...dragProps}
     >
+      <MachineIcon staffed={people.length > 0} />
       <span className="tile__name">{name}</span>
       {priority && !outOfService && <span className="visually-hidden">Prioritná zákazka</span>}
       {people.length > 0 && <span className="tile__people">{people.join(', ')}</span>}

@@ -34,6 +34,16 @@ test('export then import restores every table', async () => {
   expect(await getMeta(b, 'lastBackupAt')).toBeDefined();
 });
 
+test('restoring a backup from before equally sized machines compacts its layout', async () => {
+  const data = JSON.parse(await (await exportBackup(a)).text());
+  data.tables.machines = data.tables.machines.map((m: { id: string }) =>
+    m.id === 'm-0' ? { ...m, x: 6, y: 0, w: 3, h: 3 } : m);
+  data.tables.meta = data.tables.meta.filter((r: { key: string }) => r.key !== 'layoutVersion');
+  await importBackup(b, new Blob([JSON.stringify(data)]));
+  expect((await b.machines.toArray()).every((m) => m.w === 1 && m.h === 1)).toBe(true);
+  expect(await getMeta(b, 'layoutVersion')).toBe(2);
+});
+
 test('invalid backup is rejected and leaves the DB untouched', async () => {
   await ensureSeeded(b);
   const before = await dump(b);

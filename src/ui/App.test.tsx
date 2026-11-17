@@ -54,6 +54,21 @@ test('header occupancy counts machines with people and people by role', async ()
   expect(within(header).getByText('Zákazky 0,0 %')).toBeInTheDocument();
 });
 
+test('all machines are equally sized cells with a machine icon; a person turns it into a staffed machine', async () => {
+  const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-0', p);
+  renderApp();
+  await pickShift('B');
+  const tiles = await screen.findAllByTestId('machine-tile');
+  expect(tiles.every((t) => t.style.gridColumn.endsWith('span 1') && t.style.gridRow.endsWith('span 1'))).toBe(true);
+  const c60 = screen.getByRole('button', { name: /^HERMLE C60/ });
+  expect(within(c60).getByTestId('icon-staffed')).toBeInTheDocument();
+  const dmu = screen.getByRole('button', { name: /^DMU 125/ });
+  expect(within(dmu).getByTestId('icon-machine')).toBeInTheDocument();
+  expect(screen.getAllByTestId('icon-staffed')).toHaveLength(1);
+});
+
 test('a machine marked as priority order gets a frame on the plan', async () => {
   renderApp();
   await pickShift('B');
