@@ -89,6 +89,16 @@ test('header groups related fields into sections', async () => {
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
+  // Zmeniť zmenu and Nastavenia are icon-only buttons; viacobsluha shows a person and a machine icon
+  for (const name of ['Zmeniť zmenu', 'Nastavenia']) {
+    const btn = within(header).getByRole('button', { name });
+    expect(btn).toHaveTextContent(/^$/);
+    expect(btn.querySelector('svg')).not.toBeNull();
+  }
+  const multi = within(header).getByRole('group', { name: /^Viacobsluha/ });
+  expect(within(multi).getByTestId('icon-people')).toBeInTheDocument();
+  expect(within(multi).getByTestId('icon-machines')).toBeInTheDocument();
+  expect(multi).not.toHaveTextContent(/ľ|str/);
 });
 
 test('"Vyčistiť" empties the whole plan of the shift after confirmation', async () => {

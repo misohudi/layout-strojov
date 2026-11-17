@@ -30,17 +30,62 @@ function CellButton({ label, value, name, onClick }: { label: string; value: Rea
   );
 }
 
+/** Icon-only button: a square instead of a field with a label. */
+function IconButton({ name, icon, onClick }: { name: string; icon: ReactNode; onClick(): void }) {
+  return (
+    <button type="button" className="hcell hcell--btn hcell--icon" aria-label={name} title={name} onClick={onClick}>
+      {icon}
+    </button>
+  );
+}
+
+const svg = { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const;
+
+/** Two opposite arrows – switch to another shift. */
+const SwapIcon = () => (
+  <svg {...svg} className="hicon">
+    <path d="M4 8h15M15 4l4 4-4 4" />
+    <path d="M20 16H5M9 12l-4 4 4 4" />
+  </svg>
+);
+
+/** Gear – settings. */
+const GearIcon = () => (
+  <svg {...svg} className="hicon">
+    <circle cx="12" cy="12" r="3.2" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1.08-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1.08 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+);
+
+/** Small person and machine pictograms for the viacobsluha count. */
+const PersonIcon = () => (
+  <svg {...svg} className="hicon hicon--sm" data-testid="icon-people">
+    <circle cx="12" cy="7" r="3.5" />
+    <path d="M5 21v-2a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v2" />
+  </svg>
+);
+const MachineIconSmall = () => (
+  <svg {...svg} className="hicon hicon--sm" data-testid="icon-machines">
+    <rect x="3" y="4" width="18" height="14" rx="2" />
+    <rect x="6.5" y="7.5" width="7" height="7" rx="1" />
+    <path d="M16.5 8v2M16.5 13v1M6 21h12" />
+  </svg>
+);
+
 /** Section padding + border (both sides) and the gap between fields – must match .hsection in styles.css. */
 const SECTION_EDGE = 14;
 const FIELD_GAP = 6;
+/** Width of an icon-only button – must match .hcell--icon in styles.css. */
+const ICON_W = 48;
 
 /**
  * A group of related fields with a small title. The section starts at the width of its own edges and
  * gaps and grows by the number of fields, so every field in the header ends up equally wide.
  */
-function Section({ title, count, children }: { title: string; count: number; children: ReactNode }) {
+function Section({ title, count, icons = 0, children }: { title: string; count: number; icons?: number; children: ReactNode }) {
+  const basis = SECTION_EDGE + FIELD_GAP * (count + icons - 1) + ICON_W * icons;
   return (
-    <section className="hsection" aria-label={title} style={{ flex: `${count} 1 ${SECTION_EDGE + FIELD_GAP * (count - 1)}px` }}>
+    <section className="hsection" aria-label={title} style={{ flex: `${count} 1 ${basis}px` }}>
       <h2 className="hsection__title">{title}</h2>
       <div className="hsection__cells">{children}</div>
     </section>
@@ -50,9 +95,9 @@ function Section({ title, count, children }: { title: string; count: number; chi
 export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
   return (
     <header className="header">
-      <Section title="Zmena" count={2}>
+      <Section title="Zmena" count={1} icons={1}>
         <Cell label="Zmena" value={shiftName} variant="hcell--shift" name={`Zmena ${shiftName}`} />
-        <CellButton label="Zmeniť" value="zmenu" name="Zmeniť zmenu" onClick={onChangeShift} />
+        <IconButton name="Zmeniť zmenu" icon={<SwapIcon />} onClick={onChangeShift} />
       </Section>
       <Section title="Obsadenosť ľuďmi" count={5}>
         <Cell label="Obsadenosť" value={formatPct(stats.staffedPct)} variant="hcell--main" />
@@ -66,14 +111,21 @@ export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings,
         <Cell label="Operátori" value={stats.operatori ?? 0} />
         <Cell
           label="Viacobsluha"
-          value={`${stats.multiPeople ?? 0} ľ / ${stats.multiMachines ?? 0} str`}
-          variant="hcell--small"
+          value={
+            <span className="hcell__multi">
+              <PersonIcon />
+              {stats.multiPeople ?? 0}
+              <span className="hcell__sep">/</span>
+              <MachineIconSmall />
+              {stats.multiMachines ?? 0}
+            </span>
+          }
           name={`Viacobsluha ${stats.multiPeople ?? 0} ľudí na ${stats.multiMachines ?? 0} strojoch`}
         />
       </Section>
-      <Section title="Aplikácia" count={2}>
+      <Section title="Aplikácia" count={1} icons={1}>
         <CellButton label="Prehľad" value="História" name="História" onClick={onHistory} />
-        <CellButton label="Nastavenia" value="⚙" name="Nastavenia" onClick={onSettings} />
+        <IconButton name="Nastavenia" icon={<GearIcon />} onClick={onSettings} />
       </Section>
     </header>
   );
