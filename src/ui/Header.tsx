@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { formatPct } from '../report/xlsx';
-import { GearIcon, svg } from './icons';
+import { GearIcon, HistoryIcon, svg } from './icons';
 import type { Stats } from '../domain/types';
 
 interface Props {
@@ -55,22 +55,15 @@ const MachineIconSmall = () => (
   </svg>
 );
 
-/** Section padding + border (both sides) and the gap between fields – must match .hsection in styles.css. */
-const SECTION_EDGE = 14;
-const FIELD_GAP = 6;
-/** Width of an icon-only button – must match .hcell--icon in styles.css. */
-const ICON_W = 48;
-
 /**
- * A group of related fields with a small title. The section starts at the width of its own edges and
- * gaps and grows by the number of fields, so every field in the header ends up equally wide.
+ * A group of related fields: the shift on the left, occupancy by people in the middle, the app's
+ * buttons on the right. No visible frame or title – the title is for screen readers only.
  */
-function Section({ title, count, icons = 0, children }: { title: string; count: number; icons?: number; children: ReactNode }) {
-  const basis = SECTION_EDGE + FIELD_GAP * (count + icons - 1) + ICON_W * icons;
+function Section({ title, place, children }: { title: string; place: 'start' | 'center' | 'end'; children: ReactNode }) {
   return (
-    <section className="hsection" aria-label={title} style={{ flex: `${count} 1 ${basis}px` }}>
-      <h2 className="hsection__title">{title}</h2>
-      <div className="hsection__cells">{children}</div>
+    <section className={`hgroup hgroup--${place}`} aria-label={title}>
+      <h2 className="visually-hidden">{title}</h2>
+      {children}
     </section>
   );
 }
@@ -78,11 +71,11 @@ function Section({ title, count, icons = 0, children }: { title: string; count: 
 export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
   return (
     <header className="header">
-      <Section title="Zmena" count={1}>
+      <Section title="Zmena" place="start">
         {/* tap the shift to switch to another one */}
         <CellButton label="Zmena" value={shiftName} variant="hcell--shift" name={`Zmena ${shiftName} – zmeniť zmenu`} onClick={onChangeShift} />
       </Section>
-      <Section title="Obsadenosť ľuďmi" count={5}>
+      <Section title="Obsadenosť ľuďmi" place="center">
         <Cell label="Obsadenosť" value={formatPct(stats.staffedPct)} variant="hcell--main" />
         <CellButton
           label="Stroje"
@@ -106,8 +99,8 @@ export function Header({ shiftName, stats, onChangeShift, onHistory, onSettings,
           name={`Viacobsluha ${stats.multiPeople ?? 0} ľudí na ${stats.multiMachines ?? 0} strojoch`}
         />
       </Section>
-      <Section title="Aplikácia" count={1} icons={1}>
-        <CellButton label="Prehľad" value="História" name="História" onClick={onHistory} />
+      <Section title="Aplikácia" place="end">
+        <IconButton name="História" icon={<HistoryIcon />} onClick={onHistory} />
         <IconButton name="Nastavenia" icon={<GearIcon />} onClick={onSettings} />
       </Section>
     </header>

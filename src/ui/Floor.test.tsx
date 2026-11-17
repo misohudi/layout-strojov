@@ -41,6 +41,13 @@ test('the hall fills the screen: 13 columns and 5 rows + aisle fit a 1280 × 800
   expect(tileSize(300, 200, hall)).toEqual({ w: 64, h: 64 });
 });
 
+test('a zone with only a few machines fills the whole area (no maximum height)', () => {
+  const two = { cols: [1], rows: [1, 1] };
+  // 600 px high: (600 - 20 - 10) / 2 = 285; width up to 1.5 × the height
+  expect(tileSize(1200, 600, two, true)).toEqual({ w: 427, h: 285 });
+  expect(tileSize(1200, 600, two)).toEqual({ w: 180, h: 120 }); // normal zones stay capped
+});
+
 test('zooming scales tiles in both directions', () => {
   const { scroller, grid } = setup();
   pinch(scroller, 100, 200);

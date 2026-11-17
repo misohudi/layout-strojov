@@ -226,3 +226,12 @@ test('machine editor: pick a zone, its machines are shown; a machine can move to
   await vi.waitFor(async () => expect((await db.machines.get('m-hsc-2'))!.hallId).toBe('frezy'));
   await vi.waitFor(() => expect(screen.getAllByTestId('machine-tile')).toHaveLength(36)); // now showing the milling hall
 });
+
+test('zones can be moved up and down; the first cannot go up, the last cannot go down', async () => {
+  wrap(<HallSettings />);
+  expect(await screen.findByRole('button', { name: 'Posunúť Frézovňa hore' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Posunúť HSC dole' })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: 'Posunúť HSC hore' }));
+  await vi.waitFor(async () => expect((await db.halls.orderBy('order').toArray()).map((h) => h.name)).toEqual(['HSC', 'Frézovňa']));
+  expect(await screen.findByRole('button', { name: 'Posunúť HSC hore' })).toBeDisabled();
+});

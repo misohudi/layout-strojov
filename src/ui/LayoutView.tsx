@@ -45,6 +45,16 @@ function largestTracks(halls: Hall[], machines: Machine[]) {
   return { cols, rows };
 }
 
+/** A zone with at most this many machines shows them enlarged over the whole plan area. */
+const FEW_MACHINES = 4;
+
+/** Moves machines so the top-left one starts at 0,0 (the empty floor around them is not drawn). */
+function cropped<T extends Machine>(items: T[]): T[] {
+  const x0 = Math.min(...items.map((m) => m.x));
+  const y0 = Math.min(...items.map((m) => m.y));
+  return items.map((m) => ({ ...m, x: m.x - x0, y: m.y - y0 }));
+}
+
 /** A swipe: one finger, mostly sideways, at least this far. */
 const SWIPE_PX = 60;
 
@@ -107,7 +117,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const open = machines.find((m) => m.id === openId);
   const zoneIdx = Math.max(0, halls.findIndex((h) => h.id === zoneId));
   const hall = halls[zoneIdx] as Hall | undefined;
-  const visible = hall ? machines.filter((m) => m.hallId === hall.id) : machines;
+  const inZone = hall ? machines.filter((m) => m.hallId === hall.id) : machines;
+  const few = inZone.length > 0 && inZone.length <= FEW_MACHINES;
+  const visible = few ? cropped(inZone) : inZone;
   const multiZone = halls.length > 1;
   const goZone = (delta: number) => {
     const next = halls[zoneIdx + delta];
@@ -182,7 +194,13 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             <Chevron dir="left" />
           </button>
         )}
-        <Floor key={hall?.id} items={visible} sizeTracks={largestTracks(halls, machines)} onPlanClick={egg.onPlanClick}>
+        <Floor
+          key={hall?.id}
+          items={visible}
+          sizeTracks={few ? undefined : largestTracks(halls, machines)}
+          fill={few}
+          onPlanClick={egg.onPlanClick}
+        >
           {visible.map((m) => {
             const a = draft.assignments[m.id];
             const hit = legendKey ? matchesLegend(legendKey, m, a) : null;

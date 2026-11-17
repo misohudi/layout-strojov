@@ -141,20 +141,16 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 /* Header: sections of related fields (shift, occupancy by people, orders, app). Section widths follow
    their number of fields, so every field has the same size; sections wrap only on narrow screens. */
 .header {
-  display: flex; flex-wrap: wrap; gap: 12px;
-  padding: 8px 16px 10px; background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 8px 16px; background: var(--surface); border-bottom: 1px solid var(--border);
   position: sticky; top: 0; z-index: 5;
 }
-.hsection {
-  min-width: 110px; padding: 4px 6px 6px; border-radius: 16px;
-  background: var(--bg); border: 1px solid var(--border);
-}
-.hsection__title {
-  margin: 0 0 4px 4px; font-size: 10px; font-weight: 700; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
-}
-.hsection__cells { display: flex; gap: 6px; }
-.hsection__cells > * { flex: 1 1 0; }
+/* shift on the left, occupancy in the middle (on its own light band), app buttons on the right */
+.hgroup { display: flex; gap: 6px; align-items: center; }
+.hgroup--start, .hgroup--end { flex: 1 1 0; }
+.hgroup--end { justify-content: flex-end; }
+.hgroup--center { flex: none; padding: 5px; border-radius: 16px; background: var(--bg); }
+.hgroup > .hcell { flex: none; min-width: 66px; padding: 4px 10px; }
 .hcell {
   height: 54px; min-width: 0; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--border);
   background: var(--surface); color: var(--text); font: inherit;
@@ -169,7 +165,7 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .hcell--shift .hcell__value, .hcell--main .hcell__value { color: var(--primary-text); font-size: 17px; }
 .hcell--small .hcell__value { font-size: 13px; }
 /* Icon-only buttons (Zmeniť zmenu, Nastavenia): a narrow square instead of a full field. */
-.hsection__cells > .hcell--icon { flex: 0 0 48px; width: 48px; padding: 0; }
+.hgroup > .hcell--icon { flex: none; min-width: 0; width: 48px; padding: 0; }
 .hicon { width: 26px; height: 26px; }
 .hicon--sm { width: 18px; height: 18px; flex: none; }
 .hcell__multi { display: inline-flex; align-items: center; gap: 3px; }
@@ -192,10 +188,17 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--text);
 }
 .zone__arrow svg { width: 18px; height: 18px; }
+/* a zone with only a few machines: enlarged and centred */
+.floor__scroll--fill { display: flex; }
+.floor__scroll--fill > .floor__grid { margin: auto; } /* centred, and still fully reachable when zoomed in */
 .zone__arrow:disabled { opacity: 0.25; cursor: default; }
 .machine-list__zone th { padding-top: 14px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .record-zone { display: flex; flex-direction: column; gap: 6px; }
 .record-zone__name { margin: 0; font-size: 15px; }
+/* Settings → Oddelenia: one aligned grid row per zone (order arrows, name, machine count, buttons) */
+.hall-row { display: grid; grid-template-columns: auto minmax(160px, 280px) 80px auto auto; gap: 10px; align-items: center; justify-content: start; }
+.hall-row__move { display: flex; gap: 4px; }
+.hall-row input { min-height: 44px; font-size: 16px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); color: var(--text); }
 /* Shown only while zoomed: semi-transparent "back to 100 %" in the top-right corner. */
 .floor__reset {
   position: absolute; top: 18px; right: 26px; z-index: 4; min-height: 44px; min-width: 64px; padding: 0 14px;

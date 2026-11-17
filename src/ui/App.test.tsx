@@ -92,10 +92,12 @@ test('header groups related fields into sections', async () => {
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
-  // Nastavenia is an icon-only button; viacobsluha shows a person and a machine icon
-  const gear = within(header).getByRole('button', { name: 'Nastavenia' });
-  expect(gear).toHaveTextContent(/^$/);
-  expect(gear.querySelector('svg')).not.toBeNull();
+  // História and Nastavenia are icon-only buttons; viacobsluha shows a person and a machine icon
+  for (const name of ['História', 'Nastavenia']) {
+    const btn = within(section('Aplikácia')).getByRole('button', { name });
+    expect(btn).toHaveTextContent(/^$/);
+    expect(btn.querySelector('svg')).not.toBeNull();
+  }
   const multi = within(header).getByRole('group', { name: /^Viacobsluha/ });
   expect(within(multi).getByTestId('icon-people')).toBeInTheDocument();
   expect(within(multi).getByTestId('icon-machines')).toBeInTheDocument();
@@ -364,7 +366,11 @@ test('zones: the name is shown under the header; arrows and a swipe switch betwe
   expect(screen.getByRole('button', { name: /^Predchádzajúce oddelenie/ })).toBeDisabled();
   await userEvent.click(screen.getByRole('button', { name: 'Ďalšie oddelenie – HSC' }));
   expect(await screen.findByRole('heading', { name: 'HSC' })).toBeInTheDocument();
-  expect(screen.getAllByTestId('machine-tile').map((t) => t.getAttribute('title'))).toEqual(['MIKRON / 1', 'MIKRON / 2']);
+  const hsc = screen.getAllByTestId('machine-tile');
+  expect(hsc.map((t) => t.getAttribute('title'))).toEqual(['MIKRON / 1', 'MIKRON / 2']);
+  // only two machines: enlarged over the whole plan, without the empty floor to their left
+  expect(hsc.map((t) => t.style.gridColumn)).toEqual(['1 / span 1', '1 / span 1']);
+  expect(screen.getByTestId('floor-scroll')).toHaveClass('floor__scroll--fill');
   // the header counts the whole department
   expect(within(screen.getByRole('banner')).getByRole('button', { name: '0 / 37 strojov' })).toBeInTheDocument();
   // swipe right → back to the milling hall
