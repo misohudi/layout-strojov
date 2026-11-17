@@ -67,12 +67,11 @@ describe('report folder settings', () => {
   });
 });
 
-test('machine editor moves and renames the selected machine', async () => {
+test('machine editor renames the selected machine', async () => {
   wrap(<MachineEditor />);
   const before = (await db.machines.toArray()).find((m) => m.name === 'DMC 1035')!;
   await userEvent.click(await screen.findByRole('button', { name: /DMC 1035/ }));
-  await userEvent.click(screen.getByRole('button', { name: 'Posunúť doprava' }));
-  await vi.waitFor(async () => expect((await db.machines.get(before.id))!.x).toBe(before.x + 1));
+  expect(screen.queryByRole('button', { name: /Posunúť/ })).toBeNull(); // moving is done by dragging
   const input = screen.getByLabelText('Názov stroja');
   await userEvent.clear(input);
   await userEvent.type(input, 'DMC 1035 V');

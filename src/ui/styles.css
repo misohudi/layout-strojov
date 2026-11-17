@@ -97,6 +97,9 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .muted { color: var(--muted); }
 .pad { padding: 16px; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+/* fields with a label on top: the button lines up with the input boxes, not with the labels */
+.row--bottom { align-items: flex-end; }
+.row--bottom > .btn { min-height: 48px; }
 
 /* Buttons */
 .btn {
