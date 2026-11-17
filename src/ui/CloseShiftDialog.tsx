@@ -131,10 +131,11 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
         <h2>{closed ? 'Zmena uzavretá' : 'Uzavrieť zmenu'}</h2>
         <p>
           Obsadenosť <strong>{formatPct(stats.staffedPct)}</strong> ({stats.staffed ?? 0} / {stats.total} strojov s ľuďmi) ·
-          Frézari {stats.frezari ?? 0} · Operátori {stats.operatori ?? 0}
+          Frézari {stats.frezari ?? 0} · Operátori {stats.operatori ?? 0} · Viacobsluha {stats.multiPeople ?? 0} ľ /{' '}
+          {stats.multiMachines ?? 0} str
           <br />
           <span className="muted">
-            Zákazky {formatPct(stats.occupancyPct)} ({stats.occupied}) · EXT {stats.ext} ({formatPct(stats.extPct)}) ·
+            Vyťaženie strojov {formatPct(stats.occupancyPct)} ({stats.occupied}) · EXT {stats.ext} ({formatPct(stats.extPct)}) ·
             INT {stats.int} ({formatPct(stats.intPct)})
           </span>
         </p>

@@ -44,9 +44,10 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
     `Dátum: ${skDate(r.date)}   Zmena: ${r.shiftName}   Majster: ${r.foremanName}   Uzavreté: ${hhmm(r.closedAt)}`;
   ws.getCell('A3').value =
     `Strojov: ${s.total}   Obsadené ľuďmi: ${s.staffed ?? '–'} (${formatPct(s.staffedPct)})   ` +
-    `Frézari: ${s.frezari ?? '–'}   Operátori: ${s.operatori ?? '–'}`;
+    `Frézari: ${s.frezari ?? '–'}   Operátori: ${s.operatori ?? '–'}   ` +
+    `Viacobsluha: ${s.multiPeople ?? '–'} ľudí / ${s.multiMachines ?? '–'} strojov`;
   ws.getCell('A4').value =
-    `Zákazky: ${s.occupied} (${formatPct(s.occupancyPct)})   ` +
+    `Vyťaženie strojov: ${s.occupied} (${formatPct(s.occupancyPct)})   ` +
     `EXT: ${s.ext} (${formatPct(s.extPct)})   INT: ${s.int} (${formatPct(s.intPct)})`;
   const oos = r.rows.filter((x) => x.outOfService).length;
   if (oos > 0) ws.getCell('A5').value = `Mimo prevádzky: ${oos}`;
@@ -79,13 +80,13 @@ export async function buildHistoryXlsx(records: ShiftRecord[]): Promise<Blob> {
   const ws = wb.addWorksheet('História');
   ws.addRow([
     'Dátum', 'Zmena', 'Majster', 'Strojov', 'Obsadené ľuďmi', 'Obsadenosť %', 'Frézari', 'Operátori',
-    'Zákazky', 'Zákazky %', 'EXT', 'INT', 'EXT %', 'INT %',
+    'Viacobsluha ľudia', 'Viacobsluha stroje', 'So zákazkou', 'Vyťaženie strojov %', 'EXT', 'INT', 'EXT %', 'INT %',
   ]).font = { bold: true };
   for (const r of records) {
     const s = r.stats;
     ws.addRow([
       skDate(r.date), r.shiftName, r.foremanName, s.total, s.staffed ?? '–', s.staffedPct ?? '–',
-      s.frezari ?? '–', s.operatori ?? '–',
+      s.frezari ?? '–', s.operatori ?? '–', s.multiPeople ?? '–', s.multiMachines ?? '–',
       s.occupied, s.occupancyPct ?? '–', s.ext, s.int, s.extPct ?? '–', s.intPct ?? '–',
     ]);
   }

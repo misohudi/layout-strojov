@@ -13,19 +13,29 @@ export function computeStats(
   machines: Machine[], assignments: Record<string, Assignment>, people: Person[] = [],
 ): Stats {
   const personById = new Map(people.map((p) => [p.id, p]));
-  const assigned = new Set<string>();
-  let total = 0, staffed = 0, ext = 0, int = 0, peopleWithoutType = 0;
+  /** On how many active machines each person works. */
+  const machinesOf = new Map<string, string[]>();
+  let total = 0, staffed = 0, ext = 0, int = 0, peopleWithoutType = 0, oos = 0, prio = 0;
   for (const m of machines) {
-    if (m.status !== 'active') continue;
+    if (m.status !== 'active') {
+      oos++;
+      continue;
+    }
     total++;
     const a = assignments[m.id];
     if (!a) continue;
     if (a.personIds.length > 0) staffed++;
-    for (const pid of a.personIds) assigned.add(pid);
+    for (const pid of a.personIds) machinesOf.set(pid, [...(machinesOf.get(pid) ?? []), m.id]);
     if (a.type === 'EXT') ext++;
     else if (a.type === 'INT') int++;
     else if (a.personIds.length > 0) peopleWithoutType++;
+    if (a.type && a.priority) prio++;
   }
+  const assigned = new Set(machinesOf.keys());
+  // viacobsluha: one person on several machines
+  const multi = [...machinesOf.values()].filter((ms) => ms.length > 1);
+  const multiPeople = multi.length;
+  const multiMachines = new Set(multi.flat()).size;
   let frezari = 0, operatori = 0;
   for (const pid of assigned) {
     const p = personById.get(pid);
@@ -40,6 +50,11 @@ export function computeStats(
     staffedPct: pct(staffed, total),
     frezari,
     operatori,
+    multiPeople,
+    multiMachines,
+    free: total - ext - int,
+    oos,
+    prio,
     occupied, ext, int,
     occupancyPct: pct(occupied, total),
     extPct: pct(ext, occupied),

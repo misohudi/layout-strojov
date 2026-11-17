@@ -14,7 +14,8 @@ test('counts only active machines, ext/int share of occupied', () => {
     oos: { type: 'EXT', personIds: [] },
   });
   expect(s).toEqual({
-    total: 4, staffed: 0, staffedPct: 0, frezari: 0, operatori: 0, occupied: 3, ext: 2, int: 1,
+    total: 4, staffed: 0, staffedPct: 0, frezari: 0, operatori: 0, multiPeople: 0, multiMachines: 0,
+    free: 1, oos: 1, prio: 0, occupied: 3, ext: 2, int: 1,
     occupancyPct: 75, extPct: 66.7, intPct: 33.3, peopleWithoutType: 0,
   });
 });
@@ -76,4 +77,26 @@ test('people are counted once per role; missing role means frézar', () => {
   }, [person('f1', 'frezar'), person('o1', 'operator'), person('o2', 'operator'), person('o3', 'operator'), person('old')]);
   expect(s.frezari).toBe(2);
   expect(s.operatori).toBe(2);
+});
+
+test('viacobsluha: people on several active machines and the machines they cover', () => {
+  const s = computeStats(machines, {
+    a: { type: 'EXT', personIds: ['p1', 'p2'] },
+    b: { type: 'INT', personIds: ['p1'] },
+    c: { type: null, personIds: ['p1', 'p3'] },
+    d: { type: 'EXT', personIds: ['p3'] },
+    oos: { type: null, personIds: ['p2'] }, // out of service does not count
+  }, [person('p1'), person('p2'), person('p3')]);
+  expect(s.multiPeople).toBe(2); // p1 on a, b, c; p3 on c, d
+  expect(s.multiMachines).toBe(4); // a, b, c, d
+  expect(s.frezari).toBe(3); // still counted once each
+});
+
+test('legend counts: free, out of service and priority orders (only with an order type)', () => {
+  const s = computeStats(machines, {
+    a: { type: 'EXT', personIds: [], priority: true },
+    b: { type: null, personIds: [], priority: true },
+    c: { type: 'INT', personIds: [] },
+  });
+  expect(s).toMatchObject({ ext: 1, int: 1, free: 2, oos: 1, prio: 1 });
 });

@@ -75,9 +75,10 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
           <>
             {' '}· Obsadenosť <strong>{formatPct(s.staffedPct)}</strong> ({s.staffed} / {s.total}) · Frézari{' '}
             {s.frezari ?? 0} · Operátori {s.operatori ?? 0}
+            {s.multiPeople != null && ` · Viacobsluha ${s.multiPeople} ľ / ${s.multiMachines ?? 0} str`}
           </>
         )}
-        {' '}· Zákazky {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}
+        {' '}· Vyťaženie strojov {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}
         {s.int} ({formatPct(s.intPct)})
       </div>
       {layout.length > 0 && (

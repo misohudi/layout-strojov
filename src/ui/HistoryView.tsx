@@ -67,7 +67,7 @@ export function HistoryView({ onBack }: { onBack(): void }) {
           <table>
             <thead>
               <tr>
-                <th>Dátum</th><th>Zmena</th><th>Majster</th><th>Obsadenosť</th><th>Frézari / Operátori</th><th>Zákazky</th><th>EXT</th><th>INT</th>
+                <th>Dátum</th><th>Zmena</th><th>Majster</th><th>Obsadenosť</th><th>Frézari / Operátori</th><th>Vyťaženie</th><th>EXT</th><th>INT</th>
               </tr>
             </thead>
             <tbody>
