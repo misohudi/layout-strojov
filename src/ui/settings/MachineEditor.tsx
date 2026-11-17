@@ -5,7 +5,7 @@ import { Floor } from '../Floor';
 import { MachineTile } from '../MachineTile';
 import { PLAN_FRAME, cellIndex, trackWeights } from '../grid';
 import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
-import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
+import { freeCell, moveMachine } from '../../domain/layoutEdit';
 import { moveToCell } from '../../domain/compact';
 import { autoNick, NICK_MAX } from '../../domain/nick';
 import type { Machine } from '../../domain/types';
@@ -85,7 +85,7 @@ export function MachineEditor() {
     const d = drag.current;
     if (!d || e.pointerId !== d.pointerId) return;
     const c = cellAt(d, e.clientX, e.clientY);
-    const moved = moveMachine(d.machine, c.col - d.startCol, c.row - d.startRow);
+    const moved = moveMachine(d.machine, c.col - d.startCol, c.row - d.startRow, PLAN_FRAME); // stays inside 13 × 6
     d.target = { x: moved.x, y: moved.y };
     setPreview((p) => (p && p.x === moved.x && p.y === moved.y ? p : { id: moved.id, x: moved.x, y: moved.y }));
   }
@@ -104,16 +104,23 @@ export function MachineEditor() {
     setPreview(null);
   }
 
+  /** Free cell of the plan (13 × 6) for a new machine; none when the plan is full. */
+  const spot = freeCell(machines, PLAN_FRAME);
+
   async function add() {
-    const pos = freeSpotBelow(machines);
-    if (!hallId) return;
-    setSelId(await addMachine(db, { hallId, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' }));
+    if (!hallId || !spot) return;
+    setSelId(await addMachine(db, { hallId, name: 'Nový stroj', ...spot, w: 1, h: 1, status: 'active' }));
   }
 
-  /** Moves the selected machine to another zone, to a free cell below its machines. */
+  /** Moves the selected machine to another zone, to a free cell of its plan. */
   async function moveToHall(m: Machine, target: string) {
     const there = await db.machines.where('hallId').equals(target).toArray();
-    await save({ ...m, hallId: target, ...freeSpotBelow(there) });
+    const free = freeCell(there, PLAN_FRAME);
+    if (!free) {
+      window.alert('V tomto oddelení už nie je voľné miesto (13 × 6 strojov).');
+      return;
+    }
+    await save({ ...m, hallId: target, ...free });
     setHallPick(target);
   }
 
@@ -181,7 +188,14 @@ export function MachineEditor() {
           </div>
         )}
         <div className="row">
-          <button className="btn btn--primary" onClick={add}>Pridať stroj</button>
+          <button
+            className="btn btn--primary"
+            disabled={!spot}
+            title={spot ? undefined : 'Pôdorys je plný – najviac 13 × 6 strojov.'}
+            onClick={add}
+          >
+            Pridať stroj
+          </button>
           {sel && (
             <>
               {sel.status === 'active' ? (
