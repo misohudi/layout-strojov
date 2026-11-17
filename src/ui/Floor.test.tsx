@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Floor, tileSize } from './Floor';
+import { Floor, fitZoom, tileSize } from './Floor';
 
 const items = [{ x: 0, y: 0, w: 2, h: 2 }];
 const RESET = 'Späť na 100 %';
@@ -23,30 +23,35 @@ function pinch(el: HTMLElement, d0: number, d1: number) {
 
 const zoom = (grid: HTMLElement) => Number(grid.dataset.zoom);
 
-test('tiles have one fixed shape and a finger-sized minimum even without a measured area', () => {
+test('cards have a finger-sized minimum even without a measured area', () => {
   const { grid } = setup();
-  // jsdom has no layout (size 0) → the minimum 75 px high, 0.86 × as wide
-  expect(grid.style.gridTemplateColumns).toBe('65px 65px');
-  expect(grid.style.gridTemplateRows).toBe('75px 75px');
+  // jsdom has no layout (size 0) → the minimum 60 × 60 px
+  expect(grid.style.gridTemplateColumns).toBe('60px 60px');
+  expect(grid.style.gridTemplateRows).toBe('60px 60px');
 });
 
-test('every plan keeps the tile shape; only the zoom depends on how many machines it has', () => {
-  // milling hall: 13 columns, 6 rows (the aisle is a whole row) on a 1280 × 800 tablet
-  const hall = { cols: Array(13).fill(1), rows: Array(6).fill(1) };
-  expect(tileSize(1212, 575, hall)).toEqual({ w: 72, h: 84 }); // (575 - 20 - 50) / 6 = 84.2
-  // two machines above each other fill the height, same shape
-  expect(tileSize(1212, 575, { cols: [1], rows: [1, 1] })).toEqual({ w: 234, h: 272 });
-  // a wide plan on a narrow screen is limited by the width
-  expect(tileSize(600, 800, hall)).toEqual({ w: 65, h: 75 }); // below the minimum → the plan scrolls
-  for (const t of [tileSize(1212, 575, hall), tileSize(3000, 2000, hall)]) expect(Math.abs(t.w / t.h - 0.86)).toBeLessThan(0.01);
+test('the 13 × 6 plan stretches its cards over the whole area', () => {
+  const frame = { cols: Array(13).fill(1), rows: Array(6).fill(1) };
+  // 1212 × 575: (1212 - 20 - 120) / 13 = 82.5; (575 - 20 - 50) / 6 = 84.2
+  expect(tileSize(1212, 575, frame)).toEqual({ w: 82, h: 84 });
+  expect(fitZoom(1212, 575, { w: 82, h: 84 }, frame)).toBeCloseTo(1, 1); // the full plan needs no zoom
+});
+
+test('a zone with two machines uses the same cards and gaps, zoomed in on them', () => {
+  const base = { w: 82, h: 84 };
+  // two cards above each other: 82 + 2·10 wide, 2·84 + 3·10 high → limited by the height
+  const z = fitZoom(1212, 575, base, { cols: [1], rows: [1, 1] });
+  expect(z).toBeCloseTo(575 / 198, 3);
+  // never zoomed out below the normal card size
+  expect(fitZoom(1212, 575, base, { cols: Array(20).fill(1), rows: [1] })).toBe(1);
 });
 
 test('zooming scales tiles in both directions', () => {
   const { scroller, grid } = setup();
   pinch(scroller, 100, 200);
   expect(zoom(grid)).toBe(2);
-  expect(grid.style.gridTemplateColumns).toBe('130px 130px');
-  expect(grid.style.gridTemplateRows).toBe('150px 150px');
+  expect(grid.style.gridTemplateColumns).toBe('120px 120px');
+  expect(grid.style.gridTemplateRows).toBe('120px 120px');
 });
 
 test('at 100 % there are no zoom controls covering the plan', () => {

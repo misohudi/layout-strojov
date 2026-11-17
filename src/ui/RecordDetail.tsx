@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
+import { PLAN_FRAME, cropped } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
@@ -93,8 +94,8 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       {zones.map((z) => (
         <section key={z.id} className="record-zone" aria-label={z.name || undefined}>
           {zones.length > 1 && <h3 className="record-zone__name">{z.name}</h3>}
-          <Floor items={z.items}>
-            {z.items.map((l) => (
+          <Floor items={cropped(z.items)} frame={PLAN_FRAME} fill>
+            {cropped(z.items).map((l) => (
               <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
             ))}
           </Floor>
