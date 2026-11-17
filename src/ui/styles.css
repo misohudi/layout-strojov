@@ -169,7 +169,8 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 /* Icon-only buttons (Zmeniť zmenu, Nastavenia): a narrow square instead of a full field. */
 .hgroup > .hcell--icon { flex: none; min-width: 0; width: 48px; padding: 0; }
 /* the shift button keeps one width whatever the shift is called (long names end with "…") */
-.hgroup > .hcell--shift { width: 96px; min-width: 0; }
+.hgroup > .hcell--shift { min-width: 96px; }
+.hcell--shift .hcell__value > span { display: inline-block; }
 .hicon { width: 26px; height: 26px; }
 .hicon--sm { width: 18px; height: 18px; flex: none; }
 .hcell__multi { display: inline-flex; align-items: center; gap: 3px; }
@@ -202,7 +203,7 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 /* the button itself grows and shrinks */
 @keyframes zone-pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.35, 1.03); } /* a tall narrow strip: mostly wider */
+  50% { transform: scale(1.175, 1.03); } /* a tall narrow strip: a little wider, slightly taller */
 }
 /* legend item selected: the arrow towards zones with such machines takes the item's colour */
 .zone__arrow--hl-prio { background: #facc15; color: #111827; }
