@@ -104,7 +104,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         <span><i className="sw tile--int" /> INT – interná</span>
         <span><i className="sw tile--free" /> voľný</span>
         <span><i className="sw tile--oos" /> mimo prevádzky</span>
-        <span><i className="sw tile--free tile--priority" /> prioritná zákazka</span>
+        <span><span className="prio-badge prio-badge--inline">PRIO</span> prioritná zákazka</span>
         <span className="legend__actions">
           <button className="btn btn--primary" onClick={onCloseShift}>Uzavrieť zmenu a vytvoriť report</button>
           <button

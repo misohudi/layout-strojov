@@ -17,8 +17,8 @@
   --oos-a: #d1d5db;
   --oos-b: #f3f4f6;
   --selected: #f59e0b;
-  --priority: #facc15;
-  --priority-ring: #713f12;
+  --prio-bg: #111827;
+  --prio-text: #ffffff;
   --overlay-bg: rgba(255, 255, 255, 0.6);
   --overlay-text: #111827;
   --overlay-border: rgba(17, 24, 39, 0.25);
@@ -46,6 +46,8 @@
   --warn-bg: #3a2e10;
   --warn-text: #fcd34d;
   --tile-border: rgba(255, 255, 255, 0.12);
+  --prio-bg: #f9fafb;
+  --prio-text: #111827;
   --oos-a: #3a4250;
   --oos-b: #222933;
   --overlay-bg: rgba(26, 33, 43, 0.65);
@@ -70,6 +72,8 @@
     --warn-bg: #3a2e10;
     --warn-text: #fcd34d;
     --tile-border: rgba(255, 255, 255, 0.12);
+    --prio-bg: #f9fafb;
+    --prio-text: #111827;
     --oos-a: #3a4250;
     --oos-b: #222933;
     --overlay-bg: rgba(26, 33, 43, 0.65);
@@ -199,10 +203,19 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .tile__person-name { min-width: 0; }
 .tile__more { flex: none; font-size: 0.78em; font-weight: 700; padding: 0.05em 0.45em; border-radius: 999px; background: rgba(127, 127, 127, 0.28); }
 .tile__role { font-size: 0.74em; opacity: 0.8; }
-.tile__star {
-  position: absolute; top: 0.2em; right: 0.35em; font-size: 1.25em; line-height: 1; color: var(--priority);
-  text-shadow: 0 0 2px var(--priority-ring), 0 0 6px rgba(250, 204, 21, 0.9);
+/* Icon colours follow the tile: lines = text colour, fills and cut-outs = tile background. */
+.tile { --icon-bg: var(--free); }
+.tile--ext { --icon-bg: var(--ext); }
+.tile--int { --icon-bg: var(--int); }
+.tile--oos { --icon-bg: var(--oos-b); }
+/* Priority order: dark "PRIO" tag sitting on the top edge – neutral on blue and red alike. */
+.prio-badge {
+  position: absolute; top: -0.75em; right: 0.9em; z-index: 1;
+  padding: 0.12em 0.6em; border-radius: 999px; border: 2px solid var(--surface);
+  background: var(--prio-bg); color: var(--prio-text);
+  font-size: 0.72em; font-weight: 800; letter-spacing: 0.06em; line-height: 1.3;
 }
+.prio-badge--inline { position: static; display: inline-block; vertical-align: middle; font-size: 11px; margin-right: 6px; }
 .tile--ext { background: var(--ext); color: var(--ext-text); }
 .tile--int { background: var(--int); color: var(--int-text); }
 .tile--free { background: var(--free); color: var(--text); }
@@ -211,15 +224,11 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   color: var(--muted);
 }
 .tile--selected { outline: 3px solid var(--selected); outline-offset: 2px; }
-/* Priority order: a yellow glow around the tile (and a star in its corner). */
-.tile--priority {
-  z-index: 1; border-color: var(--priority);
-  box-shadow: 0 0 0 2px var(--priority), 0 0 12px 3px rgba(250, 204, 21, 0.85);
-}
-.sw.tile--priority { box-shadow: 0 0 0 2px var(--priority), 0 0 6px 2px rgba(250, 204, 21, 0.85); }
+.tile--priority { z-index: 1; }
 .btn--priority { width: 100%; margin: 8px 0; }
-.btn--priority-on { background: var(--priority); color: #422006; border-color: var(--priority-ring); font-weight: 700; }
-.priority-mark { color: #ca8a04; }
+.btn--priority-on { background: var(--prio-bg); color: var(--prio-text); border-color: var(--prio-bg); font-weight: 800; letter-spacing: 0.02em; }
+.btn--priority:disabled { opacity: 0.45; }
+.priority-hint { margin: -2px 0 6px; font-size: 13px; }
 .person__role { color: var(--muted); }
 .role-badge { font-size: 0.85em; padding: 2px 8px; border-radius: 6px; background: var(--free); }
 .role-badge--operator { background: var(--warn-bg); color: var(--warn-text); }

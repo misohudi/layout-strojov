@@ -47,7 +47,7 @@ export function MachineList({ machines, assignments, stats, nameOf, onPick, onCl
                 return (
                   <tr key={m.id} className="clickable" onClick={() => onPick(m.id)}>
                     <td>
-                      {a?.priority && <span className="priority-mark" title="Prioritná zákazka">★ </span>}
+                      {a?.priority && a.type && <span className="prio-badge prio-badge--inline" title="Prioritná zákazka">PRIO</span>}
                       {m.name}
                     </td>
                     <td><span className={`type-badge ${tileClass(type, false)}`}>{type ?? 'voľný'}</span></td>

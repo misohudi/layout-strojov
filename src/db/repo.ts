@@ -43,12 +43,18 @@ async function updateAssignment(
   });
 }
 
+/** A free machine (no order type) cannot keep a priority order. */
 export function setMachineType(db: AppDB, shiftId: string, machineId: string, type: OrderType | null) {
-  return updateAssignment(db, shiftId, machineId, (a) => ({ ...a, type }));
+  return updateAssignment(db, shiftId, machineId, (a) => {
+    if (type !== null) return { ...a, type };
+    const { priority: _dropped, ...rest } = a;
+    return { ...rest, type };
+  });
 }
 
+/** Priority can be set only on a machine with an order type (EXT / INT). */
 export function setMachinePriority(db: AppDB, shiftId: string, machineId: string, priority: boolean) {
-  return updateAssignment(db, shiftId, machineId, (a) => ({ ...a, priority }));
+  return updateAssignment(db, shiftId, machineId, (a) => ({ ...a, priority: priority && a.type !== null }));
 }
 
 export function togglePerson(db: AppDB, shiftId: string, machineId: string, personId: string) {

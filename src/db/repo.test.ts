@@ -1,6 +1,6 @@
 import { openDB, ensureSeeded, type AppDB } from './db';
 import {
-  getDraft, startDraft, continueDraft, getLastForeman, setMachineType, togglePerson, copyFromLastRecord,
+  getDraft, startDraft, continueDraft, getLastForeman, setMachineType, setMachinePriority, togglePerson, copyFromLastRecord,
   upsertPerson, deletePerson, setPersonActive, upsertMachine, addMachine, deleteMachine,
   upsertShift, deleteShift, saveRecordAndReset, listRecords,
 } from './repo';
@@ -67,6 +67,19 @@ test('an existing install with the old layout is compacted once, keeping machine
   await db.machines.update('m-17', { x: 20 });
   await ensureSeeded(db);
   expect((await db.machines.get('m-17'))!.x).toBe(20);
+});
+
+test('priority can be set only on a machine with an order type and is dropped when it becomes free', async () => {
+  await startDraft(db, 's-B', 'B', NOW);
+  await setMachinePriority(db, 's-B', 'm-0', true); // free machine
+  expect((await getDraft(db, 's-B'))!.assignments['m-0'].priority).toBe(false);
+  await setMachineType(db, 's-B', 'm-0', 'EXT');
+  await setMachinePriority(db, 's-B', 'm-0', true);
+  expect((await getDraft(db, 's-B'))!.assignments['m-0'].priority).toBe(true);
+  await setMachineType(db, 's-B', 'm-0', 'INT'); // another order type keeps it
+  expect((await getDraft(db, 's-B'))!.assignments['m-0'].priority).toBe(true);
+  await setMachineType(db, 's-B', 'm-0', null);
+  expect((await getDraft(db, 's-B'))!.assignments['m-0']).toEqual({ type: null, personIds: [] });
 });
 
 test('draft survives reopening the database', async () => {

@@ -35,7 +35,7 @@ export function buildShiftRecord(input: {
         machineName: m.name,
         type: a?.type ?? null,
         outOfService: false,
-        priority: !!a?.priority,
+        priority: !!a?.priority && !!a.type,
         people: (a?.personIds ?? [])
           .map((pid) => personById.get(pid))
           .filter((p): p is Person => !!p)
@@ -68,7 +68,7 @@ export function buildShiftRecord(input: {
       h: m.h,
       type: m.status === 'active' ? (draft.assignments[m.id]?.type ?? null) : null,
       outOfService: m.status !== 'active',
-      priority: m.status === 'active' && !!draft.assignments[m.id]?.priority,
+      priority: m.status === 'active' && !!draft.assignments[m.id]?.priority && !!draft.assignments[m.id]?.type,
     })),
   };
 }

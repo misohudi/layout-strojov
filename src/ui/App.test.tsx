@@ -58,19 +58,23 @@ test('header occupancy counts machines with people and people by role', async ()
   expect(within(header).getByRole('group', { name: 'Zákazky 0,0 %' })).toBeInTheDocument();
 });
 
-test('all machines are equally sized cells with a machine icon; a person turns it into a staffed machine', async () => {
+test('all machines are equally sized cells with a machine icon; the figure follows the role of the person', async () => {
   const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  const o = await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true, role: 'operator' });
   await startDraft(db, 's-B', 'B', new Date());
   await togglePerson(db, 's-B', 'm-0', p);
+  await togglePerson(db, 's-B', 'm-1', o);
   renderApp();
   await pickShift('B');
   const tiles = await screen.findAllByTestId('machine-tile');
   expect(tiles.every((t) => t.style.gridColumn.endsWith('span 1') && t.style.gridRow.endsWith('span 1'))).toBe(true);
   const c60 = screen.getByRole('button', { name: /^HERMLE C60/ });
-  expect(within(c60).getByTestId('icon-staffed')).toBeInTheDocument();
+  expect(within(c60).getByTestId('icon-frezar')).toBeInTheDocument(); // standing
+  const c42 = screen.getByRole('button', { name: /^HERMLE C42 \/ 4/ });
+  expect(within(c42).getByTestId('icon-operator')).toBeInTheDocument(); // seated
   const dmu = screen.getByRole('button', { name: /^DMU 125/ });
   expect(within(dmu).getByTestId('icon-machine')).toBeInTheDocument();
-  expect(screen.getAllByTestId('icon-staffed')).toHaveLength(1);
+  expect(screen.getAllByTestId('icon-frezar')).toHaveLength(1);
 });
 
 test('header groups related fields into sections', async () => {
@@ -106,20 +110,28 @@ test('"Vyčistiť" empties the whole plan of the shift after confirmation', asyn
   confirm.mockRestore();
 });
 
-test('a machine marked as priority order gets a frame on the plan', async () => {
+test('priority needs an order type; the tile gets a PRIO tag; a free machine loses it', async () => {
   renderApp();
   await pickShift('B');
   await userEvent.click(await screen.findByRole('button', { name: /^DMU 125/ }));
-  await userEvent.click(screen.getByRole('button', { name: /Označiť ako prioritnú zákazku/ }));
-  expect(await screen.findByRole('button', { name: /Prioritná zákazka/, pressed: true })).toBeInTheDocument();
+  const prio = () => screen.getByRole('button', { name: /prioritn/i });
+  // no order type yet → priority can't be chosen
+  expect(prio()).toBeDisabled();
+  expect(screen.getByText('Prioritu môžete zvoliť až po výbere EXT alebo INT.')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'INT' }));
+  await userEvent.click(prio());
+  expect(await screen.findByRole('button', { name: /PRIO/, pressed: true })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Hotovo' }));
   const tile = screen.getByRole('button', { name: /^DMU 125/ });
   expect(tile).toHaveClass('tile--priority');
-  // turning it off removes the frame
+  expect(within(tile).getByText('PRIO')).toBeInTheDocument();
+  // switching the machine to free drops the priority
   await userEvent.click(tile);
-  await userEvent.click(screen.getByRole('button', { name: /Prioritná zákazka/, pressed: true }));
+  await userEvent.click(screen.getByRole('button', { name: 'Voľný' }));
+  expect(prio()).toBeDisabled();
   await userEvent.click(screen.getByRole('button', { name: 'Hotovo' }));
   expect(screen.getByRole('button', { name: /^DMU 125/ })).not.toHaveClass('tile--priority');
+  expect((await db.drafts.get('s-B'))!.assignments['m-17'].priority).toBeUndefined();
 });
 
 test('backup banner shows when records exist and no recent backup; opens backup settings', async () => {

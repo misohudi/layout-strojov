@@ -97,7 +97,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
               <tr key={r.machineName}>
                 <td>{r.machineName}</td>
                 <td>{r.outOfService ? 'mimo prevádzky' : (r.type ?? '–')}</td>
-                <td>{r.priority ? '★' : ''}</td>
+                <td>{r.priority ? <span className="prio-badge prio-badge--inline">PRIO</span> : ''}</td>
                 <td>{r.people.map((p) => (p.overtime ? `${p.name} (${p.homeShiftName})` : p.name)).join(', ')}</td>
               </tr>
             ))}

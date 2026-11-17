@@ -28,7 +28,7 @@ test('first person with role below and a count of the others; staffed icon', () 
     />,
   );
   const tile = screen.getByTestId('machine-tile');
-  expect(within(tile).getByTestId('icon-staffed')).toBeInTheDocument();
+  expect(within(tile).getByTestId('icon-operator')).toBeInTheDocument(); // first person is an operator → seated
   expect(tile.querySelector('.tile__name')).toHaveTextContent('DMU 80P');
   expect(tile.querySelector('.tile__name-sub')).toHaveTextContent('DUO BLOCK / 1');
   expect(tile.querySelector('.tile__person-name')).toHaveTextContent('Kováč');
@@ -41,16 +41,20 @@ test('a person without a role shows as Frézar; one person has no count', () => 
   render(<MachineTile {...base} name="HERMLE C60" people={[{ name: 'Kováč' }]} />);
   const tile = screen.getByTestId('machine-tile');
   expect(tile.querySelector('.tile__role')).toHaveTextContent('Frézar');
+  expect(within(tile).getByTestId('icon-frezar')).toBeInTheDocument(); // standing
   expect(tile.querySelector('.tile__more')).toBeNull();
 });
 
-test('priority order: glow class and a star; not on a machine out of service', () => {
-  const { rerender } = render(<MachineTile {...base} name="HERMLE C60" priority />);
+test('priority order: PRIO tag only with an order type and not out of service', () => {
+  const { rerender } = render(<MachineTile {...base} type="INT" name="HERMLE C60" priority />);
   let tile = screen.getByTestId('machine-tile');
   expect(tile).toHaveClass('tile--priority');
-  expect(tile.querySelector('.tile__star')).toHaveTextContent('★');
-  rerender(<MachineTile {...base} name="HERMLE C60" priority outOfService />);
+  expect(tile.querySelector('.prio-badge')).toHaveTextContent(/^PRIO/);
+  rerender(<MachineTile {...base} name="HERMLE C60" priority />); // free machine
+  tile = screen.getByTestId('machine-tile');
+  expect(tile.querySelector('.prio-badge')).toBeNull();
+  rerender(<MachineTile {...base} type="EXT" name="HERMLE C60" priority outOfService />);
   tile = screen.getByTestId('machine-tile');
   expect(tile).not.toHaveClass('tile--priority');
-  expect(tile.querySelector('.tile__star')).toBeNull();
+  expect(tile.querySelector('.prio-badge')).toBeNull();
 });
