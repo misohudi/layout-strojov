@@ -380,3 +380,5 @@ tr.clickable { cursor: pointer; }
 .chip, .chip--on, .hcell, .hcell--btn, .hcell--shift, .hcell--main, .legend__item, .legend__stat, .person, .tile {
   border: 2px solid var(--outline);
 }
+/* Machines out of service: red outline (also the legend swatch). */
+.tile.tile--oos, .sw.tile--oos { border-color: #dc2626; }

@@ -135,8 +135,9 @@ export function MachineIcon({ figure }: { figure: IconFigure }) {
       {figure === 'operator' && <Seated />}
       {figure === 'oos' && (
         <g>
-          <circle cx="96" cy="94" r="15" fill={BG} stroke={INK} strokeWidth={SW + 0.5} />
-          <line x1="88" y1="94" x2="104" y2="94" stroke={INK} strokeWidth={SW + 1.5} strokeLinecap="round" />
+          {/* minus in a circle, top right */}
+          <circle cx="102" cy="17" r="15" fill={BG} stroke={INK} strokeWidth={SW + 0.5} />
+          <line x1="94" y1="17" x2="110" y2="17" stroke={INK} strokeWidth={SW + 1.5} strokeLinecap="round" />
         </g>
       )}
     </svg>
