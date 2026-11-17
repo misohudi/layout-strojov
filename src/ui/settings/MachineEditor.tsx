@@ -3,7 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from '../useDB';
 import { Floor } from '../Floor';
 import { MachineTile } from '../MachineTile';
-import { cellIndex, trackWeights } from '../grid';
+import { PLAN_FRAME, cellIndex, trackWeights } from '../grid';
 import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
 import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
 import { moveToCell } from '../../domain/compact';
@@ -194,7 +194,7 @@ export function MachineEditor() {
           )}
         </div>
       </div>
-      <Floor items={machines}>
+      <Floor items={machines} frame={PLAN_FRAME}>
         {machines.map((m) => {
           const p = preview?.id === m.id ? preview : null;
           return (

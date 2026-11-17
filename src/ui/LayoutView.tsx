@@ -1,6 +1,7 @@
 import { useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
+import { PLAN_FRAME, cropped } from './grid';
 import { Header } from './Header';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
@@ -10,7 +11,7 @@ import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
-import type { Hall, Machine } from '../domain/types';
+import type { Hall } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
 const ZONE_KEY = 'layout-strojov.zone';
@@ -27,13 +28,6 @@ function storeZone(id: string) {
   } catch {
     /* not remembered – fine */
   }
-}
-
-/** Moves machines so the top-left one starts at 0,0 (the empty floor around them is not drawn). */
-function cropped<T extends Machine>(items: T[]): T[] {
-  const x0 = Math.min(...items.map((m) => m.x));
-  const y0 = Math.min(...items.map((m) => m.y));
-  return items.map((m) => ({ ...m, x: m.x - x0, y: m.y - y0 }));
 }
 
 /** A swipe: one finger, mostly sideways, at least this far. */
@@ -178,6 +172,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         <Floor
           key={hall?.id}
           items={visible}
+          frame={PLAN_FRAME}
           fill
           onPlanClick={egg.onPlanClick}
         >

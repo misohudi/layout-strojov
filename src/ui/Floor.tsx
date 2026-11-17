@@ -7,13 +7,8 @@ const MAX_ZOOM = 3;
 /** Pinching back to within 8 % of 100 % snaps to exactly 100 %. */
 const SNAP = 0.08;
 
-/**
- * Every machine tile has exactly the same shape (width / height); only its size changes: the plan is
- * zoomed so its machines fill the screen – the big milling hall gives the smallest tiles, a zone with
- * two machines the biggest. A tile never gets smaller than a finger target (the plan scrolls then).
- */
-export const TILE_RATIO = 0.86;
-const TILE_MIN_H = 75;
+/** A card never gets smaller than a finger target (the plan scrolls then). */
+const TILE_MIN = 60;
 const GAP = 10;
 
 const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
@@ -42,10 +37,27 @@ function midpoint(el: HTMLElement, touches: TouchList) {
 const fit = (areaPx: number, weights: number[]) =>
   (areaPx - 2 * GAP - GAP * (weights.length - 1)) / weights.reduce((s, w) => s + w, 0);
 
-/** Tile size at 100 % for a scroll area `areaW` × `areaH` showing the given columns and rows. */
-export function tileSize(areaW: number, areaH: number, tracks: { cols: number[]; rows: number[] }) {
-  const h = Math.max(TILE_MIN_H, Math.floor(Math.min(fit(areaH, tracks.rows), fit(areaW, tracks.cols) / TILE_RATIO) || 0));
-  return { w: Math.round(h * TILE_RATIO), h };
+type Tracks = { cols: number[]; rows: number[] };
+const ones = (n: number) => new Array<number>(n).fill(1);
+const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
+
+/** Card size that stretches the given columns and rows over a scroll area `areaW` × `areaH`. */
+export function tileSize(areaW: number, areaH: number, tracks: Tracks) {
+  return {
+    w: Math.max(TILE_MIN, Math.floor(fit(areaW, tracks.cols) || 0)),
+    h: Math.max(TILE_MIN, Math.floor(fit(areaH, tracks.rows) || 0)),
+  };
+}
+
+/**
+ * How much a plan drawn with cards of size `base` (and the usual gaps) is enlarged so it fills the
+ * area: 1 for the full 13 × 6 plan, more for a zone with only a few machines (never below 1).
+ */
+export function fitZoom(areaW: number, areaH: number, base: { w: number; h: number }, tracks: Tracks) {
+  const width = sum(tracks.cols) * base.w + GAP * (tracks.cols.length + 1);
+  const height = sum(tracks.rows) * base.h + GAP * (tracks.rows.length + 1);
+  if (!areaW || !areaH) return 1;
+  return Math.max(1, Math.min(areaW / width, areaH / height));
 }
 
 /**
@@ -56,12 +68,15 @@ export function tileSize(areaW: number, areaH: number, tracks: { cols: number[];
  */
 export function Floor({
   items,
+  frame,
   fill = false,
   children,
   onPlanClick,
 }: {
   items: GridItem[];
-  /** Centre the plan in its area (the main screen). */
+  /** Cards are sized so this many columns × rows fill the area (13 × 6, the largest plan). */
+  frame?: { cols: number; rows: number };
+  /** Zoom in on the machines so they fill the area, centred (the main screen). */
   fill?: boolean;
   children: ReactNode;
   /** Any tap inside the plan area (machines included – the handler filters). */
@@ -85,9 +100,18 @@ export function Floor({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const size = tileSize(area.w, area.h, tracks);
-  const tileH = size.h * zoom;
-  const tileW = size.w * zoom;
+  // card size from the frame (or the plan itself); in the editor the frame grows with the plan
+  const sizing: Tracks = frame
+    ? {
+        cols: ones(fill ? frame.cols : Math.max(frame.cols, tracks.cols.length)),
+        rows: ones(fill ? frame.rows : Math.max(frame.rows, tracks.rows.length)),
+      }
+    : tracks;
+  const base = tileSize(area.w, area.h, sizing);
+  // a zone with few machines is zoomed in on them: cards and gaps grow together, keeping the shape
+  const scale = zoom * (fill && frame ? fitZoom(area.w, area.h, base, tracks) : 1);
+  const tileH = base.h * scale;
+  const tileW = base.w * scale;
 
   const applyZoom = (z: number) => {
     zoomRef.current = z;
@@ -172,11 +196,10 @@ export function Floor({
           className="floor__grid"
           data-zoom={zoom}
           style={{
-            // aisles (empty columns / rows) are narrower than machines
             gridTemplateColumns: tracks.cols.map((w) => `${Math.round(tileW * w)}px`).join(' '),
             gridTemplateRows: tracks.rows.map((w) => `${Math.round(tileH * w)}px`).join(' '),
-            gap: `${Math.round(GAP * zoom)}px`,
-            padding: `${Math.round(GAP * zoom)}px`,
+            gap: `${Math.round(GAP * scale)}px`,
+            padding: `${Math.round(GAP * scale)}px`,
             // texts and icon scale with the tile
             fontSize: `${(Math.min(tileW, tileH) * 0.17).toFixed(1)}px`,
           }}

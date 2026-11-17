@@ -7,6 +7,14 @@ export interface GridItem {
 
 const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
 
+/** Moves the items so the top-left one starts at 0,0 (the empty floor around them is not drawn). */
+export function cropped<T extends GridItem>(items: T[]): T[] {
+  if (items.length === 0) return items;
+  const x0 = Math.min(...items.map((m) => m.x));
+  const y0 = Math.min(...items.map((m) => m.y));
+  return items.map((m) => ({ ...m, x: m.x - x0, y: m.y - y0 }));
+}
+
 /** Number of columns and rows of the plan. */
 export function gridSize(items: GridItem[]): { cols: number; rows: number } {
   return {
@@ -14,6 +22,12 @@ export function gridSize(items: GridItem[]): { cols: number; rows: number } {
     rows: Math.max(1, ...items.map((i) => i.y + i.h)),
   };
 }
+
+/**
+ * The largest plan: 13 × 6 machine cards. Its cards fill the screen; every zone uses cards of the same
+ * size (and the same gaps), a zone with fewer machines is then zoomed in on them.
+ */
+export const PLAN_FRAME = { cols: 13, rows: 6 } as const;
 
 /**
  * Size of an empty column or row (an aisle of the hall) relative to a machine: a whole tile for now
