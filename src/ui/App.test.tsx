@@ -73,6 +73,39 @@ test('all machines are equally sized cells with a machine icon; a person turns i
   expect(screen.getAllByTestId('icon-staffed')).toHaveLength(1);
 });
 
+test('header groups related fields into sections', async () => {
+  renderApp();
+  await pickShift('B');
+  const header = await screen.findByRole('banner');
+  const section = (name: string) => within(header).getByRole('region', { name });
+  expect(within(section('Zmena')).getByRole('button', { name: 'Zmeniť zmenu' })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Frézari 0' })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 35 strojov' })).toBeInTheDocument();
+  expect(within(section('Zákazky')).getByRole('group', { name: 'EXT –' })).toBeInTheDocument();
+  expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
+});
+
+test('"Vyčistiť" empties the whole plan of the shift after confirmation', async () => {
+  const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-0', 'EXT');
+  await togglePerson(db, 's-B', 'm-0', p);
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+  renderApp();
+  await pickShift('B');
+  const clear = await screen.findByRole('button', { name: 'Vyčistiť' });
+  await userEvent.click(clear); // cancelled
+  expect(Object.keys((await db.drafts.get('s-B'))!.assignments)).toHaveLength(1);
+  await userEvent.click(clear);
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments).toEqual({}));
+  expect(confirm).toHaveBeenCalledTimes(2);
+  const header = screen.getByRole('banner');
+  expect(await within(header).findByRole('group', { name: 'Obsadenosť 0,0 %' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Vyčistiť' })).toBeDisabled(); // nothing left to clear
+  expect(await db.drafts.get('s-B')).toMatchObject({ foremanName: 'B' }); // the shift stays open
+  confirm.mockRestore();
+});
+
 test('a machine marked as priority order gets a frame on the plan', async () => {
   renderApp();
   await pickShift('B');
