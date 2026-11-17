@@ -143,7 +143,7 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   position: sticky; top: 0; z-index: 5;
 }
 .hsection {
-  min-width: 150px; padding: 4px 6px 6px; border-radius: 16px;
+  min-width: 110px; padding: 4px 6px 6px; border-radius: 16px;
   background: var(--bg); border: 1px solid var(--border);
 }
 .hsection__title {
@@ -165,6 +165,12 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .hcell--shift .hcell__label, .hcell--main .hcell__label { color: var(--primary-text); opacity: 0.75; }
 .hcell--shift .hcell__value, .hcell--main .hcell__value { color: var(--primary-text); font-size: 17px; }
 .hcell--small .hcell__value { font-size: 13px; }
+/* Icon-only buttons (Zmeniť zmenu, Nastavenia): a narrow square instead of a full field. */
+.hsection__cells > .hcell--icon { flex: 0 0 48px; width: 48px; padding: 0; }
+.hicon { width: 26px; height: 26px; }
+.hicon--sm { width: 18px; height: 18px; flex: none; }
+.hcell__multi { display: inline-flex; align-items: center; gap: 3px; }
+.hcell__sep { margin: 0 3px; color: var(--muted); font-weight: 600; }
 
 .notice { margin: 10px 16px 0; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .notice--warn { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
