@@ -10,7 +10,6 @@ import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
-import { trackWeights } from './grid';
 import type { Hall, Machine } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
@@ -29,24 +28,6 @@ function storeZone(id: string) {
     /* not remembered – fine */
   }
 }
-
-/** Tile size of the largest zone, so every zone shows machines of the same size. */
-function largestTracks(halls: Hall[], machines: Machine[]) {
-  let cols: number[] = [1];
-  let rows: number[] = [1];
-  const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
-  for (const h of halls) {
-    const items = machines.filter((m) => m.hallId === h.id);
-    if (items.length === 0) continue;
-    const t = trackWeights(items);
-    if (sum(t.cols) > sum(cols)) cols = t.cols;
-    if (sum(t.rows) > sum(rows)) rows = t.rows;
-  }
-  return { cols, rows };
-}
-
-/** A zone with at most this many machines shows them enlarged over the whole plan area. */
-const FEW_MACHINES = 4;
 
 /** Moves machines so the top-left one starts at 0,0 (the empty floor around them is not drawn). */
 function cropped<T extends Machine>(items: T[]): T[] {
@@ -118,8 +99,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const zoneIdx = Math.max(0, halls.findIndex((h) => h.id === zoneId));
   const hall = halls[zoneIdx] as Hall | undefined;
   const inZone = hall ? machines.filter((m) => m.hallId === hall.id) : machines;
-  const few = inZone.length > 0 && inZone.length <= FEW_MACHINES;
-  const visible = few ? cropped(inZone) : inZone;
+  // every zone is zoomed to its own machines (the empty floor around them is not drawn)
+  const visible = inZone.length > 0 ? cropped(inZone) : inZone;
   const multiZone = halls.length > 1;
   const goZone = (delta: number) => {
     const next = halls[zoneIdx + delta];
@@ -197,8 +178,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         <Floor
           key={hall?.id}
           items={visible}
-          sizeTracks={few ? undefined : largestTracks(halls, machines)}
-          fill={few}
+          fill
           onPlanClick={egg.onPlanClick}
         >
           {visible.map((m) => {

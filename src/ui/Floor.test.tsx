@@ -23,37 +23,30 @@ function pinch(el: HTMLElement, d0: number, d1: number) {
 
 const zoom = (grid: HTMLElement) => Number(grid.dataset.zoom);
 
-test('tiles are equally sized, a finger-sized minimum even without a measured area', () => {
+test('tiles have one fixed shape and a finger-sized minimum even without a measured area', () => {
   const { grid } = setup();
-  // jsdom has no layout (size 0) → the minimum 64 × 64 px
-  expect(grid.style.gridTemplateColumns).toBe('64px 64px');
-  expect(grid.style.gridTemplateRows).toBe('64px 64px');
+  // jsdom has no layout (size 0) → the minimum 75 px high, 0.86 × as wide
+  expect(grid.style.gridTemplateColumns).toBe('65px 65px');
+  expect(grid.style.gridTemplateRows).toBe('75px 75px');
 });
 
-test('the hall fills the screen: 13 columns and 5 rows + aisle fit a 1280 × 800 tablet', () => {
-  const hall = { cols: Array(13).fill(1), rows: [1, 1, 1, 0.35, 1, 1] };
-  // 1264 px wide: (1264 - 20 - 120) / 13 = 86.4; 470 px high: (470 - 20 - 50) / 5.35 = 74.7
-  expect(tileSize(1264, 470, hall)).toEqual({ w: 86, h: 74 });
-  // big screen: not taller than 120 px, not wider than 1.5 × the height
-  expect(tileSize(4000, 2000, hall)).toEqual({ w: 180, h: 120 });
-  // narrow screen: the tile is never much narrower than high, never below 64 px → the plan scrolls
-  expect(tileSize(900, 800, hall)).toEqual({ w: 64, h: 80 });
-  expect(tileSize(300, 200, hall)).toEqual({ w: 64, h: 64 });
-});
-
-test('a zone with only a few machines fills the whole area (no maximum height)', () => {
-  const two = { cols: [1], rows: [1, 1] };
-  // 600 px high: (600 - 20 - 10) / 2 = 285; width up to 1.5 × the height
-  expect(tileSize(1200, 600, two, true)).toEqual({ w: 427, h: 285 });
-  expect(tileSize(1200, 600, two)).toEqual({ w: 180, h: 120 }); // normal zones stay capped
+test('every plan keeps the tile shape; only the zoom depends on how many machines it has', () => {
+  // milling hall: 13 columns, 6 rows (the aisle is a whole row) on a 1280 × 800 tablet
+  const hall = { cols: Array(13).fill(1), rows: Array(6).fill(1) };
+  expect(tileSize(1212, 575, hall)).toEqual({ w: 72, h: 84 }); // (575 - 20 - 50) / 6 = 84.2
+  // two machines above each other fill the height, same shape
+  expect(tileSize(1212, 575, { cols: [1], rows: [1, 1] })).toEqual({ w: 234, h: 272 });
+  // a wide plan on a narrow screen is limited by the width
+  expect(tileSize(600, 800, hall)).toEqual({ w: 65, h: 75 }); // below the minimum → the plan scrolls
+  for (const t of [tileSize(1212, 575, hall), tileSize(3000, 2000, hall)]) expect(Math.abs(t.w / t.h - 0.86)).toBeLessThan(0.01);
 });
 
 test('zooming scales tiles in both directions', () => {
   const { scroller, grid } = setup();
   pinch(scroller, 100, 200);
   expect(zoom(grid)).toBe(2);
-  expect(grid.style.gridTemplateColumns).toBe('128px 128px');
-  expect(grid.style.gridTemplateRows).toBe('128px 128px');
+  expect(grid.style.gridTemplateColumns).toBe('130px 130px');
+  expect(grid.style.gridTemplateRows).toBe('150px 150px');
 });
 
 test('at 100 % there are no zoom controls covering the plan', () => {

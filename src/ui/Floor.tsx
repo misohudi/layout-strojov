@@ -8,14 +8,12 @@ const MAX_ZOOM = 3;
 const SNAP = 0.08;
 
 /**
- * Tile size at 100 %: the whole hall fits the screen (no scrolling on the tablet), but a tile never gets
- * smaller than a comfortable finger target – on a tiny screen the plan scrolls instead.
+ * Every machine tile has exactly the same shape (width / height); only its size changes: the plan is
+ * zoomed so its machines fill the screen – the big milling hall gives the smallest tiles, a zone with
+ * two machines the biggest. A tile never gets smaller than a finger target (the plan scrolls then).
  */
-const TILE_MIN = 64;
-const TILE_H_MAX = 120;
-/** Width / height: tiles are about square, a bit wider on big screens, never much narrower than high. */
-const MAX_RATIO = 1.5;
-const MIN_RATIO = 0.8;
+export const TILE_RATIO = 0.86;
+const TILE_MIN_H = 75;
 const GAP = 10;
 
 const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
@@ -40,21 +38,14 @@ function midpoint(el: HTMLElement, touches: TouchList) {
   };
 }
 
-const clampPx = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v || 0));
-
 /** Size of one track that fills `areaPx` with tracks of the given weights (aisles < 1), padding and gaps. */
 const fit = (areaPx: number, weights: number[]) =>
   (areaPx - 2 * GAP - GAP * (weights.length - 1)) / weights.reduce((s, w) => s + w, 0);
 
-/**
- * Tile size at 100 % for a scroll area `areaW` × `areaH` showing the given columns and rows.
- * `fill`: a zone with only a few machines – they grow to fill the whole area (no maximum height).
- */
-export function tileSize(areaW: number, areaH: number, tracks: { cols: number[]; rows: number[] }, fill = false) {
-  let h = clampPx(fit(areaH, tracks.rows), TILE_MIN, fill ? Infinity : TILE_H_MAX);
-  const w = clampPx(fit(areaW, tracks.cols), TILE_MIN, h * MAX_RATIO);
-  if (w < h * MIN_RATIO) h = Math.max(TILE_MIN, w / MIN_RATIO);
-  return { w: Math.floor(w), h: Math.floor(h) };
+/** Tile size at 100 % for a scroll area `areaW` × `areaH` showing the given columns and rows. */
+export function tileSize(areaW: number, areaH: number, tracks: { cols: number[]; rows: number[] }) {
+  const h = Math.max(TILE_MIN_H, Math.floor(Math.min(fit(areaH, tracks.rows), fit(areaW, tracks.cols) / TILE_RATIO) || 0));
+  return { w: Math.round(h * TILE_RATIO), h };
 }
 
 /**
@@ -65,15 +56,12 @@ export function tileSize(areaW: number, areaH: number, tracks: { cols: number[];
  */
 export function Floor({
   items,
-  sizeTracks,
   fill = false,
   children,
   onPlanClick,
 }: {
   items: GridItem[];
-  /** Tracks to size the tiles by (the largest zone), so every zone has the same tile size. */
-  sizeTracks?: { cols: number[]; rows: number[] };
-  /** Few machines: enlarge them to fill the whole area, centred. */
+  /** Centre the plan in its area (the main screen). */
   fill?: boolean;
   children: ReactNode;
   /** Any tap inside the plan area (machines included – the handler filters). */
@@ -97,7 +85,7 @@ export function Floor({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const size = tileSize(area.w, area.h, sizeTracks ?? tracks, fill);
+  const size = tileSize(area.w, area.h, tracks);
   const tileH = size.h * zoom;
   const tileW = size.w * zoom;
 

@@ -15,8 +15,11 @@ export function gridSize(items: GridItem[]): { cols: number; rows: number } {
   };
 }
 
-/** An empty column or row (an aisle of the hall) is drawn narrower than a machine. */
-export const AISLE_WEIGHT = 0.35;
+/**
+ * Size of an empty column or row (an aisle of the hall) relative to a machine: a whole tile for now
+ * (a half-size aisle may come later).
+ */
+export const AISLE_WEIGHT = 1;
 
 function weights(items: GridItem[], pos: 'x' | 'y', size: 'w' | 'h', count: number): number[] {
   const used = new Array<boolean>(count).fill(false);

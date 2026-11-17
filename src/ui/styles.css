@@ -150,6 +150,8 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .hgroup--start, .hgroup--end { flex: 1 1 0; }
 .hgroup--end { justify-content: flex-end; }
 .hgroup--center { flex: none; padding: 5px; border-radius: 16px; background: var(--bg); }
+/* the middle fields are all as wide as the widest one */
+.hgroup--center { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }
 .hgroup > .hcell { flex: none; min-width: 66px; padding: 4px 10px; }
 .hcell {
   height: 54px; min-width: 0; padding: 4px 6px; border-radius: 12px; border: 1px solid var(--border);
