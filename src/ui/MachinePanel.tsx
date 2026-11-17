@@ -25,45 +25,50 @@ export function MachinePanel({ machine, assignment, shiftId, people, shifts, cou
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet" role="dialog" aria-label={machine.name} onClick={(e) => e.stopPropagation()}>
-        <div className="sheet__head">
-          <h2>{machine.name}</h2>
-          <button className="btn" onClick={onClose}>Hotovo</button>
+        {/* name, order type and priority stay in place while the list of people scrolls */}
+        <div className="sheet__top">
+          <div className="sheet__head">
+            <h2>{machine.name}</h2>
+            <button className="btn" onClick={onClose}>Hotovo</button>
+          </div>
+          {machine.status !== 'active' ? (
+            <p className="muted">Stroj je mimo prevádzky. Zmeniť to môžete v nastaveniach strojov.</p>
+          ) : (
+            <>
+              <div className="row">
+                {TYPES.map((t) => (
+                  <button
+                    key={t.label}
+                    className={`btn btn--type ${t.cls} ${type === t.value ? 'btn--selected' : ''}`}
+                    aria-pressed={type === t.value}
+                    onClick={() => setMachineType(db, shiftId, machine.id, t.value)}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+              <button
+                className={`btn btn--priority ${type && assignment?.priority ? 'btn--priority-on' : ''}`}
+                aria-pressed={!!type && !!assignment?.priority}
+                disabled={!type}
+                aria-describedby={type ? undefined : 'priority-hint'}
+                onClick={() => setMachinePriority(db, shiftId, machine.id, !assignment?.priority)}
+              >
+                {type && assignment?.priority ? 'PRIO · prioritná zákazka' : 'Označiť ako prioritnú zákazku'}
+              </button>
+              {!type && <p id="priority-hint" className="muted priority-hint">Prioritu môžete zvoliť až po výbere EXT alebo INT.</p>}
+            </>
+          )}
         </div>
-        {machine.status !== 'active' ? (
-          <p className="muted">Stroj je mimo prevádzky. Zmeniť to môžete v nastaveniach strojov.</p>
-        ) : (
-          <>
-            <div className="row">
-              {TYPES.map((t) => (
-                <button
-                  key={t.label}
-                  className={`btn btn--type ${t.cls} ${type === t.value ? 'btn--selected' : ''}`}
-                  aria-pressed={type === t.value}
-                  onClick={() => setMachineType(db, shiftId, machine.id, t.value)}
-                >
-                  {t.label}
-                </button>
-              ))}
-            </div>
-            <button
-              className={`btn btn--priority ${type && assignment?.priority ? 'btn--priority-on' : ''}`}
-              aria-pressed={!!type && !!assignment?.priority}
-              disabled={!type}
-              aria-describedby={type ? undefined : 'priority-hint'}
-              onClick={() => setMachinePriority(db, shiftId, machine.id, !assignment?.priority)}
-            >
-              {type && assignment?.priority ? 'PRIO · prioritná zákazka' : 'Označiť ako prioritnú zákazku'}
-            </button>
-            {!type && <p id="priority-hint" className="muted priority-hint">Prioritu môžete zvoliť až po výbere EXT alebo INT.</p>}
-            <PeoplePicker
-              people={people}
-              shifts={shifts}
-              currentShiftId={shiftId}
-              selected={assignment?.personIds ?? []}
-              counts={counts}
-              onToggle={(pid) => togglePerson(db, shiftId, machine.id, pid)}
-            />
-          </>
+        {machine.status === 'active' && (
+          <PeoplePicker
+            people={people}
+            shifts={shifts}
+            currentShiftId={shiftId}
+            selected={assignment?.personIds ?? []}
+            counts={counts}
+            onToggle={(pid) => togglePerson(db, shiftId, machine.id, pid)}
+          />
         )}
       </div>
     </div>

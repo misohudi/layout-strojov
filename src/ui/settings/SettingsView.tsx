@@ -23,7 +23,7 @@ export function SettingsView({ onBack, initialTab = 'people' }: { onBack(): void
     <div className="page">
       <h2 className="visually-hidden">Nastavenia</h2>
       {/* round back button in one row with the tabs */}
-      <div className="tabs">
+      <div className="tabs settings__bar">
         <button type="button" className="chip chip--round" aria-label="Späť" title="Späť" onClick={onBack}>
           <BackIcon />
         </button>
