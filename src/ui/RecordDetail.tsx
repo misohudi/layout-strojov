@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
+import { trackWeights } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
@@ -45,6 +46,19 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
   // Records closed with machines of different sizes are shown with equally sized cells like the plan.
   const layout = isUniform(record.layout) ? record.layout : hallLayout(record.layout);
   const peopleByMachine = new Map(record.rows.map((r) => [r.machineName, r.people]));
+  // one plan per zone (older records: one plan); same tile size in every zone
+  const zones: { id: string; name: string; items: typeof layout }[] = [];
+  for (const l of layout) {
+    const id = l.hallId ?? '';
+    let z = zones.find((x) => x.id === id);
+    if (!z) zones.push((z = { id, name: l.hallName ?? '', items: [] }));
+    z.items.push(l);
+  }
+  const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
+  const sizeTracks = zones
+    .map((z) => trackWeights(z.items))
+    .reduce((acc, t) => ({ cols: sum(t.cols) > sum(acc.cols) ? t.cols : acc.cols, rows: sum(t.rows) > sum(acc.rows) ? t.rows : acc.rows }), { cols: [1], rows: [1] });
+  const withZones = zones.length > 1 || record.rows.some((r) => r.hallName);
   return (
     <div className="page">
       <div className="page__head">
@@ -81,22 +95,26 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
         {' '}· Vyťaženie strojov {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}
         {s.int} ({formatPct(s.intPct)})
       </div>
-      {layout.length > 0 && (
-        <Floor items={layout}>
-          {layout.map((l) => (
-            <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
-          ))}
-        </Floor>
-      )}
+      {zones.map((z) => (
+        <section key={z.id} className="record-zone" aria-label={z.name || undefined}>
+          {zones.length > 1 && <h3 className="record-zone__name">{z.name}</h3>}
+          <Floor items={z.items} sizeTracks={zones.length > 1 ? sizeTracks : undefined}>
+            {z.items.map((l) => (
+              <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
+            ))}
+          </Floor>
+        </section>
+      ))}
       <div className="card table-wrap">
         <table>
           <thead>
-            <tr><th>Stroj</th><th>Zakázka</th><th>Priorita</th><th>Ľudia</th></tr>
+            <tr><th>Stroj</th>{withZones && <th>Oddelenie</th>}<th>Zakázka</th><th>Priorita</th><th>Ľudia</th></tr>
           </thead>
           <tbody>
             {record.rows.map((r) => (
               <tr key={r.machineName}>
                 <td>{r.machineName}</td>
+                {withZones && <td>{r.hallName ?? ''}</td>}
                 <td>{r.outOfService ? 'mimo prevádzky' : (r.type ?? '–')}</td>
                 <td>{r.priority ? <span className="prio-badge prio-badge--inline">PRIO</span> : ''}</td>
                 <td>{r.people.map((p) => (p.overtime ? `${p.name} (${p.homeShiftName})` : p.name)).join(', ')}</td>

@@ -8,12 +8,14 @@ import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
 import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
 import { moveToCell } from '../../domain/compact';
 import { autoNick, NICK_MAX } from '../../domain/nick';
-import { HALL_FREZY } from '../../domain/seed';
 import type { Machine } from '../../domain/types';
 
 export function MachineEditor() {
   const db = useDB();
-  const machines = useLiveQuery(() => db.machines.where('hallId').equals(HALL_FREZY).toArray(), [db]) ?? [];
+  const halls = useLiveQuery(() => db.halls.orderBy('order').toArray(), [db]) ?? [];
+  const [hallPick, setHallPick] = useState<string | null>(null);
+  const hallId = hallPick ?? halls[0]?.id ?? '';
+  const machines = useLiveQuery(() => db.machines.where('hallId').equals(hallId).toArray(), [db, hallId]) ?? [];
   const [selId, setSelId] = useState<string | null>(null);
   const sel = machines.find((m) => m.id === selId);
   const [name, setName] = useState('');
@@ -104,7 +106,15 @@ export function MachineEditor() {
 
   async function add() {
     const pos = freeSpotBelow(machines);
-    setSelId(await addMachine(db, { hallId: HALL_FREZY, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' }));
+    if (!hallId) return;
+    setSelId(await addMachine(db, { hallId, name: 'Nový stroj', ...pos, w: 1, h: 1, status: 'active' }));
+  }
+
+  /** Moves the selected machine to another zone, to a free cell below its machines. */
+  async function moveToHall(m: Machine, target: string) {
+    const there = await db.machines.where('hallId').equals(target).toArray();
+    await save({ ...m, hallId: target, ...freeSpotBelow(there) });
+    setHallPick(target);
   }
 
   async function remove() {
@@ -117,6 +127,25 @@ export function MachineEditor() {
   return (
     <div className="editor">
       <div className="card editor__tools">
+        {halls.length > 1 && (
+          <div className="row" role="group" aria-label="Oddelenie">
+            <span className="muted">Oddelenie:</span>
+            {halls.map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                className={`chip ${h.id === hallId ? 'chip--on' : ''}`}
+                aria-pressed={h.id === hallId}
+                onClick={() => {
+                  setHallPick(h.id);
+                  setSelId(null);
+                }}
+              >
+                {h.name}
+              </button>
+            ))}
+          </div>
+        )}
         {!sel ? (
           <p className="muted">Ťuknite na stroj v pôdoryse, ktorý chcete upraviť. Vybraný stroj potom posuniete ťahaním prstom.</p>
         ) : (
@@ -134,6 +163,14 @@ export function MachineEditor() {
                 onChange={(e) => setNick(e.target.value)}
               />
             </label>
+            {halls.length > 1 && (
+              <label className="field">
+                <span>Oddelenie stroja</span>
+                <select value={sel.hallId} onChange={(e) => moveToHall(sel, e.target.value)}>
+                  {halls.map((h) => <option key={h.id} value={h.id}>{h.name}</option>)}
+                </select>
+              </label>
+            )}
             <button
               className="btn"
               disabled={!name.trim() || !nameChanged}

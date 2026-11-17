@@ -1,6 +1,6 @@
 import { buildShiftRecord, localDate } from './record';
 import { computeStats } from './stats';
-import { seedMachines, seedShifts } from './seed';
+import { seedHalls, seedHscMachines, seedMachines, seedShifts } from './seed';
 import type { Person, ShiftDraft } from './types';
 
 const shifts = seedShifts();
@@ -85,4 +85,15 @@ test('priority order is kept in rows and layout of active machines', () => {
   expect(r.rows.find((x) => x.machineName === 'HERMLE C60')!.priority).toBe(true);
   expect(r.layout.find((l) => l.name === 'HERMLE C60')!.priority).toBe(true);
   expect(r.layout.find((l) => l.name === 'DMU 125')!.priority).toBe(false);
+});
+
+test('with several zones, rows and the plan remember the zone; rows go zone by zone', () => {
+  const r = buildShiftRecord({
+    draft, shift: B, machines: [...seedHscMachines(), ...machines], people, shifts, halls: seedHalls(),
+    now: new Date(2026, 10, 11, 6, 0), id: 'r2',
+  });
+  const active = r.rows.filter((x) => !x.outOfService);
+  expect(active[0]).toMatchObject({ machineName: 'HERMLE C60', hallName: 'Frézovňa' });
+  expect(active.slice(-2).map((x) => [x.machineName, x.hallName])).toEqual([['MIKRON / 1', 'HSC'], ['MIKRON / 2', 'HSC']]);
+  expect(r.layout.find((l) => l.name === 'MIKRON / 1')).toMatchObject({ hallId: 'hsc', hallName: 'HSC', x: 12, y: 0 });
 });

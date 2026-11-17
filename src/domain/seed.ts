@@ -1,7 +1,30 @@
 import { parseCellRange } from './cellRange';
-import type { Machine, Shift } from './types';
+import type { Hall, Machine, Shift } from './types';
 
 export const HALL_FREZY = 'frezy';
+export const HALL_HSC = 'hsc';
+
+/** Zones of the department: the milling hall and HSC. */
+export function seedHalls(): Hall[] {
+  return [
+    { id: HALL_FREZY, name: 'Frézovňa', order: 0 },
+    { id: HALL_HSC, name: 'HSC', order: 1 },
+  ];
+}
+
+/** HSC: two Mikron machines above each other, on the far right of a plan as wide as the milling hall. */
+export function seedHscMachines(): Machine[] {
+  return [0, 1].map((y) => ({
+    id: `m-hsc-${y + 1}`,
+    hallId: HALL_HSC,
+    name: `MIKRON / ${y + 1}`,
+    x: 12,
+    y,
+    w: 1,
+    h: 1,
+    status: 'active' as const,
+  }));
+}
 
 /** Sheet "frezy" of Layout MPS.xlsx – machine name and merged cell range. */
 const FREZY: [string, string][] = [

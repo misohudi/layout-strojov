@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie';
-import type { Machine, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
-import { HALL_FREZY, seedMachines, seedShifts } from '../domain/seed';
+import type { Hall, Machine, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
+import { HALL_FREZY, seedHalls, seedHscMachines, seedMachines, seedShifts } from '../domain/seed';
 import { hallLayout } from '../domain/compact';
 
 export interface MetaEntry {
@@ -10,6 +10,7 @@ export interface MetaEntry {
 
 export class AppDB extends Dexie {
   machines!: EntityTable<Machine, 'id'>;
+  halls!: EntityTable<Hall, 'id'>;
   shifts!: EntityTable<Shift, 'id'>;
   people!: EntityTable<Person, 'id'>;
   drafts!: EntityTable<ShiftDraft, 'shiftId'>;
@@ -26,10 +27,12 @@ export class AppDB extends Dexie {
       records: 'id, shiftId, date, closedAt',
       meta: 'key',
     });
+    // zones of the department (milling hall, HSC…), each with its own plan
+    this.version(2).stores({ halls: 'id, order' });
   }
 }
 
-export const TABLES = ['machines', 'shifts', 'people', 'drafts', 'records', 'meta'] as const;
+export const TABLES = ['machines', 'halls', 'shifts', 'people', 'drafts', 'records', 'meta'] as const;
 
 export function openDB(name = 'layout-strojov'): AppDB {
   return new AppDB(name);
@@ -43,21 +46,38 @@ export function openDB(name = 'layout-strojov'): AppDB {
 export const LAYOUT_VERSION = 4;
 
 export async function ensureSeeded(db: AppDB): Promise<void> {
-  await db.transaction('rw', db.machines, db.shifts, db.meta, async () => {
+  await db.transaction('rw', db.machines, db.halls, db.shifts, db.meta, async () => {
     if (!(await db.meta.get('seeded'))) {
       await db.machines.bulkPut(seedMachines(HALL_FREZY));
       await db.shifts.bulkPut(seedShifts());
       await db.meta.put({ key: 'seeded', value: true });
     }
     await ensureCompactLayout(db);
+    await ensureHalls(db); // after the layout step, which would pack the HSC machines to the left
   });
 }
 
-/** Original hall positions, when the machines are still exactly the seeded ones (ids and names). */
-function originalPositions(machines: Machine[]): Machine[] | null {
+/**
+ * Zones: installations from before zones get the milling hall and the new HSC zone with its two
+ * Mikron machines. Runs once (when there are no zones yet). Call inside a transaction with `halls`
+ * and `machines`.
+ */
+export async function ensureHalls(db: AppDB): Promise<void> {
+  if ((await db.halls.count()) > 0) return;
+  await db.halls.bulkPut(seedHalls());
+  const hsc = seedHscMachines();
+  if ((await db.machines.where('hallId').equals(hsc[0].hallId).count()) === 0) await db.machines.bulkPut(hsc);
+}
+
+/**
+ * Original hall positions, when the milling hall's machines are still exactly the seeded ones (ids and
+ * names). Other zones are left out.
+ */
+function originalPositions(all: Machine[]): Machine[] | null {
   const seed = new Map(seedMachines(HALL_FREZY).map((m) => [m.id, m]));
+  const machines = all.filter((m) => m.hallId === HALL_FREZY);
   if (machines.length !== seed.size) return null;
-  if (!machines.every((m) => seed.get(m.id)?.name === m.name && m.hallId === HALL_FREZY)) return null;
+  if (!machines.every((m) => seed.get(m.id)?.name === m.name)) return null;
   return machines.map((m) => {
     const s = seed.get(m.id)!;
     return { ...m, x: s.x, y: s.y, w: s.w, h: s.h };

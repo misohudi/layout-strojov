@@ -1,4 +1,4 @@
-import { TABLES, ensureCompactLayout, setMeta, type AppDB } from '../db/db';
+import { TABLES, ensureCompactLayout, ensureHalls, setMeta, type AppDB } from '../db/db';
 
 const APP = 'layout-strojov';
 const VERSION = 1;
@@ -30,14 +30,16 @@ export async function importBackup(db: AppDB, file: Blob): Promise<void> {
     throw new Error('Neplatný súbor zálohy');
   }
   const tables = data.tables;
-  if (!TABLES.every((t) => Array.isArray(tables[t]))) throw new Error('Neplatný súbor zálohy');
+  // backups from before zones have no "halls" – they get the default zones below
+  if (!TABLES.every((t) => t === 'halls' || Array.isArray(tables[t]))) throw new Error('Neplatný súbor zálohy');
   await db.transaction('rw', TABLES.map((t) => db.table(t)), async () => {
     for (const t of TABLES) {
       await db.table(t).clear();
-      await db.table(t).bulkPut(tables[t]);
+      await db.table(t).bulkPut(tables[t] ?? []);
     }
     await setMeta(db, 'lastBackupAt', new Date().toISOString());
     await ensureCompactLayout(db); // backups from before equally sized machines
+    await ensureHalls(db);
   });
 }
 

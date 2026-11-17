@@ -5,10 +5,12 @@ import { ShiftSettings } from './ShiftSettings';
 import { BackupSettings } from './BackupSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { ReportSettings } from './ReportSettings';
+import { HallSettings } from './HallSettings';
 import { BackIcon } from '../icons';
 
 const TABS = [
   { id: 'people', label: 'Ľudia' },
+  { id: 'halls', label: 'Oddelenia' },
   { id: 'machines', label: 'Stroje' },
   { id: 'shifts', label: 'Zmeny' },
   { id: 'report', label: 'Report' },
@@ -42,6 +44,7 @@ export function SettingsView({ onBack, initialTab = 'people' }: { onBack(): void
         </div>
       </div>
       {tab === 'people' && <PeopleSettings />}
+      {tab === 'halls' && <HallSettings />}
       {tab === 'machines' && <MachineEditor />}
       {tab === 'shifts' && <ShiftSettings />}
       {tab === 'report' && <ReportSettings />}

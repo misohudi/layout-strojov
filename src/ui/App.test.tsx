@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { DBProvider } from './useDB';
@@ -10,6 +10,7 @@ let n = 0;
 beforeEach(async () => {
   db = openDB(`app-${++n}-${Math.random()}`);
   await ensureSeeded(db);
+  localStorage.clear(); // the zone shown last is remembered per device
 });
 // Unmount first: live queries of still-mounted components must not hit a closed database.
 afterEach(() => {
@@ -36,7 +37,7 @@ test('pick shift, mark machine EXT, header shows order stats as secondary', asyn
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C60/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
   // order figures live in the legend now
-  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,9 %' })).toBeInTheDocument();
+  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,7 %' })).toBeInTheDocument(); // 1 / 37 (both zones)
   expect(screen.getByRole('button', { name: 'EXT – externá: 1, 100,0 %' })).toBeInTheDocument();
   // no people yet – occupancy by people stays at zero
   expect(within(header).getByRole('group', { name: 'Obsadenosť 0,0 %' })).toBeInTheDocument();
@@ -52,8 +53,8 @@ test('header occupancy counts machines with people and people by role', async ()
   renderApp();
   await pickShift('B');
   const header = await screen.findByRole('banner');
-  expect(await within(header).findByRole('group', { name: 'Obsadenosť 5,7 %' })).toBeInTheDocument(); // 2 / 35
-  expect(within(header).getByRole('button', { name: '2 / 35 strojov' })).toBeInTheDocument();
+  expect(await within(header).findByRole('group', { name: 'Obsadenosť 5,4 %' })).toBeInTheDocument(); // 2 / 37
+  expect(within(header).getByRole('button', { name: '2 / 37 strojov' })).toBeInTheDocument();
   expect(within(header).getByRole('group', { name: 'Frézari 1' })).toBeInTheDocument();
   expect(within(header).getByRole('group', { name: 'Operátori 1' })).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Vyťaženie strojov 0,0 %' })).toBeInTheDocument();
@@ -87,7 +88,7 @@ test('header groups related fields into sections', async () => {
   expect(within(section('Zmena')).getAllByRole('button')).toHaveLength(1);
   expect(within(section('Zmena')).getByRole('button', { name: /^Zmena B/ })).toHaveTextContent('B');
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Frézari 0' })).toBeInTheDocument();
-  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 35 strojov' })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 37 strojov' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
@@ -135,9 +136,9 @@ test('legend shows counts and shares; tapping an item highlights its machines an
   await pickShift('B');
   const ext = await screen.findByRole('button', { name: 'EXT – externá: 2, 66,7 %' });
   expect(screen.getByRole('button', { name: 'INT – interná: 1, 33,3 %' })).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'voľný: 31' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'voľný: 33' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'mimo prevádzky: 1' })).toBeInTheDocument();
-  expect(screen.getByRole('group', { name: 'Vyťaženie strojov 8,8 %' })).toBeInTheDocument(); // 3 / 34
+  expect(screen.getByRole('group', { name: 'Vyťaženie strojov 8,3 %' })).toBeInTheDocument(); // 3 / 36
   expect(within(screen.getByRole('banner')).getByRole('group', { name: 'Viacobsluha 1 ľudí na 2 strojoch' })).toBeInTheDocument();
 
   await userEvent.click(ext);
@@ -248,10 +249,10 @@ test('a machine set out of service in settings is not counted in occupancy', asy
   await userEvent.click(screen.getByRole('button', { name: 'Späť' }));
   await pickShift('B');
   const header = await screen.findByRole('banner');
-  expect(await within(header).findByRole('button', { name: '0 / 34 strojov' })).toBeInTheDocument();
+  expect(await within(header).findByRole('button', { name: '0 / 36 strojov' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C42 \/ 4/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
-  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,9 %' })).toBeInTheDocument(); // 1 / 34
+  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,8 %' })).toBeInTheDocument(); // 1 / 36
 });
 
 test('tapping the machine count opens a list of machines with order type and people', async () => {
@@ -263,19 +264,22 @@ test('tapping the machine count opens a list of machines with order type and peo
   await setMachineType(db, 's-B', 'm-2', 'INT');
   renderApp();
   await pickShift('B');
-  await userEvent.click(await screen.findByRole('button', { name: '1 / 34 strojov' }));
+  await userEvent.click(await screen.findByRole('button', { name: '1 / 36 strojov' }));
   const list = await screen.findByRole('dialog', { name: 'Zoznam strojov' });
   const active = within(list).getByRole('table', { name: 'V prevádzke' });
-  const rows = within(active).getAllByRole('row').slice(1);
-  expect(rows).toHaveLength(34);
+  // machines of both zones, each zone under its heading
+  const all = within(active).getAllByRole('row').slice(1);
+  expect(all.filter((r) => r.classList.contains('machine-list__zone')).map((r) => r.textContent)).toEqual(['Frézovňa', 'HSC']);
+  const rows = all.filter((r) => !r.classList.contains('machine-list__zone'));
+  expect(rows).toHaveLength(36);
   const c60 = rows.find((r) => r.textContent!.includes('HERMLE C60'))!;
   expect(c60).toHaveTextContent('EXT');
   expect(c60).toHaveTextContent('Kováč');
   expect(rows.find((r) => r.textContent!.includes('HERMLE C42 / 1'))).toHaveTextContent('INT');
   expect(rows.find((r) => r.textContent!.includes('DMU 125'))).toHaveTextContent('voľný');
   expect(within(list).getByRole('table', { name: 'Mimo prevádzky' })).toHaveTextContent('HERMLE C42 / 4');
-  expect(list).toHaveTextContent('Obsadenosť 2,9 %'); // 1 machine with people / 34
-  expect(list).toHaveTextContent('Vyťaženie strojov 5,9 %');
+  expect(list).toHaveTextContent('Obsadenosť 2,8 %'); // 1 machine with people / 36
+  expect(list).toHaveTextContent('Vyťaženie strojov 5,6 %');
 
   // tapping a row opens that machine for editing
   await userEvent.click(c60);
@@ -286,7 +290,7 @@ test('tapping the machine count opens a list of machines with order type and peo
 test('a machine edited from the list returns to the list on "Hotovo", showing the change', async () => {
   renderApp();
   await pickShift('B');
-  await userEvent.click(await screen.findByRole('button', { name: '0 / 35 strojov' }));
+  await userEvent.click(await screen.findByRole('button', { name: '0 / 37 strojov' }));
   const list = await screen.findByRole('dialog', { name: 'Zoznam strojov' });
   const row = within(list).getAllByRole('row').find((r) => r.textContent!.includes('DMU 125'))!;
   await userEvent.click(row);
@@ -350,4 +354,26 @@ test('tapping a shift with an open draft continues it directly', async () => {
   renderApp();
   await pickShift('A');
   expect(await screen.findByRole('button', { name: 'INT – interná: 1, 100,0 %' })).toBeInTheDocument();
+});
+
+test('zones: the name is shown under the header; arrows and a swipe switch between them', async () => {
+  renderApp();
+  await pickShift('B');
+  expect(await screen.findByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument();
+  expect(screen.getAllByTestId('machine-tile')).toHaveLength(35);
+  expect(screen.getByRole('button', { name: /^Predchádzajúce oddelenie/ })).toBeDisabled();
+  await userEvent.click(screen.getByRole('button', { name: 'Ďalšie oddelenie – HSC' }));
+  expect(await screen.findByRole('heading', { name: 'HSC' })).toBeInTheDocument();
+  expect(screen.getAllByTestId('machine-tile').map((t) => t.getAttribute('title'))).toEqual(['MIKRON / 1', 'MIKRON / 2']);
+  // the header counts the whole department
+  expect(within(screen.getByRole('banner')).getByRole('button', { name: '0 / 37 strojov' })).toBeInTheDocument();
+  // swipe right → back to the milling hall
+  const zone = screen.getByTestId('floor-scroll').closest('.zone')!;
+  fireEvent.touchStart(zone, { touches: [{ clientX: 100, clientY: 300 }] });
+  fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 300, clientY: 310 }] });
+  expect(await screen.findByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument();
+  // a mostly vertical move is not a swipe
+  fireEvent.touchStart(zone, { touches: [{ clientX: 300, clientY: 100 }] });
+  fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 220, clientY: 400 }] });
+  expect(screen.getByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument();
 });

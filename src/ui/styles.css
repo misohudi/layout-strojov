@@ -179,6 +179,23 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .notice--warn { background: var(--warn-bg); color: var(--warn-text); border-color: transparent; }
 
 .floor { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 4px 6px; }
+/* Zones of the department: name centred under the header, narrow arrows on the sides, swipe between them. */
+.zonebar { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 0 0; }
+.zonebar__name { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: 0.02em; line-height: 1.2; }
+.zonebar__dots { display: flex; gap: 5px; }
+.zonebar__dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); opacity: 0.4; }
+.zonebar__dots i.on { background: var(--text); opacity: 1; }
+.zone { flex: 1; min-height: 0; display: flex; align-items: stretch; gap: 2px; padding: 0 4px; }
+.zone > .floor { flex: 1; min-width: 0; padding-left: 2px; padding-right: 2px; }
+.zone__arrow {
+  flex: none; width: 26px; margin: 4px 0; padding: 0; border-radius: 10px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; background: var(--surface); color: var(--text);
+}
+.zone__arrow svg { width: 18px; height: 18px; }
+.zone__arrow:disabled { opacity: 0.25; cursor: default; }
+.machine-list__zone th { padding-top: 14px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.record-zone { display: flex; flex-direction: column; gap: 6px; }
+.record-zone__name { margin: 0; font-size: 15px; }
 /* Shown only while zoomed: semi-transparent "back to 100 %" in the top-right corner. */
 .floor__reset {
   position: absolute; top: 18px; right: 26px; z-index: 4; min-height: 44px; min-width: 64px; padding: 0 14px;
@@ -377,7 +394,7 @@ tr.clickable { cursor: pointer; }
 
 /* Every button – and every machine tile – has the same thicker dark outline (light in dark mode). */
 .btn, .btn--primary, .btn--danger, .btn--danger-outline, .btn--ext, .btn--int, .btn--priority-on,
-.chip, .chip--on, .hcell, .hcell--btn, .hcell--shift, .hcell--main, .legend__item, .legend__stat, .person, .tile {
+.chip, .chip--on, .hcell, .hcell--btn, .hcell--shift, .hcell--main, .legend__item, .legend__stat, .person, .tile, .zone__arrow {
   border: 2px solid var(--outline);
 }
 /* Machines out of service: red outline (also the legend swatch). */

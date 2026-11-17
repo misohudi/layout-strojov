@@ -53,7 +53,9 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
   if (oos > 0) ws.getCell('A5').value = `Mimo prevádzky: ${oos}`;
 
   const header = ws.getRow(6);
-  header.values = ['Stroj', 'Zakázka', 'Priorita', 'Ľudia', 'Nadčas'];
+  // records with several zones get the zone in the last column
+  const withHall = r.rows.some((x) => x.hallName);
+  header.values = ['Stroj', 'Zakázka', 'Priorita', 'Ľudia', 'Nadčas', ...(withHall ? ['Oddelenie'] : [])];
   header.font = { bold: true };
   r.rows.forEach((row, i) => {
     const xr = ws.getRow(7 + i);
@@ -63,6 +65,7 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
       row.priority ? 'áno' : '',
       peopleLabel(row),
       row.people.some((p) => p.overtime) ? 'áno' : '',
+      ...(withHall ? [row.hallName ?? ''] : []),
     ];
     if (row.type && !row.outOfService) {
       xr.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: FILL[row.type] } };
@@ -71,7 +74,7 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
       xr.getCell(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: PRIORITY_FILL } };
     }
   });
-  ws.columns.forEach((c, i) => (c.width = [24, 16, 10, 40, 10][i]));
+  ws.columns.forEach((c, i) => (c.width = [24, 16, 10, 40, 10, 16][i]));
   return toBlob(wb);
 }
 
