@@ -74,27 +74,22 @@ export async function clearDraft(db: AppDB, shiftId: string): Promise<void> {
   });
 }
 
-/** Copies types and people from the most recent record (any shift) into the shift's draft. */
+/**
+ * Copies the order types and priorities (not the people – the new foreman assigns them) from the most
+ * recent record (any shift) into the shift's draft. People already assigned in the draft stay.
+ */
 export async function copyFromLastRecord(db: AppDB, shiftId: string): Promise<boolean> {
-  return db.transaction('rw', [db.records, db.machines, db.people, db.shifts, db.drafts], async () => {
+  return db.transaction('rw', [db.records, db.machines, db.drafts], async () => {
     const last = await db.records.orderBy('closedAt').last();
     const draft = await db.drafts.get(shiftId);
     if (!last || !draft) return false;
     const machines = await db.machines.toArray();
-    const people = (await db.people.toArray()).filter((p) => p.active);
-    const shifts = await db.shifts.toArray();
-    const shiftName = new Map(shifts.map((s) => [s.id, s.name]));
-    const assignments: Record<string, Assignment> = {};
+    const assignments: Record<string, Assignment> = { ...draft.assignments };
     for (const row of last.rows) {
-      if (row.outOfService) continue;
+      if (row.outOfService || !row.type) continue;
       const m = machines.find((x) => x.name === row.machineName && x.status === 'active');
       if (!m) continue;
-      const personIds: string[] = [];
-      for (const rp of row.people) {
-        const matches = people.filter((p) => p.name === rp.name);
-        const p = matches.find((x) => shiftName.get(x.shiftId) === rp.homeShiftName) ?? matches[0];
-        if (p && !personIds.includes(p.id)) personIds.push(p.id);
-      }
+      const personIds = draft.assignments[m.id]?.personIds ?? [];
       assignments[m.id] = { type: row.type, personIds, ...(row.priority ? { priority: true } : {}) };
     }
     await db.drafts.put({ ...draft, assignments });

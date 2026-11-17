@@ -208,23 +208,24 @@ test('listRecords filters and sorts newest first', async () => {
   expect((await listRecords(db, { from: '2026-11-10', to: '2026-11-10' })).map((r) => r.id)).toEqual(['r3', 'r2']);
 });
 
-test('copyFromLastRecord maps by machine name and skips inactive people', async () => {
-  const p1 = await upsertPerson(db, { name: 'Kováč', shiftId: 's-A', active: true });
-  await upsertPerson(db, { name: 'Horváth', shiftId: 's-A', active: false });
+test('copyFromLastRecord takes order types and priorities by machine name, not the people', async () => {
+  await upsertPerson(db, { name: 'Kováč', shiftId: 's-A', active: true });
   await saveRecordAndReset(db, record({
     rows: [
-      { machineName: 'HERMLE C60', type: 'EXT', outOfService: false, people: [
+      { machineName: 'HERMLE C60', type: 'EXT', outOfService: false, priority: true, people: [
         { name: 'Kováč', homeShiftName: 'A', overtime: false },
-        { name: 'Horváth', homeShiftName: 'A', overtime: false },
       ] },
+      { machineName: 'HERMLE C42 / 4', type: 'INT', outOfService: false, people: [] },
+      { machineName: 'DMU 125', type: null, outOfService: false, people: [{ name: 'Kováč', homeShiftName: 'A', overtime: false }] },
       { machineName: 'Neexistuje', type: 'INT', outOfService: false, people: [] },
     ],
   }));
   await startDraft(db, 's-B', 'Y', NOW);
   expect(await copyFromLastRecord(db, 's-B')).toBe(true);
   const d = await getDraft(db, 's-B');
-  expect(d?.assignments['m-0']).toEqual({ type: 'EXT', personIds: [p1] });
-  expect(Object.keys(d!.assignments)).toEqual(['m-0']);
+  expect(d?.assignments['m-0']).toEqual({ type: 'EXT', personIds: [], priority: true });
+  expect(d?.assignments['m-1']).toEqual({ type: 'INT', personIds: [] });
+  expect(Object.keys(d!.assignments).sort()).toEqual(['m-0', 'm-1']); // free machines and unknown names skipped
 });
 
 test('copyFromLastRecord returns false without records', async () => {
