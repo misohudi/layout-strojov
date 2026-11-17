@@ -6,7 +6,7 @@ import { MachineTile } from '../MachineTile';
 import { cellIndex, trackWeights } from '../grid';
 import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
 import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
-import { packRows } from '../../domain/compact';
+import { moveToCell } from '../../domain/compact';
 import { HALL_FREZY } from '../../domain/seed';
 import type { Machine } from '../../domain/types';
 
@@ -21,12 +21,10 @@ export function MachineEditor() {
 
   const save = (m: Machine) => upsertMachine(db, m);
 
-  /** Moves a machine and packs the rows again, so machines always stand side by side. */
+  /** Moves a machine to a cell; onto another machine they swap places, so they never overlap. */
   async function place(m: Machine, x: number, y: number) {
-    // same row: ← / → swap with the neighbour; another row: the machine takes the cell it was moved to
-    const dx = y === m.y ? Math.sign(x - m.x) : 0;
-    const next = packRows(machines.map((o) => (o.id === m.id ? { ...o, x, y } : o)), { id: m.id, dx });
-    await db.machines.bulkPut(next);
+    const changed = moveToCell(machines, m.id, x, y);
+    if (changed.length) await db.machines.bulkPut(changed);
   }
   const step = (m: Machine, dx: number, dy: number) => {
     const t = moveMachine(m, dx, dy);

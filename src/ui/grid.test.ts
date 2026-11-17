@@ -1,9 +1,9 @@
 import { cellIndex, gridSize, trackWeights } from './grid';
 
-test('gridSize and trackWeights: equally sized tracks', () => {
-  const items = [{ x: 0, y: 0, w: 1, h: 1 }, { x: 2, y: 1, w: 1, h: 1 }];
-  expect(gridSize(items)).toEqual({ cols: 3, rows: 2 });
-  expect(trackWeights(items)).toEqual({ cols: [1, 1, 1], rows: [1, 1] });
+test('gridSize and trackWeights: machines weigh 1, empty tracks (aisles) 0.35', () => {
+  const items = [{ x: 0, y: 0, w: 1, h: 1 }, { x: 2, y: 2, w: 1, h: 1 }];
+  expect(gridSize(items)).toEqual({ cols: 3, rows: 3 });
+  expect(trackWeights(items)).toEqual({ cols: [1, 0.35, 1], rows: [1, 0.35, 1] });
   expect(gridSize([])).toEqual({ cols: 1, rows: 1 });
 });
 

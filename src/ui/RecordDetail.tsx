@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
-import { compactLayout, isPacked } from '../domain/compact';
+import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
 import {
@@ -42,8 +42,8 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       alive = false;
     };
   }, [record]);
-  // Records closed with an older plan are shown packed the same way as the current one.
-  const layout = isPacked(record.layout) ? record.layout : compactLayout(record.layout);
+  // Records closed with machines of different sizes are shown with equally sized cells like the plan.
+  const layout = isUniform(record.layout) ? record.layout : hallLayout(record.layout);
   const peopleByMachine = new Map(record.rows.map((r) => [r.machineName, r.people]));
   return (
     <div className="page">
