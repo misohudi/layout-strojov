@@ -2,6 +2,7 @@ import Dexie, { type EntityTable } from 'dexie';
 import type { Hall, Machine, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
 import { HALL_FREZY, seedHalls, seedHscMachines, seedMachines, seedShifts } from '../domain/seed';
 import { hallLayout } from '../domain/compact';
+import { pullIntoFrame } from '../domain/layoutEdit';
 
 export interface MetaEntry {
   key: string;
@@ -54,7 +55,17 @@ export async function ensureSeeded(db: AppDB): Promise<void> {
     }
     await ensureCompactLayout(db);
     await ensureHalls(db); // after the layout step, which would pack the HSC machines to the left
+    await ensureInFrame(db);
   });
+}
+
+/** Every zone keeps its machines inside the 13 × 6 plan (machines added below it are moved in). */
+export async function ensureInFrame(db: AppDB): Promise<void> {
+  const machines = await db.machines.toArray();
+  for (const hall of new Set(machines.map((m) => m.hallId))) {
+    const moved = pullIntoFrame(machines.filter((m) => m.hallId === hall));
+    if (moved.length) await db.machines.bulkPut(moved);
+  }
 }
 
 /**

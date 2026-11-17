@@ -21,6 +21,9 @@
   --prio-text: #ffffff;
   --outline: #111827;
   --overlay-bg: rgba(255, 255, 255, 0.6);
+  --note-bg: rgba(254, 240, 138, 0.62);
+  --note-border: rgba(161, 98, 7, 0.45);
+  --note-text: #3b2a00;
   --overlay-text: #111827;
   --overlay-border: rgba(17, 24, 39, 0.25);
   --shadow: rgba(0, 0, 0, 0.08);
@@ -53,6 +56,9 @@
   --oos-a: #3a4250;
   --oos-b: #222933;
   --overlay-bg: rgba(26, 33, 43, 0.65);
+  --note-bg: rgba(202, 138, 4, 0.32);
+  --note-border: rgba(250, 204, 21, 0.45);
+  --note-text: #fef3c7;
   --overlay-text: #e5e7eb;
   --overlay-border: rgba(255, 255, 255, 0.25);
   --shadow: rgba(0, 0, 0, 0.4);
@@ -80,6 +86,9 @@
     --oos-a: #3a4250;
     --oos-b: #222933;
     --overlay-bg: rgba(26, 33, 43, 0.65);
+    --note-bg: rgba(202, 138, 4, 0.32);
+    --note-border: rgba(250, 204, 21, 0.45);
+    --note-text: #fef3c7;
     --overlay-text: #e5e7eb;
     --overlay-border: rgba(255, 255, 255, 0.25);
     --shadow: rgba(0, 0, 0, 0.4);
@@ -217,13 +226,18 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 .zone { position: relative; }
 /* zone name + plan; the take-over bar floats over the zone name */
 .plan-area { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.plan-offer {
+.plan-notes {
   position: absolute; top: 0; left: 38px; right: 38px; z-index: 5;
-  display: flex; align-items: center; gap: 12px; padding: 3px 4px 3px 16px; border-radius: 14px;
-  border: 1px solid var(--overlay-border); color: var(--overlay-text); background: var(--overlay-bg);
+  display: flex; flex-direction: column; gap: 4px; pointer-events: none;
+}
+.plan-offer {
+  pointer-events: auto; min-height: 42px;
+  display: flex; align-items: center; gap: 12px; padding: 3px 4px 3px 12px; border-radius: 14px;
+  border: 1px solid var(--note-border); color: var(--note-text); background: var(--note-bg);
   backdrop-filter: blur(3px); box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15); font-size: 15px; font-weight: 700;
 }
 .plan-offer > span { flex: 1; }
+.plan-offer__icon { width: 22px; height: 22px; flex: none; }
 .plan-offer .btn { min-height: 34px; padding: 0 12px; font-size: 14px; }
 .plan-offer__close {
   flex: none; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--overlay-border); background: transparent;
