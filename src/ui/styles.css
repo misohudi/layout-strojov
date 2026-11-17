@@ -276,7 +276,13 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
   box-shadow: 0 1px 3px var(--shadow);
 }
 .tile__icon { flex: none; width: 3em; height: 2.9em; }
-.tile__nick, .tile__person-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tile__nick, .tile__person-name { white-space: nowrap; overflow: hidden; max-width: 100%; }
+/* Text too long for the tile (e.g. a name next to the 2× / +1 badges) scrolls left and back instead of "…". */
+.scroll-text { display: block; min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; }
+.scroll-text__inner { display: inline-block; }
+.scroll-text--on .scroll-text__inner { animation: text-scroll var(--scroll-time, 4s) ease-in-out infinite alternate; }
+@keyframes text-scroll { 0%, 20% { transform: translateX(0); } 80%, 100% { transform: translateX(var(--scroll-shift, 0)); } }
+/* deliberately not switched off for prefers-reduced-motion: it is slow, and the name would be cut otherwise */
 .tile__nick { font-weight: 800; font-size: 1.02em; letter-spacing: -0.03em; }
 .tile__person { display: flex; align-items: center; justify-content: center; gap: 0.12em; max-width: 100%; min-width: 0; font-size: 0.86em; font-weight: 600; }
 .tile__person-name { min-width: 0; }
