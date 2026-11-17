@@ -398,7 +398,8 @@ test('an empty plan offers the orders of the last shift on a card over the plan;
   renderApp();
   await pickShift('B');
   const card = await screen.findByRole('status');
-  expect(card.closest('.zone')).not.toBeNull(); // over the plan, not above it
+  // above the zone name
+  expect(card.compareDocumentPosition(screen.getByRole('heading', { name: 'Frézovňa' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   await userEvent.click(within(card).getByRole('button', { name: 'Zavrieť bez prevzatia' }));
   expect(screen.queryByRole('button', { name: /Prevziať/ })).toBeNull();
   expect((await db.drafts.get('s-B'))!.assignments).toEqual({});
