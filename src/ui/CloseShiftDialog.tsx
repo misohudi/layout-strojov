@@ -10,7 +10,6 @@ import { shareOrDownload } from '../report/share';
 import {
   getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
 } from '../report/folder';
-import { HALL_FREZY } from '../domain/seed';
 import type { ShiftRecord, Stats } from '../domain/types';
 
 interface Props {
@@ -40,7 +39,7 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   const live = useLiveQuery(async () => {
     const [draft, machines, people] = await Promise.all([
       db.drafts.get(shiftId),
-      db.machines.where('hallId').equals(HALL_FREZY).toArray(),
+      db.machines.toArray(), // all zones of the department
       db.people.toArray(),
     ]);
     return { draft, machines, people };
@@ -64,15 +63,16 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
     // Ask for folder access first, while the browser still counts this as the user's tap.
     if (folder) await requestFolderAccess(folder);
     try {
-      const [draft, machines, people, shifts] = await Promise.all([
+      const [draft, machines, people, shifts, halls] = await Promise.all([
         db.drafts.get(shiftId),
-        db.machines.where('hallId').equals(HALL_FREZY).toArray(),
+        db.machines.toArray(),
         db.people.toArray(),
         db.shifts.toArray(),
+        db.halls.orderBy('order').toArray(),
       ]);
       const shift = shifts.find((s) => s.id === shiftId);
       if (!draft || !shift) throw new Error('Zmena už nie je otvorená');
-      const record = buildShiftRecord({ draft, shift, machines, people, shifts, now: new Date(), id: crypto.randomUUID() });
+      const record = buildShiftRecord({ draft, shift, machines, people, shifts, halls, now: new Date(), id: crypto.randomUUID() });
       await saveRecordAndReset(db, record);
       setClosed({ record, blob: null });
       try {

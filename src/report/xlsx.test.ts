@@ -84,3 +84,11 @@ test('reportFileName and formatPct', () => {
   expect(formatPct(null)).toBe('–');
   expect(formatPct(undefined)).toBe('–'); // records from before occupancy by people
 });
+
+test('records with several zones get the zone in the last column', async () => {
+  const r = rec();
+  r.rows = r.rows.map((x, i) => ({ ...x, hallName: i === 2 ? 'HSC' : 'Frézovňa' }));
+  const ws = (await load(await buildReportXlsx(r))).getWorksheet('Report')!;
+  expect(ws.getRow(6).values).toEqual([, 'Stroj', 'Zakázka', 'Priorita', 'Ľudia', 'Nadčas', 'Oddelenie']);
+  expect(ws.getRow(9).values).toEqual([, 'DMU 125', '–', '', '', '', 'HSC']);
+});

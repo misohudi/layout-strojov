@@ -21,7 +21,10 @@ export const AISLE_WEIGHT = 0.35;
 function weights(items: GridItem[], pos: 'x' | 'y', size: 'w' | 'h', count: number): number[] {
   const used = new Array<boolean>(count).fill(false);
   for (const i of items) for (let k = i[pos]; k < i[pos] + i[size]; k++) used[k] = true;
-  return used.map((u) => (u ? 1 : AISLE_WEIGHT));
+  // only gaps between machines are aisles; empty floor before the first machine keeps full size
+  // (HSC: two machines on the far right of the plan)
+  const first = used.indexOf(true);
+  return used.map((u, k) => (u || k < first ? 1 : AISLE_WEIGHT));
 }
 
 /** Relative size of each column and row: 1 where a machine stands, narrower for empty tracks (aisles). */

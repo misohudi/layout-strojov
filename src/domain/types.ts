@@ -1,6 +1,13 @@
 export type OrderType = 'EXT' | 'INT';
 export type MachineStatus = 'active' | 'out_of_service';
 
+/** A zone (workplace) of the department with its own floor plan, e.g. the milling hall or HSC. */
+export interface Hall {
+  id: string;
+  name: string;
+  order: number;
+}
+
 export interface Machine {
   id: string;
   hallId: string;
@@ -88,6 +95,8 @@ export interface RecordPerson {
 
 export interface RecordRow {
   machineName: string;
+  /** Zone of the machine (records closed with several zones). */
+  hallName?: string;
   type: OrderType | null;
   outOfService: boolean;
   priority?: boolean;
@@ -96,6 +105,9 @@ export interface RecordRow {
 
 export interface RecordLayoutItem {
   name: string;
+  /** Zone of the machine; older records have one plan only. */
+  hallId?: string;
+  hallName?: string;
   /** Tile nick at the time the shift was closed. */
   nick?: string;
   x: number;

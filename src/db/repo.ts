@@ -1,6 +1,6 @@
 import type { AppDB } from './db';
 import { getMeta, setMeta } from './db';
-import type { Assignment, Machine, OrderType, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
+import type { Assignment, Hall, Machine, OrderType, Person, Shift, ShiftDraft, ShiftRecord } from '../domain/types';
 
 const newId = () => crypto.randomUUID();
 
@@ -190,4 +190,25 @@ export async function listRecords(
       (!filter.from || r.date >= filter.from) &&
       (!filter.to || r.date <= filter.to),
   );
+}
+
+/** New zone at the end. */
+export async function addHall(db: AppDB, name: string): Promise<string> {
+  const id = newId();
+  const last = await db.halls.orderBy('order').last();
+  await db.halls.put({ id, name, order: (last?.order ?? -1) + 1 });
+  return id;
+}
+
+export async function renameHall(db: AppDB, hall: Hall, name: string): Promise<void> {
+  await db.halls.put({ ...hall, name });
+}
+
+/** Removes an empty zone (zones with machines and the last zone stay). */
+export async function deleteHall(db: AppDB, id: string): Promise<void> {
+  await db.transaction('rw', db.halls, db.machines, async () => {
+    if ((await db.machines.where('hallId').equals(id).count()) > 0) throw new Error('Oddelenie má stroje');
+    if ((await db.halls.count()) <= 1) throw new Error('Posledné oddelenie');
+    await db.halls.delete(id);
+  });
 }

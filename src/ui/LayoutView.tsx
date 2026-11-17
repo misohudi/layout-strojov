@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState, type TouchEvent } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { Header } from './Header';
@@ -10,7 +10,49 @@ import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
-import { HALL_FREZY } from '../domain/seed';
+import { trackWeights } from './grid';
+import type { Hall, Machine } from '../domain/types';
+
+/** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
+const ZONE_KEY = 'layout-strojov.zone';
+function readZone(): string | null {
+  try {
+    return localStorage.getItem(ZONE_KEY);
+  } catch {
+    return null;
+  }
+}
+function storeZone(id: string) {
+  try {
+    localStorage.setItem(ZONE_KEY, id);
+  } catch {
+    /* not remembered – fine */
+  }
+}
+
+/** Tile size of the largest zone, so every zone shows machines of the same size. */
+function largestTracks(halls: Hall[], machines: Machine[]) {
+  let cols: number[] = [1];
+  let rows: number[] = [1];
+  const sum = (a: number[]) => a.reduce((s, v) => s + v, 0);
+  for (const h of halls) {
+    const items = machines.filter((m) => m.hallId === h.id);
+    if (items.length === 0) continue;
+    const t = trackWeights(items);
+    if (sum(t.cols) > sum(cols)) cols = t.cols;
+    if (sum(t.rows) > sum(rows)) rows = t.rows;
+  }
+  return { cols, rows };
+}
+
+/** A swipe: one finger, mostly sideways, at least this far. */
+const SWIPE_PX = 60;
+
+const Chevron = ({ dir }: { dir: 'left' | 'right' }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={dir === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+  </svg>
+);
 
 interface Props {
   shiftId: string;
@@ -23,7 +65,12 @@ interface Props {
 
 export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCloseShift, banner }: Props) {
   const db = useDB();
-  const machines = useLiveQuery(() => db.machines.where('hallId').equals(HALL_FREZY).toArray(), [db]);
+  // all zones of the department: the stats count them all, the plan shows one zone at a time
+  const machines = useLiveQuery(() => db.machines.toArray(), [db]);
+  const halls = useLiveQuery(() => db.halls.orderBy('order').toArray(), [db]) ?? [];
+  const [zoneId, setZoneId] = useState<string | null>(readZone);
+  const swipe = useRef<{ x: number; y: number } | null>(null);
+  const zoneRef = useRef<HTMLDivElement>(null);
   // null = loaded but no draft (shift deleted, backup restored, closed); undefined = still loading
   const draftResult = useLiveQuery(async () => (await db.drafts.get(shiftId)) ?? null, [db, shiftId]);
   const people = useLiveQuery(() => db.people.toArray(), [db]) ?? [];
@@ -58,6 +105,35 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   const personOf = new Map(people.map((p) => [p.id, p]));
   const open = machines.find((m) => m.id === openId);
+  const zoneIdx = Math.max(0, halls.findIndex((h) => h.id === zoneId));
+  const hall = halls[zoneIdx] as Hall | undefined;
+  const visible = hall ? machines.filter((m) => m.hallId === hall.id) : machines;
+  const multiZone = halls.length > 1;
+  const goZone = (delta: number) => {
+    const next = halls[zoneIdx + delta];
+    if (!next) return;
+    setZoneId(next.id);
+    storeZone(next.id);
+  };
+  const onTouchStart = (e: TouchEvent) => {
+    swipe.current = e.touches.length === 1 ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+  };
+  const onTouchMove = (e: TouchEvent) => {
+    if (e.touches.length > 1) swipe.current = null; // pinch zoom, not a swipe
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    const s = swipe.current;
+    swipe.current = null;
+    const t = e.changedTouches[0];
+    if (!s || !t || !multiZone) return;
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
+    // a zoomed plan that pans sideways keeps the swipe for panning
+    const scroller = zoneRef.current?.querySelector<HTMLElement>('[data-testid="floor-scroll"]');
+    if (scroller && scroller.scrollWidth > scroller.clientWidth + 1) return;
+    goZone(dx < 0 ? 1 : -1);
+  };
   const isEmpty = Object.keys(draft.assignments).length === 0;
 
   return (
@@ -86,28 +162,60 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
         </div>
       )}
-      <Floor items={machines} onPlanClick={egg.onPlanClick}>
-        {machines.map((m) => {
-          const a = draft.assignments[m.id];
-          const hit = legendKey ? matchesLegend(legendKey, m, a) : null;
-          return (
-            <MachineTile
-              key={m.id}
-              {...m}
-              type={a?.type ?? null}
-              outOfService={m.status !== 'active'}
-              priority={!!a?.priority}
-              people={(a?.personIds ?? []).map((id) => {
-                const p = personOf.get(id);
-                return { name: p?.name ?? '?', role: p?.role, machines: counts[id] ?? 1 };
-              })}
-              highlighted={hit === true}
-              dimmed={hit === false}
-              onClick={() => setOpenId(m.id)}
-            />
-          );
-        })}
-      </Floor>
+      {multiZone && hall && (
+        <div className="zonebar">
+          <h2 className="zonebar__name" aria-live="polite">{hall.name}</h2>
+          <span className="zonebar__dots" aria-hidden="true">
+            {halls.map((h) => <i key={h.id} className={h.id === hall.id ? 'on' : ''} />)}
+          </span>
+        </div>
+      )}
+      <div className="zone" ref={zoneRef} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        {multiZone && (
+          <button
+            type="button"
+            className="zone__arrow"
+            aria-label={`Predchádzajúce oddelenie${halls[zoneIdx - 1] ? ` – ${halls[zoneIdx - 1].name}` : ''}`}
+            disabled={zoneIdx === 0}
+            onClick={() => goZone(-1)}
+          >
+            <Chevron dir="left" />
+          </button>
+        )}
+        <Floor key={hall?.id} items={visible} sizeTracks={largestTracks(halls, machines)} onPlanClick={egg.onPlanClick}>
+          {visible.map((m) => {
+            const a = draft.assignments[m.id];
+            const hit = legendKey ? matchesLegend(legendKey, m, a) : null;
+            return (
+              <MachineTile
+                key={m.id}
+                {...m}
+                type={a?.type ?? null}
+                outOfService={m.status !== 'active'}
+                priority={!!a?.priority}
+                people={(a?.personIds ?? []).map((id) => {
+                  const p = personOf.get(id);
+                  return { name: p?.name ?? '?', role: p?.role, machines: counts[id] ?? 1 };
+                })}
+                highlighted={hit === true}
+                dimmed={hit === false}
+                onClick={() => setOpenId(m.id)}
+              />
+            );
+          })}
+        </Floor>
+        {multiZone && (
+          <button
+            type="button"
+            className="zone__arrow"
+            aria-label={`Ďalšie oddelenie${halls[zoneIdx + 1] ? ` – ${halls[zoneIdx + 1].name}` : ''}`}
+            disabled={zoneIdx === halls.length - 1}
+            onClick={() => goZone(1)}
+          >
+            <Chevron dir="right" />
+          </button>
+        )}
+      </div>
       <Legend stats={stats} selected={legendKey} onSelect={setLegendKey}>
         <button
           className="btn btn--danger-outline"
@@ -124,6 +232,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
       {listOpen && (
         <MachineList
           machines={machines}
+          halls={halls}
           assignments={draft.assignments}
           stats={stats}
           nameOf={nameOf}

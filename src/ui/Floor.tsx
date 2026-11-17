@@ -62,10 +62,13 @@ export function tileSize(areaW: number, areaH: number, tracks: { cols: number[];
  */
 export function Floor({
   items,
+  sizeTracks,
   children,
   onPlanClick,
 }: {
   items: GridItem[];
+  /** Tracks to size the tiles by (the largest zone), so every zone has the same tile size. */
+  sizeTracks?: { cols: number[]; rows: number[] };
   children: ReactNode;
   /** Any tap inside the plan area (machines included – the handler filters). */
   onPlanClick?(e: MouseEvent): void;
@@ -88,7 +91,7 @@ export function Floor({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const size = tileSize(area.w, area.h, tracks);
+  const size = tileSize(area.w, area.h, sizeTracks ?? tracks);
   const tileH = size.h * zoom;
   const tileW = size.w * zoom;
 

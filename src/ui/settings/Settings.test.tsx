@@ -7,6 +7,7 @@ import { PeopleSettings } from './PeopleSettings';
 import { ShiftSettings } from './ShiftSettings';
 import { BackupSettings } from './BackupSettings';
 import { SettingsView } from './SettingsView';
+import { HallSettings } from './HallSettings';
 import { upsertPerson } from '../../db/repo';
 import { shareOrDownload } from '../../report/share';
 import { trackWeights } from '../grid';
@@ -137,9 +138,9 @@ test('machine editor toggles out of service, adds and deletes a machine', async 
   await userEvent.click(screen.getByRole('button', { name: 'Mimo prevádzky' }));
   await vi.waitFor(async () => expect((await db.machines.get('m-0'))!.status).toBe('out_of_service'));
   await userEvent.click(screen.getByRole('button', { name: 'Pridať stroj' }));
-  await vi.waitFor(async () => expect(await db.machines.count()).toBe(36));
+  await vi.waitFor(async () => expect(await db.machines.count()).toBe(38));
   await userEvent.click(screen.getByRole('button', { name: 'Odstrániť stroj' }));
-  await vi.waitFor(async () => expect(await db.machines.count()).toBe(35));
+  await vi.waitFor(async () => expect(await db.machines.count()).toBe(37));
 });
 
 test('people settings add a person to a shift', async () => {
@@ -204,4 +205,24 @@ test('saving a backup shares the file and records the time', async () => {
     expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^zaloha-layout-strojov-/)),
   );
   await vi.waitFor(async () => expect(await getMeta(db, 'lastBackupAt')).toBeDefined());
+});
+
+test('zones in settings: add and rename; a zone with machines cannot be removed', async () => {
+  wrap(<HallSettings />);
+  expect(await screen.findByLabelText('Názov oddelenia Frézovňa')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Odstrániť oddelenie HSC' })).toBeDisabled(); // has 2 machines
+  await userEvent.type(screen.getByLabelText('Nové oddelenie'), 'Brúsky');
+  await userEvent.click(screen.getByRole('button', { name: 'Pridať oddelenie' }));
+  await vi.waitFor(async () => expect((await db.halls.orderBy('order').toArray()).map((h) => h.name)).toEqual(['Frézovňa', 'HSC', 'Brúsky']));
+  expect(await screen.findByRole('button', { name: 'Odstrániť oddelenie Brúsky' })).toBeEnabled();
+});
+
+test('machine editor: pick a zone, its machines are shown; a machine can move to another zone', async () => {
+  wrap(<MachineEditor />);
+  await userEvent.click(await screen.findByRole('button', { name: 'HSC' }));
+  await vi.waitFor(() => expect(screen.getAllByTestId('machine-tile')).toHaveLength(2));
+  await userEvent.click(screen.getByRole('button', { name: /MIKRON \/ 2/ }));
+  await userEvent.selectOptions(screen.getByLabelText('Oddelenie stroja'), 'frezy');
+  await vi.waitFor(async () => expect((await db.machines.get('m-hsc-2'))!.hallId).toBe('frezy'));
+  await vi.waitFor(() => expect(screen.getAllByTestId('machine-tile')).toHaveLength(36)); // now showing the milling hall
 });

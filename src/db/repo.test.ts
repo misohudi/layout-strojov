@@ -2,7 +2,7 @@ import { openDB, ensureSeeded, type AppDB } from './db';
 import {
   getDraft, startDraft, continueDraft, getLastForeman, setMachineType, setMachinePriority, togglePerson, copyFromLastRecord,
   upsertPerson, deletePerson, setPersonActive, upsertMachine, addMachine, deleteMachine,
-  upsertShift, deleteShift, saveRecordAndReset, listRecords,
+  upsertShift, deleteShift, saveRecordAndReset, listRecords, addHall, deleteHall,
 } from './repo';
 import type { ShiftRecord } from '../domain/types';
 import { seedMachines } from '../domain/seed';
@@ -31,7 +31,8 @@ const record = (over: Partial<ShiftRecord> = {}): ShiftRecord => ({
 
 test('ensureSeeded is idempotent', async () => {
   await ensureSeeded(db);
-  expect(await db.machines.count()).toBe(35);
+  expect(await db.machines.count()).toBe(37); // milling hall 35 + HSC 2
+  expect(await db.halls.count()).toBe(2);
   expect(await db.shifts.count()).toBe(3);
 });
 
@@ -41,7 +42,7 @@ test('a tablet with the packed rows (layout version 3) gets the hall columns, ga
   await db.machines.update(edel.id, { x: 4, y: 3, status: 'out_of_service' });
   await db.meta.put({ key: 'layoutVersion', value: 3 });
   await ensureSeeded(db);
-  const ms = await db.machines.toArray();
+  const ms = (await db.machines.toArray()).filter((m) => m.hallId === 'frezy');
   const byName = (n: string) => ms.find((m) => m.name === n)!;
   expect(byName('EDEL')).toMatchObject({ x: byName('UNIPORT 4000').x, y: 5, status: 'out_of_service' });
   expect(ms.some((m) => m.y === 3)).toBe(false); // the aisle
@@ -61,7 +62,8 @@ test('version 3 with machines changed since (added one) keeps the current positi
 test('a new install gets the compact layout: every machine one cell, no two in one cell', async () => {
   const ms = await db.machines.toArray();
   expect(ms.every((m) => m.w === 1 && m.h === 1)).toBe(true);
-  expect(new Set(ms.map((m) => `${m.x},${m.y}`)).size).toBe(ms.length);
+  // each zone has its own plan
+  expect(new Set(ms.map((m) => `${m.hallId}:${m.x},${m.y}`)).size).toBe(ms.length);
 });
 
 test('an existing install with the old layout is compacted once, keeping machine ids and status', async () => {
@@ -186,7 +188,7 @@ test('upsertShift and upsertMachine create and update', async () => {
   await upsertShift(db, { id, name: 'Nočná', order: 3 });
   expect((await db.shifts.get(id))?.name).toBe('Nočná');
   const mid = await upsertMachine(db, { hallId: 'frezy', name: 'Nový', x: 0, y: 20, w: 1, h: 1, status: 'active' });
-  expect(await db.machines.count()).toBe(36);
+  expect(await db.machines.count()).toBe(38);
   expect((await db.machines.get(mid))?.name).toBe('Nový');
 });
 
@@ -228,4 +230,25 @@ test('copyFromLastRecord maps by machine name and skips inactive people', async 
 test('copyFromLastRecord returns false without records', async () => {
   await startDraft(db, 's-B', 'Y', NOW);
   expect(await copyFromLastRecord(db, 's-B')).toBe(false);
+});
+
+test('zones: the milling hall and HSC with two Mikron machines above each other on the far right', async () => {
+  const halls = await db.halls.orderBy('order').toArray();
+  expect(halls.map((h) => h.name)).toEqual(['Frézovňa', 'HSC']);
+  const hsc = await db.machines.where('hallId').equals('hsc').toArray();
+  expect(hsc.map((m) => [m.name, m.x, m.y])).toEqual([['MIKRON / 1', 12, 0], ['MIKRON / 2', 12, 1]]);
+});
+
+test('an install from before zones gets the zones once; a zone removed later is not recreated', async () => {
+  await db.halls.clear();
+  await db.machines.where('hallId').equals('hsc').delete();
+  await ensureSeeded(db);
+  expect(await db.halls.count()).toBe(2);
+  expect(await db.machines.where('hallId').equals('hsc').count()).toBe(2);
+  // empty zones can be removed, zones with machines and the last zone stay
+  const id = await addHall(db, 'Brúsky');
+  await deleteHall(db, id);
+  await expect(deleteHall(db, 'hsc')).rejects.toThrow('Oddelenie má stroje');
+  await ensureSeeded(db);
+  expect(await db.halls.count()).toBe(2);
 });
