@@ -1,3 +1,4 @@
+import { nickOf } from './nick';
 import { computeStats } from './stats';
 import { isPool, roleOf, type Machine, type Person, type RecordRow, type Shift, type ShiftDraft, type ShiftRecord } from './types';
 
@@ -62,6 +63,7 @@ export function buildShiftRecord(input: {
     rows,
     layout: machines.map((m) => ({
       name: m.name,
+      nick: nickOf(m),
       x: m.x,
       y: m.y,
       w: m.w,

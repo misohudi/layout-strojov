@@ -7,12 +7,16 @@ const MAX_ZOOM = 3;
 /** Pinching back to within 8 % of 100 % snaps to exactly 100 %. */
 const SNAP = 0.08;
 
-/** Tile height at 100 %: from the available height (all rows visible), but always readable. */
-const TILE_H_MIN = 84;
-const TILE_H_MAX = 104;
-/** Tiles are landscape rectangles: icon on the left, texts on the right. */
-const TILE_RATIO = 2.1;
-const GAP = 14;
+/**
+ * Tile size at 100 %: the whole hall fits the screen (no scrolling on the tablet), but a tile never gets
+ * smaller than a comfortable finger target – on a tiny screen the plan scrolls instead.
+ */
+const TILE_MIN = 64;
+const TILE_H_MAX = 120;
+/** Width / height: tiles are about square, a bit wider on big screens, never much narrower than high. */
+const MAX_RATIO = 1.5;
+const MIN_RATIO = 0.8;
+const GAP = 10;
 
 const clamp = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
@@ -36,16 +40,24 @@ function midpoint(el: HTMLElement, touches: TouchList) {
   };
 }
 
-/** Tile height at 100 % for a scroll area `areaPx` high showing rows of the given weights (aisles < 1). */
-export function tileHeight(areaPx: number, rows: number[]): number {
-  const units = rows.reduce((s, w) => s + w, 0);
-  const fit = (areaPx - 2 * GAP - GAP * (rows.length - 1)) / units;
-  return Math.round(Math.min(TILE_H_MAX, Math.max(TILE_H_MIN, fit || 0)));
+const clampPx = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v || 0));
+
+/** Size of one track that fills `areaPx` with tracks of the given weights (aisles < 1), padding and gaps. */
+const fit = (areaPx: number, weights: number[]) =>
+  (areaPx - 2 * GAP - GAP * (weights.length - 1)) / weights.reduce((s, w) => s + w, 0);
+
+/** Tile size at 100 % for a scroll area `areaW` × `areaH` showing the given columns and rows. */
+export function tileSize(areaW: number, areaH: number, tracks: { cols: number[]; rows: number[] }) {
+  let h = clampPx(fit(areaH, tracks.rows), TILE_MIN, TILE_H_MAX);
+  const w = clampPx(fit(areaW, tracks.cols), TILE_MIN, h * MAX_RATIO);
+  if (w < h * MIN_RATIO) h = Math.max(TILE_MIN, w / MIN_RATIO);
+  return { w: Math.floor(w), h: Math.floor(h) };
 }
 
 /**
- * Floor plan of equally sized landscape tiles. Rows wider than the screen pan sideways with one
- * finger (native scrolling of its own area); two fingers zoom around the point between them. While
+ * Floor plan of equally sized tiles that fill the screen. Should the plan not fit (tiny screen or zoomed
+ * in), it pans with one finger (native scrolling of its own area); two fingers zoom around the point
+ * between them. While
  * zoomed, a semi-transparent "100 %" button in the top-right corner returns to the normal size.
  */
 export function Floor({
@@ -65,19 +77,20 @@ export function Floor({
   /** Scroll position to restore after the zoom re-renders, keeping the focal point under the fingers. */
   const anchor = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null);
   const tracks = trackWeights(items);
-  const [areaH, setAreaH] = useState(0);
+  const [area, setArea] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const measure = () => setAreaH(el.clientHeight);
+    const measure = () => setArea({ w: el.clientWidth, h: el.clientHeight });
     measure();
     if (typeof ResizeObserver === 'undefined') return;
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
-  const tileH = tileHeight(areaH, tracks.rows) * zoom;
-  const tileW = tileH * TILE_RATIO;
+  const size = tileSize(area.w, area.h, tracks);
+  const tileH = size.h * zoom;
+  const tileW = size.w * zoom;
 
   const applyZoom = (z: number) => {
     zoomRef.current = z;
@@ -168,7 +181,7 @@ export function Floor({
             gap: `${Math.round(GAP * zoom)}px`,
             padding: `${Math.round(GAP * zoom)}px`,
             // texts and icon scale with the tile
-            fontSize: `${(tileH * 0.135).toFixed(1)}px`,
+            fontSize: `${(Math.min(tileW, tileH) * 0.17).toFixed(1)}px`,
           }}
         >
           {children}

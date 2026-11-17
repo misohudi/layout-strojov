@@ -7,6 +7,7 @@ import { cellIndex, trackWeights } from '../grid';
 import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
 import { freeSpotBelow, moveMachine } from '../../domain/layoutEdit';
 import { moveToCell } from '../../domain/compact';
+import { autoNick, NICK_MAX } from '../../domain/nick';
 import { HALL_FREZY } from '../../domain/seed';
 import type { Machine } from '../../domain/types';
 
@@ -16,8 +17,11 @@ export function MachineEditor() {
   const [selId, setSelId] = useState<string | null>(null);
   const sel = machines.find((m) => m.id === selId);
   const [name, setName] = useState('');
+  const [nick, setNick] = useState('');
 
   useEffect(() => setName(sel?.name ?? ''), [sel?.id, sel?.name]);
+  useEffect(() => setNick(sel?.nick ?? ''), [sel?.id, sel?.nick]);
+  const nameChanged = !!sel && (name.trim() !== sel.name || nick.trim() !== (sel.nick ?? ''));
 
   const save = (m: Machine) => upsertMachine(db, m);
 
@@ -126,7 +130,20 @@ export function MachineEditor() {
                 <span>Názov stroja</span>
                 <input value={name} onChange={(e) => setName(e.target.value)} />
               </label>
-              <button className="btn" disabled={!name.trim() || name.trim() === sel.name} onClick={() => save({ ...sel, name: name.trim() })}>
+              <label className="field field--nick">
+                <span>{`Prezývka na dlaždici (max. ${NICK_MAX} znakov)`}</span>
+                <input
+                  value={nick}
+                  maxLength={NICK_MAX + 2}
+                  placeholder={autoNick(name || sel.name)}
+                  onChange={(e) => setNick(e.target.value)}
+                />
+              </label>
+              <button
+                className="btn"
+                disabled={!name.trim() || !nameChanged}
+                onClick={() => save({ ...sel, name: name.trim(), nick: nick.trim() || undefined })}
+              >
                 Uložiť názov
               </button>
             </div>

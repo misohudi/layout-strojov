@@ -1,25 +1,23 @@
 import { render, screen, within } from '@testing-library/react';
-import { MachineTile, splitName } from './MachineTile';
+import { MachineTile } from './MachineTile';
 
 const base = { x: 0, y: 0, w: 1, h: 1, type: null, outOfService: false } as const;
 
-test('splitName keeps normal names on one line and moves the end of the longest to a second line', () => {
-  expect(splitName('HERMLE C60')).toEqual(['HERMLE C60', null]);
-  expect(splitName('DMF 220 LINEAR')).toEqual(['DMF 220 LINEAR', null]);
-  expect(splitName('DMU 80P DUO BLOCK / 1')).toEqual(['DMU 80P', 'DUO BLOCK / 1']);
-  expect(splitName('DMU 60P DUO BLOCK')).toEqual(['DMU 60P', 'DUO BLOCK']);
-  expect(splitName('VERYLONGNAMEWITHOUTSPACES')).toEqual(['VERYLONGNAMEWITHOUTSPACES', null]);
-});
-
-test('free machine: icon on the left, name, no person', () => {
-  render(<MachineTile {...base} name="DMU 125" />);
-  const tile = screen.getByTestId('machine-tile');
+test('free machine: icon on top, nick below; the full name stays for screen readers and as a tooltip', () => {
+  render(<MachineTile {...base} name="HERMLE C42 / 4" />);
+  const tile = screen.getByRole('button', { name: 'HERMLE C42 / 4' });
   expect(tile.firstElementChild).toBe(within(tile).getByTestId('icon-machine'));
-  expect(tile).toHaveTextContent(/^DMU 125$/);
+  expect(tile.querySelector('.tile__nick')).toHaveTextContent(/^C42\/4$/);
+  expect(tile).toHaveAttribute('title', 'HERMLE C42 / 4');
   expect(tile.querySelector('.tile__role')).toBeNull();
 });
 
-test('first person with role below and a count of the others; staffed icon', () => {
+test('a nick set in Settings is shown instead of the automatic one', () => {
+  render(<MachineTile {...base} name="HERMLE C60" nick="Šesťd." />);
+  expect(screen.getByTestId('machine-tile').querySelector('.tile__nick')).toHaveTextContent(/^Šesťd\.$/);
+});
+
+test('first person with a count of the others (role for screen readers) of the others; staffed icon', () => {
   render(
     <MachineTile
       {...base}
@@ -29,8 +27,7 @@ test('first person with role below and a count of the others; staffed icon', () 
   );
   const tile = screen.getByTestId('machine-tile');
   expect(within(tile).getByTestId('icon-operator')).toBeInTheDocument(); // first person is an operator → seated
-  expect(tile.querySelector('.tile__name')).toHaveTextContent('DMU 80P');
-  expect(tile.querySelector('.tile__name-sub')).toHaveTextContent('DUO BLOCK / 1');
+  expect(tile.querySelector('.tile__nick')).toHaveTextContent('80P DB/1');
   expect(tile.querySelector('.tile__person-name')).toHaveTextContent('Kováč');
   expect(tile.querySelector('.tile__more')).toHaveTextContent('+2');
   expect(tile.querySelector('.tile__role')).toHaveTextContent('Operátor');

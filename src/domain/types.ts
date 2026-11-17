@@ -5,6 +5,8 @@ export interface Machine {
   id: string;
   hallId: string;
   name: string;
+  /** Short name shown on the tile (empty = made from the name automatically). */
+  nick?: string;
   x: number;
   y: number;
   w: number;
@@ -94,6 +96,8 @@ export interface RecordRow {
 
 export interface RecordLayoutItem {
   name: string;
+  /** Tile nick at the time the shift was closed. */
+  nick?: string;
   x: number;
   y: number;
   w: number;
