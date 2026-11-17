@@ -159,8 +159,31 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
    * when one of those zones has a priority order.
    */
   const seenIds = seen.key === draftKey ? seen.ids : [];
+  /** Does a zone have machines of the given legend item (priority, EXT, INT, out of service…)? */
+  const zoneHas = (key: LegendKey, hallId: string) =>
+    machines.some((m) => m.hallId === hallId && matchesLegend(key, m, draft.assignments[m.id]));
+  /**
+   * Tapping a legend item: when the shown zone has no such machine but another zone does, the view
+   * switches to the nearest of those zones.
+   */
+  const selectLegend = (key: LegendKey | null) => {
+    setLegendKey(key);
+    if (!key || !multiZone || (hall && zoneHas(key, hall.id))) return;
+    const target = halls
+      .map((h, i) => ({ h, d: Math.abs(i - zoneIdx) }))
+      .filter(({ h }) => zoneHas(key, h.id))
+      .sort((a, b) => a.d - b.d)[0];
+    if (target) {
+      setZoneId(target.h.id);
+      storeZone(target.h.id);
+    }
+  };
   const arrowClass = (dir: -1 | 1) => {
     const ahead = dir < 0 ? halls.slice(0, zoneIdx) : halls.slice(zoneIdx + 1);
+    // a legend item is selected: the arrow towards zones with such machines lights up in its colour
+    if (legendKey && ahead.some((h) => zoneHas(legendKey, h.id))) {
+      return `zone__arrow--pulse zone__arrow--hl zone__arrow--hl-${legendKey}`;
+    }
     const unseen = ahead.filter((h) => !seenIds.includes(h.id));
     if (unseen.length === 0) return '';
     const prio = machines.some(
@@ -199,7 +222,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         {showOffer && (
           <div className="plan-offer" role="status">
             <span>Pôdorys je prázdny.</span>
-            <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
+            <button className="btn" onClick={() => copyFromLastRecord(db, shiftId)}>
               Prevziať zakázky a priority z poslednej zmeny
             </button>
             <button
@@ -267,7 +290,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           </button>
         )}
       </div>
-      <Legend stats={stats} selected={legendKey} onSelect={setLegendKey}>
+      <Legend stats={stats} selected={legendKey} onSelect={selectLegend}>
         <button
           className="btn btn--danger-outline"
           disabled={isEmpty}
