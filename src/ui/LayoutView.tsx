@@ -210,86 +210,88 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
         </div>
       )}
-      {/* above the zone name, over the screen like the zoom button */}
-      {showOffer && (
-        <div className="plan-offer" role="status">
-          <span>Pôdorys je prázdny.</span>
-          <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
-            Prevziať zakázky a priority z poslednej zmeny
-          </button>
-          <button
-            type="button"
-            className="plan-offer__close"
-            aria-label="Zavrieť bez prevzatia"
-            title="Zavrieť bez prevzatia"
-            onClick={() => {
-              if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
-              setOfferClosed(draftKey);
-            }}
-          >
-            ×
-          </button>
-        </div>
-      )}
-      {multiZone && hall && (
-        <div className="zonebar">
-          <h2 className="zonebar__name" aria-live="polite">{hall.name}</h2>
-          <span className="zonebar__dots" aria-hidden="true">
-            {halls.map((h) => <i key={h.id} className={h.id === hall.id ? 'on' : ''} />)}
-          </span>
-        </div>
-      )}
-      <div className="zone" ref={zoneRef} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-        {multiZone && (
-          <button
-            type="button"
-            className={`zone__arrow ${arrowClass(-1)}`}
-            aria-label={`Predchádzajúce oddelenie${halls[zoneIdx - 1] ? ` – ${halls[zoneIdx - 1].name}` : ''}`}
-            disabled={zoneIdx === 0}
-            onClick={() => goZone(-1)}
-          >
-            <Chevron dir="left" />
-          </button>
+      <div className="plan-area">
+        {/* a see-through layer over the zone name (like the zoom button), not pushing the plan down */}
+        {showOffer && (
+          <div className="plan-offer" role="status">
+            <span>Pôdorys je prázdny.</span>
+            <button className="btn btn--small" onClick={() => copyFromLastRecord(db, shiftId)}>
+              Prevziať zakázky a priority z poslednej zmeny
+            </button>
+            <button
+              type="button"
+              className="plan-offer__close"
+              aria-label="Zavrieť bez prevzatia"
+              title="Zavrieť bez prevzatia"
+              onClick={() => {
+                if (draftKey) writeNote(`${draftKey}.offerClosed`, true);
+                setOfferClosed(draftKey);
+              }}
+            >
+              ×
+            </button>
+          </div>
         )}
-        <Floor
-          key={hall?.id}
-          items={visible}
-          frame={PLAN_FRAME}
-          fill
-          onPlanClick={egg.onPlanClick}
-        >
-          {visible.map((m) => {
-            const a = draft.assignments[m.id];
-            const hit = legendKey ? matchesLegend(legendKey, m, a) : null;
-            return (
-              <MachineTile
-                key={m.id}
-                {...m}
-                type={a?.type ?? null}
-                outOfService={m.status !== 'active'}
-                priority={!!a?.priority}
-                people={(a?.personIds ?? []).map((id) => {
-                  const p = personOf.get(id);
-                  return { name: p?.name ?? '?', role: p?.role, machines: counts[id] ?? 1 };
-                })}
-                highlighted={hit === true}
-                dimmed={hit === false}
-                onClick={() => setOpenId(m.id)}
-              />
-            );
-          })}
-        </Floor>
-        {multiZone && (
-          <button
-            type="button"
-            className={`zone__arrow ${arrowClass(1)}`}
-            aria-label={`Ďalšie oddelenie${halls[zoneIdx + 1] ? ` – ${halls[zoneIdx + 1].name}` : ''}`}
-            disabled={zoneIdx === halls.length - 1}
-            onClick={() => goZone(1)}
-          >
-            <Chevron dir="right" />
-          </button>
+        {multiZone && hall && (
+          <div className="zonebar">
+            <h2 className="zonebar__name" aria-live="polite">{hall.name}</h2>
+            <span className="zonebar__dots" aria-hidden="true">
+              {halls.map((h) => <i key={h.id} className={h.id === hall.id ? 'on' : ''} />)}
+            </span>
+          </div>
         )}
+        <div className="zone" ref={zoneRef} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+          {multiZone && (
+            <button
+              type="button"
+              className={`zone__arrow ${arrowClass(-1)}`}
+              aria-label={`Predchádzajúce oddelenie${halls[zoneIdx - 1] ? ` – ${halls[zoneIdx - 1].name}` : ''}`}
+              disabled={zoneIdx === 0}
+              onClick={() => goZone(-1)}
+            >
+              <Chevron dir="left" />
+            </button>
+          )}
+          <Floor
+            key={hall?.id}
+            items={visible}
+            frame={PLAN_FRAME}
+            fill
+            onPlanClick={egg.onPlanClick}
+          >
+            {visible.map((m) => {
+              const a = draft.assignments[m.id];
+              const hit = legendKey ? matchesLegend(legendKey, m, a) : null;
+              return (
+                <MachineTile
+                  key={m.id}
+                  {...m}
+                  type={a?.type ?? null}
+                  outOfService={m.status !== 'active'}
+                  priority={!!a?.priority}
+                  people={(a?.personIds ?? []).map((id) => {
+                    const p = personOf.get(id);
+                    return { name: p?.name ?? '?', role: p?.role, machines: counts[id] ?? 1 };
+                  })}
+                  highlighted={hit === true}
+                  dimmed={hit === false}
+                  onClick={() => setOpenId(m.id)}
+                />
+              );
+            })}
+          </Floor>
+          {multiZone && (
+            <button
+              type="button"
+              className={`zone__arrow ${arrowClass(1)}`}
+              aria-label={`Ďalšie oddelenie${halls[zoneIdx + 1] ? ` – ${halls[zoneIdx + 1].name}` : ''}`}
+              disabled={zoneIdx === halls.length - 1}
+              onClick={() => goZone(1)}
+            >
+              <Chevron dir="right" />
+            </button>
+          )}
+        </div>
       </div>
       <Legend stats={stats} selected={legendKey} onSelect={selectLegend}>
         <button
