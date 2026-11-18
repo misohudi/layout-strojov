@@ -8,7 +8,7 @@ import { addMachine, deleteMachine, upsertMachine } from '../../db/repo';
 import { freeCell, moveMachine } from '../../domain/layoutEdit';
 import { moveToCell } from '../../domain/compact';
 import { autoNick, NICK_MAX } from '../../domain/nick';
-import type { Machine } from '../../domain/types';
+import { MACHINE_KINDS, type Machine } from '../../domain/types';
 
 export function MachineEditor() {
   const db = useDB();
@@ -178,6 +178,25 @@ export function MachineEditor() {
                 </select>
               </label>
             )}
+            <div className="field">
+              <span id="machine-kind">Typ stroja</span>
+              <div className="row" role="group" aria-labelledby="machine-kind">
+                {MACHINE_KINDS.map((k) => {
+                  const on = (sel.kind ?? 'mill') === k.value;
+                  return (
+                    <button
+                      key={k.value}
+                      type="button"
+                      className={`chip ${on ? 'chip--on' : ''}`}
+                      aria-pressed={on}
+                      onClick={() => save({ ...sel, kind: k.value })}
+                    >
+                      {k.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             <button
               className="btn"
               disabled={!name.trim() || !nameChanged}
