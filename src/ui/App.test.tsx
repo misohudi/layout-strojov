@@ -55,8 +55,8 @@ test('header occupancy counts machines with people and people by role', async ()
   const header = await screen.findByRole('banner');
   expect(await within(header).findByRole('group', { name: 'Obsadenosť 5,4 %' })).toBeInTheDocument(); // 2 / 37
   expect(within(header).getByRole('button', { name: '2 / 37 strojov' })).toBeInTheDocument();
-  expect(within(header).getByRole('group', { name: 'Frézari 1' })).toBeInTheDocument();
-  expect(within(header).getByRole('group', { name: 'Operátori 1' })).toBeInTheDocument();
+  expect(within(header).getByRole('button', { name: 'Frézari 1 – zoznam ľudí' })).toBeInTheDocument();
+  expect(within(header).getByRole('button', { name: 'Operátori 1 – zoznam ľudí' })).toBeInTheDocument();
   expect(screen.getByRole('group', { name: 'Vyťaženie strojov 0,0 %' })).toBeInTheDocument();
 });
 
@@ -87,7 +87,7 @@ test('header groups related fields into sections', async () => {
   // the shift itself is the button for switching shifts – no separate button
   expect(within(section('Zmena')).getAllByRole('button')).toHaveLength(1);
   expect(within(section('Zmena')).getByRole('button', { name: /^Zmena B/ })).toHaveTextContent('B');
-  expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Frézari 0' })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: 'Frézari 0 – zoznam ľudí' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 37 strojov' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
@@ -499,4 +499,41 @@ test('machines with people but no order type: "2 stroje majú", "5 strojov má"'
   expect(await screen.findByText('2 stroje majú ľudí, ale nemajú určený typ zakázky.')).toBeInTheDocument();
   for (const m of ['m-2', 'm-3', 'm-4']) await togglePerson(db, 's-B', m, p);
   expect(await screen.findByText('5 strojov má ľudí, ale nemá určený typ zakázky.')).toBeInTheDocument();
+});
+
+test('tapping Frézari opens the people list by shift; a person gets a machine and an order type', async () => {
+  const f = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true, role: 'frezar' });
+  await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true, role: 'operator' });
+  await upsertPerson(db, { name: 'Baláž', shiftId: 's-A', active: true, role: 'frezar' });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-0', f);
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(screen.getByRole('button', { name: /^Frézari 1/ }));
+  const list = await screen.findByRole('dialog', { name: 'Zoznam ľudí' });
+  expect(within(list).getByRole('button', { name: 'Frézari' })).toHaveAttribute('aria-pressed', 'true');
+  const table = within(list).getByRole('table');
+  const headings = [...table.querySelectorAll('.machine-list__zone')].map((h) => h.textContent);
+  expect(headings.slice(0, 2)).toEqual(['Moja zmena B', 'Zmena A']); // own shift first
+  expect(within(table).queryByText('Horváth')).toBeNull(); // operators are under the other filter
+  const kovac = within(table).getByRole('row', { name: /Kováč/ });
+  expect(kovac).toHaveTextContent('voľný');
+
+  await userEvent.click(kovac);
+  const panel = await screen.findByRole('dialog', { name: /Kováč/ });
+  await userEvent.click(within(panel).getByRole('checkbox', { name: 'DMC 1035' }));
+  const dmc = await within(panel).findByRole('group', { name: 'Zakázka – DMC 1035' });
+  await userEvent.click(within(dmc).getByRole('button', { name: 'EXT' }));
+  await vi.waitFor(async () => {
+    const d = (await db.drafts.get('s-B'))!;
+    const dmc = Object.entries(d.assignments).find(([, a]) => a.type === 'EXT')!;
+    expect(dmc[1].personIds).toContain(f);
+  });
+  await userEvent.click(within(panel).getByRole('button', { name: 'Hotovo' }));
+  const back = await screen.findByRole('dialog', { name: 'Zoznam ľudí' });
+  expect(within(back).getByText('DMC 1035')).toBeInTheDocument();
+  expect(within(back).getByText('EXT')).toBeInTheDocument();
+
+  await userEvent.click(within(back).getByRole('button', { name: 'Operátori' }));
+  expect(within(back).getByText('Horváth')).toBeInTheDocument();
 });

@@ -4,7 +4,7 @@ import { formatPct } from '../report/xlsx';
 import { AutoThemeIcon, GearIcon, HistoryIcon, MoonIcon, SunIcon, svg } from './icons';
 import { useDB } from './useDB';
 import { loadTheme, nextTheme, saveTheme, themeLabel } from './theme';
-import type { Stats } from '../domain/types';
+import type { PersonRole, Stats } from '../domain/types';
 
 interface Props {
   shiftName: string;
@@ -15,6 +15,8 @@ interface Props {
   onHistory(): void;
   onSettings(): void;
   onMachineList(): void;
+  /** Tap on Frézari / Operátori: the list of people of that role. */
+  onPeopleList(role: PersonRole): void;
 }
 
 /** One header field: small label on top, value below. Every field has the same size. */
@@ -89,7 +91,7 @@ function Section({ title, place, children }: { title: string; place: 'start' | '
   );
 }
 
-export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
+export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList }: Props) {
   return (
     <header className="header">
       <Section title="Zmena" place="start">
@@ -111,8 +113,8 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
           name={`${stats.staffed ?? 0} / ${stats.total} strojov`}
           onClick={onMachineList}
         />
-        <Cell label="Frézari" value={stats.frezari ?? 0} />
-        <Cell label="Operátori" value={stats.operatori ?? 0} />
+        <CellButton label="Frézari" value={stats.frezari ?? 0} name={`Frézari ${stats.frezari ?? 0} – zoznam ľudí`} onClick={() => onPeopleList('frezar')} />
+        <CellButton label="Operátori" value={stats.operatori ?? 0} name={`Operátori ${stats.operatori ?? 0} – zoznam ľudí`} onClick={() => onPeopleList('operator')} />
         <Cell
           label="Viacobsluha"
           value={
