@@ -246,3 +246,41 @@ test('a new machine is placed on a free cell inside the 13 × 6 plan', async () 
   const others = (await db.machines.where('hallId').equals(added.hallId).toArray()).filter((m) => m.id !== added.id);
   expect(others.some((m) => m.x === added.x && m.y === added.y)).toBe(false);
 });
+
+describe('settings tabs', () => {
+  const swipe = (el: Element, dx: number) => {
+    fireEvent.touchStart(el, { touches: [{ clientX: 200, clientY: 300 }] });
+    fireEvent.touchEnd(el, { changedTouches: [{ clientX: 200 + dx, clientY: 305 }] });
+  };
+  const selected = () => screen.getByRole('tab', { selected: true });
+
+  test('are ordered Oddelenia, Stroje, Zmeny, Ľudia, Report, Záloha, Vzhľad', async () => {
+    wrap(<SettingsView onBack={() => {}} />);
+    const tabs = await screen.findAllByRole('tab');
+    expect(tabs.map((t) => t.textContent)).toEqual(['Oddelenia', 'Stroje', 'Zmeny', 'Ľudia', 'Report', 'Záloha', 'Vzhľad']);
+  });
+
+  test('a swipe goes to the neighbouring tab and round past the ends', async () => {
+    wrap(<SettingsView initialTab="appearance" onBack={() => {}} />);
+    const bar = await screen.findByRole('tablist');
+    swipe(bar, -120); // to the left = next
+    expect(selected()).toHaveTextContent('Oddelenia');
+    swipe(bar, 120); // to the right = previous
+    expect(selected()).toHaveTextContent('Vzhľad');
+    swipe(bar, 120);
+    expect(selected()).toHaveTextContent('Záloha');
+    swipe(bar, 30); // too short – stays
+    expect(selected()).toHaveTextContent('Záloha');
+  });
+});
+
+test('machine editor sets the machine type: fréza (default) or sústruh', async () => {
+  wrap(<MachineEditor />);
+  const c60 = (await db.machines.toArray()).find((m) => m.name === 'HERMLE C60')!;
+  await userEvent.click(await screen.findByRole('button', { name: /HERMLE C60/ }));
+  const kind = screen.getByRole('group', { name: 'Typ stroja' });
+  expect(within(kind).getByRole('button', { name: 'Fréza' })).toHaveAttribute('aria-pressed', 'true');
+  await userEvent.click(within(kind).getByRole('button', { name: 'Sústruh' }));
+  await vi.waitFor(async () => expect((await db.machines.get(c60.id))!.kind).toBe('lathe'));
+  await vi.waitFor(() => expect(within(kind).getByRole('button', { name: 'Sústruh' })).toHaveAttribute('aria-pressed', 'true'));
+});
