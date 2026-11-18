@@ -14,6 +14,11 @@ import { clearDraft, copyFromLastRecord } from '../db/repo';
 import { isPool, type Hall } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
+/** Slovak plural: 1 stroj, 2–4 stroje, 5+ (and 0) strojov. */
+export function machinesCount(n: number): string {
+  return `${n} ${n === 1 ? 'stroj' : n >= 2 && n <= 4 ? 'stroje' : 'strojov'}`;
+}
+
 const ZONE_KEY = 'layout-strojov.zone';
 function readZone(): string | null {
   try {
@@ -223,7 +228,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                 <span>
                   {stats.peopleWithoutType === 1
                     ? '1 stroj má ľudí, ale nemá určený typ zakázky.'
-                    : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
+                    : `${machinesCount(stats.peopleWithoutType)} ${stats.peopleWithoutType <= 4 ? 'majú' : 'má'} ľudí, ale ${stats.peopleWithoutType <= 4 ? 'nemajú' : 'nemá'} určený typ zakázky.`}
                 </span>
               </div>
             )}

@@ -489,3 +489,14 @@ test('the theme button next to "História" cycles light → dark → by device a
   expect(await within(app).findByRole('button', { name: 'Vzhľad: Svetlý – prepnúť na Tmavý' })).toBeInTheDocument();
   expect(document.documentElement.dataset.theme).toBe('light');
 });
+
+test('machines with people but no order type: "2 stroje majú", "5 strojov má"', async () => {
+  const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  for (const m of ['m-0', 'm-1']) await togglePerson(db, 's-B', m, p);
+  renderApp();
+  await pickShift('B');
+  expect(await screen.findByText('2 stroje majú ľudí, ale nemajú určený typ zakázky.')).toBeInTheDocument();
+  for (const m of ['m-2', 'm-3', 'm-4']) await togglePerson(db, 's-B', m, p);
+  expect(await screen.findByText('5 strojov má ľudí, ale nemá určený typ zakázky.')).toBeInTheDocument();
+});

@@ -227,7 +227,8 @@ h4 { font-size: 14px; color: var(--muted); margin-top: 12px; }
 /* zone name + plan; the take-over bar floats over the zone name */
 .plan-area { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .plan-notes {
-  position: absolute; top: 0; left: 38px; right: 38px; z-index: 5;
+  /* a bar is 42px high: shifted down by more than half of it, so less of the zone name is covered */
+  position: absolute; top: 24px; left: 38px; right: 38px; z-index: 5;
   display: flex; flex-direction: column; gap: 4px; pointer-events: none;
 }
 .plan-offer {
