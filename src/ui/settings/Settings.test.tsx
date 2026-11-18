@@ -272,6 +272,15 @@ describe('settings tabs', () => {
     swipe(bar, 30); // too short – stays
     expect(selected()).toHaveTextContent('Záloha');
   });
+
+  test('a swipe on empty screen space outside the settings block works too', async () => {
+    wrap(<SettingsView initialTab="halls" onBack={() => {}} />);
+    await screen.findByRole('tablist');
+    swipe(document.body, -120);
+    expect(selected()).toHaveTextContent('Stroje');
+    swipe(document.documentElement, 120);
+    expect(selected()).toHaveTextContent('Oddelenia');
+  });
 });
 
 test('machine editor sets the machine type: fréza (default) or sústruh', async () => {
