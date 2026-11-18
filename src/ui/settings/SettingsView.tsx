@@ -1,4 +1,4 @@
-import { useRef, useState, type TouchEvent } from 'react';
+import { useEffect, useState } from 'react';
 import { PeopleSettings } from './PeopleSettings';
 import { MachineEditor } from './MachineEditor';
 import { ShiftSettings } from './ShiftSettings';
@@ -39,28 +39,39 @@ export function stepTab(tab: Tab, dir: 1 | -1): Tab {
 
 export function SettingsView({ onBack, initialTab = 'people' }: { onBack(): void; initialTab?: Tab }) {
   const [tab, setTab] = useState<Tab>(initialTab);
-  const swipe = useRef<{ x: number; y: number } | null>(null);
-  const onTouchStart = (e: TouchEvent) => {
-    const t = e.target as Element;
-    // the machine plan is dragged and panned with a finger; form fields keep their own gestures
-    const own = t.closest?.('.floor, input, textarea, select') || scrollsSideways(t);
-    swipe.current = e.touches.length === 1 && !own ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
-  };
-  const onTouchMove = (e: TouchEvent) => {
-    if (e.touches.length > 1) swipe.current = null;
-  };
-  const onTouchEnd = (e: TouchEvent) => {
-    const s = swipe.current;
-    swipe.current = null;
-    const t = e.changedTouches[0];
-    if (!s || !t) return;
-    const dx = t.clientX - s.x;
-    const dy = t.clientY - s.y;
-    if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
-    setTab((cur) => stepTab(cur, dx < 0 ? 1 : -1));
-  };
+  // listens on the whole screen, not just the settings block: empty space below and beside it counts too
+  useEffect(() => {
+    let swipe: { x: number; y: number } | null = null;
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.target as Element;
+      // the machine plan is dragged and panned with a finger; form fields keep their own gestures
+      const own = t.closest?.('.floor, input, textarea, select') || scrollsSideways(t);
+      swipe = e.touches.length === 1 && !own ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 1) swipe = null;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
+      const s = swipe;
+      swipe = null;
+      const t = e.changedTouches[0];
+      if (!s || !t) return;
+      const dx = t.clientX - s.x;
+      const dy = t.clientY - s.y;
+      if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
+      setTab((cur) => stepTab(cur, dx < 0 ? 1 : -1));
+    };
+    document.addEventListener('touchstart', onTouchStart, { passive: true });
+    document.addEventListener('touchmove', onTouchMove, { passive: true });
+    document.addEventListener('touchend', onTouchEnd);
+    return () => {
+      document.removeEventListener('touchstart', onTouchStart);
+      document.removeEventListener('touchmove', onTouchMove);
+      document.removeEventListener('touchend', onTouchEnd);
+    };
+  }, []);
   return (
-    <div className="page" onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+    <div className="page">
       <h2 className="visually-hidden">Nastavenia</h2>
       {/* round back button in one row with the tabs */}
       <div className="tabs settings__bar">
