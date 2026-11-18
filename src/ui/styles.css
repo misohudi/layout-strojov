@@ -460,3 +460,6 @@ tr.clickable { cursor: pointer; }
 }
 /* Machines out of service: red outline (also the legend swatch). */
 .tile.tile--oos, .sw.tile--oos { border-color: #dc2626; }
+/* People list: further machines of the same person (viacobsluha) without a line between them */
+.machine-list tr.machine-list__more td { border-top: none; }
+.person-machine__name { min-width: 120px; }
