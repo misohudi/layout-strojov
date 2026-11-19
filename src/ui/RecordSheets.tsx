@@ -39,7 +39,7 @@ function PageHead({ record, sub }: { record: ShiftRecord; sub?: string }) {
         <h1 className="pdf-page__title">{`Zmena ${record.shiftName} · ${skDate(record.date)}${sub ? ` · ${sub}` : ''}`}</h1>
         <p className="pdf-page__stats">{statsLine(record)}</p>
       </div>
-      <MpsLogo className="pdf-page__logo" />
+      <MpsLogo className="pdf-page__logo" still />
     </header>
   );
 }
