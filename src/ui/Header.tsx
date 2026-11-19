@@ -21,18 +21,12 @@ interface Props {
   /** Tap on Obsadenosť: where people are missing (highlighted while `staffingOn`). */
   onStaffing?(): void;
   staffingOn?: boolean;
+  /** Tap on Viacobsluha: who works on which machines (highlighted while `multiOn`). */
+  onMulti?(): void;
+  multiOn?: boolean;
 }
 
-/** One header field: small label on top, value below. Every field has the same size. */
-function Cell({ label, value, variant = '', name }: { label: string; value: ReactNode; variant?: string; name?: string }) {
-  return (
-    <div className={`hcell ${variant}`} role="group" aria-label={name ?? `${label} ${value}`}>
-      <span className="hcell__label">{label}</span>
-      <strong className="hcell__value">{value}</strong>
-    </div>
-  );
-}
-
+/** One header field (a button): small label on top, value below. Every field has the same size. */
 function CellButton({ label, value, name, variant = '', onClick }: { label: string; value: ReactNode; name: string; variant?: string; onClick(): void }) {
   return (
     <button type="button" className={`hcell hcell--btn ${variant}`} aria-label={name} title={name} onClick={onClick}>
@@ -106,7 +100,7 @@ function Section({ title, place, children }: { title: string; place: 'start' | '
   );
 }
 
-export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList, onStaffing = () => {}, staffingOn = false }: Props) {
+export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList, onStaffing = () => {}, staffingOn = false, onMulti = () => {}, multiOn = false }: Props) {
   return (
     <header className="header">
       <Section title="Zmena" place="start">
@@ -137,7 +131,7 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
         />
         <CellButton label="Frézari" value={stats.frezari ?? 0} name={`Frézari ${stats.frezari ?? 0} – zoznam ľudí`} onClick={() => onPeopleList('frezar')} />
         <CellButton label="Operátori" value={stats.operatori ?? 0} name={`Operátori ${stats.operatori ?? 0} – zoznam ľudí`} onClick={() => onPeopleList('operator')} />
-        <Cell
+        <CellButton
           label="Viacobsluha"
           value={
             <span className="hcell__multi">
@@ -148,7 +142,9 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
               {stats.multiMachines ?? 0}
             </span>
           }
-          name={`Viacobsluha ${stats.multiPeople ?? 0} ľudí na ${stats.multiMachines ?? 0} strojoch`}
+          name={`Viacobsluha ${stats.multiPeople ?? 0} ľudí na ${stats.multiMachines ?? 0} strojoch – kto na čom robí`}
+          variant={multiOn ? 'hcell--on' : ''}
+          onClick={onMulti}
         />
       </Section>
       <Section title="Aplikácia" place="end">

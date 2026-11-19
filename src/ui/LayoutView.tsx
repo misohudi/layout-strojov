@@ -9,7 +9,7 @@ import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
 import { PeopleList } from './PeopleList';
 import { Legend, matchesLegend, type LegendKey } from './Legend';
-import { StaffingSheet, UtilizationSheet } from './ShiftInsights';
+import { MultiSheet, multiGroups, StaffingSheet, UtilizationSheet } from './ShiftInsights';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
@@ -103,8 +103,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   /** Sheets opened from Obsadenosť ("kde chýbajú ľudia") and Vyťaženie strojov. */
   const [staffingOpen, setStaffingOpen] = useState(false);
   const [utilOpen, setUtilOpen] = useState(false);
+  const [multiOpen, setMultiOpen] = useState(false);
   /** A machine opened from a list returns to that list when closed. */
-  const [backTo, setBackTo] = useState<'list' | 'staffing' | null>(null);
+  const [backTo, setBackTo] = useState<'list' | 'staffing' | 'multi' | null>(null);
   const egg = useEasterEgg();
   // per open shift: whether the "take over from the last shift" card was closed, and which zones the
   // foreman has already looked at (the arrows towards the others pulse)
@@ -138,6 +139,11 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
     if (m.status !== 'active') continue;
     for (const pid of draft.assignments[m.id]?.personIds ?? []) counts[pid] = (counts[pid] ?? 0) + 1;
   }
+  // viacobsluha: people on several machines, numbered; their numbers go on their machines while shown
+  const groups = multiGroups(machines, halls, draft.assignments, people);
+  const multiPeople = new Set(groups.map((g) => g.person.id));
+  const marksOf = new Map<string, number[]>();
+  for (const g of groups) for (const m of g.machines) marksOf.set(m.id, [...(marksOf.get(m.id) ?? []), g.no]);
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   const personOf = new Map(people.map((p) => [p.id, p]));
   const open = machines.find((m) => m.id === openId);
@@ -182,7 +188,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const seenIds = seen.key === draftKey ? seen.ids : [];
   /** Does a zone have machines of the given legend item (priority, EXT, INT, out of service…)? */
   const zoneHas = (key: LegendKey, hallId: string) =>
-    machines.some((m) => m.hallId === hallId && matchesLegend(key, m, draft.assignments[m.id]));
+    machines.some((m) => m.hallId === hallId && matchesLegend(key, m, draft.assignments[m.id], multiPeople));
   /**
    * Tapping a legend item: when the shown zone has no such machine but another zone does, the view
    * switches to the nearest of those zones.
@@ -225,6 +231,15 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onMachineList={() => setListOpen(true)}
         onPeopleList={setPeopleRole}
         staffingOn={legendKey === 'unstaffed'}
+        multiOn={legendKey === 'multi'}
+        onMulti={() => {
+          if (legendKey === 'multi' && !multiOpen) {
+            selectLegend(null);
+            return;
+          }
+          selectLegend('multi');
+          setMultiOpen(true);
+        }}
         onStaffing={() => {
           // first tap: highlight the machines without people and list them; tapped again: off
           if (legendKey === 'unstaffed' && !staffingOpen) {
@@ -308,7 +323,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           >
             {visible.map((m) => {
               const a = draft.assignments[m.id];
-              const hit = legendKey ? matchesLegend(legendKey, m, a) : null;
+              const hit = legendKey ? matchesLegend(legendKey, m, a, multiPeople) : null;
               return (
                 <MachineTile
                   key={m.id}
@@ -322,6 +337,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   })}
                   highlighted={hit === true}
                   dimmed={hit === false}
+                  marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   onClick={() => setOpenId(m.id)}
                 />
               );
@@ -384,6 +400,19 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           onClose={() => setStaffingOpen(false)}
         />
       )}
+      {multiOpen && (
+        <MultiSheet
+          groups={groups}
+          assignments={draft.assignments}
+          halls={halls}
+          onPick={(id) => {
+            setMultiOpen(false);
+            setBackTo('multi');
+            setOpenId(id);
+          }}
+          onClose={() => setMultiOpen(false)}
+        />
+      )}
       {utilOpen && (
         <UtilizationSheet
           machines={machines}
@@ -417,6 +446,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             setOpenId(null);
             if (backTo === 'list') setListOpen(true);
             if (backTo === 'staffing') setStaffingOpen(true);
+            if (backTo === 'multi') setMultiOpen(true);
             setBackTo(null);
           }}
         />

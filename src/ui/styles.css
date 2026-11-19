@@ -599,3 +599,17 @@ button.legend__stat { font: inherit; color: var(--text); cursor: pointer; }
 .trend__bar { cursor: pointer; }
 .trend__hit { fill: transparent; }
 .trend__readout { font-size: 15px; }
+
+/* Viacobsluha: the person's number on each of their machines, and the sheet person → machines */
+.tile__marks { position: absolute; top: -0.5em; right: -0.4em; z-index: 1; display: flex; gap: 0.15em; }
+.tile__mark {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 1.5em; height: 1.5em; padding: 0 0.3em;
+  border-radius: 999px; border: 2px solid var(--surface); background: var(--mb-orange); color: var(--mb-900);
+  font-size: 0.72em; font-weight: 700; line-height: 1; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+.insight__multi .tile__mark { font-size: 14px; }
+.zone__arrow--hl-multi { background: var(--mb-orange); color: var(--mb-900); }
+.insight__multi { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.insight__multi > li { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.insight__multi-who { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 16px; }
+.insight__warn { margin: 0; padding: 6px 10px; border-radius: var(--radius); background: var(--note-bg); color: var(--note-text); font-size: 14px; }

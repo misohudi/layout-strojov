@@ -89,7 +89,7 @@ test('header groups related fields into sections', async () => {
   expect(within(section('Zmena')).getByRole('button', { name: /^Zmena B/ })).toHaveTextContent('B');
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: 'Frézari 0 – zoznam ľudí' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 37 strojov' })).toBeInTheDocument();
-  expect(within(section('Obsadenosť ľuďmi')).getByRole('group', { name: 'Viacobsluha 0 ľudí na 0 strojoch' })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: /^Viacobsluha 0 ľudí na 0 strojoch/ })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
   // História and Nastavenia are icon-only buttons; viacobsluha shows a person and a machine icon
@@ -98,7 +98,7 @@ test('header groups related fields into sections', async () => {
     expect(btn).toHaveTextContent(/^$/);
     expect(btn.querySelector('svg')).not.toBeNull();
   }
-  const multi = within(header).getByRole('group', { name: /^Viacobsluha/ });
+  const multi = within(header).getByRole('button', { name: /^Viacobsluha/ });
   expect(within(multi).getByTestId('icon-people')).toBeInTheDocument();
   expect(within(multi).getByTestId('icon-machines')).toBeInTheDocument();
   expect(multi).not.toHaveTextContent(/ľ|str/);
@@ -141,7 +141,7 @@ test('legend shows counts and shares; tapping an item highlights its machines an
   expect(screen.getByRole('button', { name: 'voľný: 33' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'mimo prevádzky: 1' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /^Vyťaženie strojov 8,3\s%/ })).toBeInTheDocument(); // 3 / 36
-  expect(within(screen.getByRole('banner')).getByRole('group', { name: 'Viacobsluha 1 ľudí na 2 strojoch' })).toBeInTheDocument();
+  expect(within(screen.getByRole('banner')).getByRole('button', { name: /^Viacobsluha 1 ľudí na 2 strojoch/ })).toBeInTheDocument();
 
   await userEvent.click(ext);
   expect(ext).toHaveAttribute('aria-pressed', 'true');
@@ -602,4 +602,34 @@ test('tap on Vyťaženie strojov: the breakdown now and the trend of the last cl
   expect(within(now).getByRole('row', { name: /^Frézovňa/ })).toBeInTheDocument(); // one row per zone
   expect(within(sheet).getByRole('img', { name: 'Vyťaženie strojov v posledných zmenách' })).toBeInTheDocument();
   expect(within(sheet).getByText(/táto zmena \(teraz\)/)).toBeInTheDocument();
+});
+
+test('tap on Viacobsluha: the machines of people on several machines carry the person number and are listed per person', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true, role: 'frezar' });
+  const n = await upsertPerson(db, { name: 'Novák', shiftId: 's-B', active: true, role: 'operator' });
+  await startDraft(db, 's-B', 'B', new Date());
+  for (const id of ['m-0', 'm-1']) await togglePerson(db, 's-B', id, k); // next to each other
+  await togglePerson(db, 's-B', 'm-2', n);
+  await togglePerson(db, 's-B', 'm-hsc-1', n); // Novák also in the HSC zone
+  await togglePerson(db, 's-B', 'm-3', await upsertPerson(db, { name: 'Sám', shiftId: 's-B', active: true }));
+  renderApp();
+  await pickShift('B');
+  const multi = within(screen.getByRole('banner')).getByRole('button', { name: /^Viacobsluha 2 ľudí na 4 strojoch/ });
+  await userEvent.click(multi);
+  const sheet = await screen.findByRole('dialog', { name: 'Viacobsluha – kto na čom robí' });
+  const kovac = within(sheet).getByRole('listitem', { name: 'Kováč' });
+  const novak = within(sheet).getByRole('listitem', { name: 'Novák' });
+  expect(within(kovac).getAllByRole('button')).toHaveLength(2);
+  expect(within(kovac).queryByRole('note')).toBeNull();
+  expect(within(novak).getByRole('note')).toHaveTextContent('rôznych oddeleniach');
+  // on the plan (Frézovňa): Kováč's two machines carry 1, Novák's one carries 2; the others are greyed out
+  const tiles = screen.getAllByTestId('machine-tile');
+  const marked = tiles.filter((t) => t.querySelector('.tile__mark'));
+  expect(marked.map((t) => t.querySelector('.tile__mark')!.textContent).sort()).toEqual(['1', '1', '2']);
+  expect(tiles.filter((t) => t.classList.contains('tile--hl'))).toHaveLength(3);
+  // closing the sheet keeps the numbers; tapping Viacobsluha again turns them off
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Zavrieť' }));
+  expect(screen.getAllByTestId('machine-tile').filter((t) => t.querySelector('.tile__mark'))).toHaveLength(3);
+  await userEvent.click(multi);
+  expect(screen.getAllByTestId('machine-tile').some((t) => t.querySelector('.tile__mark'))).toBe(false);
 });

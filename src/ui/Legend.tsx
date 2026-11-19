@@ -3,11 +3,16 @@ import { formatPct } from '../report/xlsx';
 import { HexOutlines } from './Brand';
 import type { Assignment, Machine, Stats } from '../domain/types';
 
-/** Legend items, plus 'unstaffed' (tap on Obsadenosť: machines with an order but nobody on them). */
-export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio' | 'unstaffed';
+/**
+ * Legend items, plus 'unstaffed' (tap on Obsadenosť: machines with an order but nobody on them) and
+ * 'multi' (tap on Viacobsluha: machines of people working on several machines).
+ */
+export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio' | 'unstaffed' | 'multi';
 
 /** Does a machine belong to a legend item? Used to highlight those machines on the plan. */
-export function matchesLegend(key: LegendKey, m: Machine, a: Assignment | undefined): boolean {
+export function matchesLegend(
+  key: LegendKey, m: Machine, a: Assignment | undefined, multiPeople: ReadonlySet<string> = new Set(),
+): boolean {
   const active = m.status === 'active';
   switch (key) {
     case 'EXT':
@@ -21,6 +26,8 @@ export function matchesLegend(key: LegendKey, m: Machine, a: Assignment | undefi
       return active && !!a?.type && !!a.priority;
     case 'unstaffed':
       return active && !!a?.type && (a.personIds?.length ?? 0) === 0;
+    case 'multi':
+      return active && (a?.personIds ?? []).some((id) => multiPeople.has(id));
   }
 }
 
