@@ -193,7 +193,11 @@ test('backup banner shows when records exist and no recent backup; opens backup 
   });
   renderApp();
   await pickShift('B');
-  await userEvent.click(await screen.findByRole('button', { name: 'Uložiť zálohu teraz' }));
+  // the same see-through info bar as the others, over the zone name
+  const bar = await screen.findByRole('note');
+  expect(bar).toHaveClass('plan-offer');
+  expect(bar.closest('.plan-notes')).not.toBeNull();
+  await userEvent.click(within(bar).getByRole('button', { name: 'Uložiť zálohu teraz' }));
   expect(await screen.findByRole('tab', { name: 'Záloha', selected: true })).toBeInTheDocument();
 });
 

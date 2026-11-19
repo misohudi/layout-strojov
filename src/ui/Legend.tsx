@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { formatPct } from '../report/xlsx';
+import { HexOutlines } from './Brand';
 import type { Assignment, Machine, Stats } from '../domain/types';
 
 export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio';
@@ -43,6 +44,7 @@ export function Legend({ stats, selected, onSelect, children }: Props) {
   ];
   return (
     <div className="legend">
+      <HexOutlines className="legend__hexes" />
       {/* legend + "Vyťaženie strojov" always stay together; only the actions wrap to a new row on narrow screens */}
       <div className="legend__info">
         <div className="legend__items" role="group" aria-label="Legenda – ťuknutím zvýrazníte stroje">

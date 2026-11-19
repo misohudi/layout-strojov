@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Floor, fitZoom, tileSize } from './Floor';
+import { Floor, fitZoom, gridMetrics, tileSize } from './Floor';
 
 const items = [{ x: 0, y: 0, w: 2, h: 2 }];
 const RESET = 'Späť na 100 %';
@@ -115,4 +115,21 @@ test('the reset button is outside the scrolling area so it never moves with the 
 test('one finger keeps native panning in both directions', () => {
   const { scroller } = setup();
   expect(scroller.style.touchAction).toBe('pan-x pan-y');
+});
+
+test('the plan never comes out larger than its area, whatever the window size', () => {
+  // a pixel too much brought up a scrollbar on a PC, which made the cards shrink, the scrollbar
+  // vanish and the cards grow again – over and over (the cards shook with the window maximised)
+  const frame = { cols: Array(13).fill(1), rows: Array(6).fill(1) };
+  const zone = { cols: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], rows: [1, 1, 1, 1, 1] }; // Frézovňa uses 5 rows
+  const total = (a: number[], gap: number) => a.reduce((s, v) => s + v, 0) + gap * (a.length + 1);
+  for (let w = 940; w <= 2600; w += 7) { // narrower: cards at their 60 px minimum, the plan scrolls on purpose
+    for (let h = 440; h <= 1400; h += 11) {
+      const base = tileSize(w, h, frame);
+      const scale = fitZoom(w, h, base, zone);
+      const m = gridMetrics(base.w * scale, base.h * scale, scale, zone);
+      expect(total(m.cols, m.gap)).toBeLessThanOrEqual(w);
+      expect(total(m.rows, m.gap)).toBeLessThanOrEqual(h);
+    }
+  }
 });

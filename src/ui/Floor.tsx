@@ -59,6 +59,20 @@ export function tileSize(areaW: number, areaH: number, tracks: Tracks) {
 }
 
 /**
+ * Pixel sizes of the grid: columns, rows and the gap (also the padding). Always rounded down, so the
+ * plan never ends up a pixel or two larger than its area – on a PC that brought up a scrollbar, the
+ * scrollbar shrank the area, the cards shrank and the scrollbar went away again, over and over: the
+ * cards shook and showed twice (seen with the window maximised).
+ */
+export function gridMetrics(tileW: number, tileH: number, scale: number, tracks: Tracks) {
+  return {
+    cols: tracks.cols.map((w) => Math.floor(tileW * w)),
+    rows: tracks.rows.map((w) => Math.floor(tileH * w)),
+    gap: Math.floor(GAP * scale),
+  };
+}
+
+/**
  * How much a plan drawn with cards of size `base` (and the usual gaps) is enlarged so it fills the
  * area: 1 for the full 13 × 6 plan, more for a zone with only a few machines (never below 1).
  */
@@ -122,6 +136,7 @@ export function Floor({
   const scale = zoom * (fill && frame ? fitZoom(area.w, area.h, base, tracks) : 1);
   const tileH = base.h * scale;
   const tileW = base.w * scale;
+  const px = gridMetrics(tileW, tileH, scale, tracks);
 
   const applyZoom = (z: number) => {
     zoomRef.current = z;
@@ -241,10 +256,10 @@ export function Floor({
           className="floor__grid"
           data-zoom={zoom}
           style={{
-            gridTemplateColumns: tracks.cols.map((w) => `${Math.round(tileW * w)}px`).join(' '),
-            gridTemplateRows: tracks.rows.map((w) => `${Math.round(tileH * w)}px`).join(' '),
-            gap: `${Math.round(GAP * scale)}px`,
-            padding: `${Math.round(GAP * scale)}px`,
+            gridTemplateColumns: px.cols.map((v) => `${v}px`).join(' '),
+            gridTemplateRows: px.rows.map((v) => `${v}px`).join(' '),
+            gap: `${px.gap}px`,
+            padding: `${px.gap}px`,
             // texts and icon scale with the tile
             fontSize: `${(Math.min(tileW, tileH) * 0.17).toFixed(1)}px`,
           }}
