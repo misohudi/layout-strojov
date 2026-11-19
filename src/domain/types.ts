@@ -117,6 +117,7 @@ export interface RecordLayoutItem {
   name: string;
   /** Zone of the machine; older records have one plan only. */
   hallId?: string;
+  kind?: MachineKind;
   hallName?: string;
   /** Tile nick at the time the shift was closed. */
   nick?: string;

@@ -78,3 +78,12 @@ test('machine out of service: grey icon with a minus sign; legend highlight clas
   rerender(<MachineTile {...base} name="ZAYER" dimmed />);
   expect(screen.getByTestId('machine-tile')).toHaveClass('tile--dim');
 });
+
+test('a lathe gets the lathe icon, with the same figures as a milling machine', () => {
+  const { rerender } = render(<MachineTile {...base} name="SPINNER" kind="lathe" />);
+  expect(within(screen.getByTestId('machine-tile')).getByTestId('icon-machine')).toHaveAttribute('data-kind', 'lathe');
+  rerender(<MachineTile {...base} name="SPINNER" kind="lathe" people={[{ name: 'Kováč', role: 'operator' }]} />);
+  expect(within(screen.getByTestId('machine-tile')).getByTestId('icon-operator')).toHaveAttribute('data-kind', 'lathe');
+  rerender(<MachineTile {...base} name="HERMLE C60" />);
+  expect(within(screen.getByTestId('machine-tile')).getByTestId('icon-machine')).toHaveAttribute('data-kind', 'mill');
+});

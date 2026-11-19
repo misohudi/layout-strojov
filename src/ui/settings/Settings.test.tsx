@@ -292,4 +292,6 @@ test('machine editor sets the machine type: fréza (default) or sústruh', async
   await userEvent.click(within(kind).getByRole('button', { name: 'Sústruh' }));
   await vi.waitFor(async () => expect((await db.machines.get(c60.id))!.kind).toBe('lathe'));
   await vi.waitFor(() => expect(within(kind).getByRole('button', { name: 'Sústruh' })).toHaveAttribute('aria-pressed', 'true'));
+  // the tile shows the lathe icon
+  expect(within(screen.getByRole('button', { name: /HERMLE C60/ })).getByTestId('icon-machine')).toHaveAttribute('data-kind', 'lathe');
 });
