@@ -734,7 +734,6 @@ test('with EXT selected in the legend, tapping machines gives them EXT; PRIO onl
   await pickShift('B');
   const tile = (id: string) => screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === id)!;
   await userEvent.click(await screen.findByRole('button', { name: /^EXT – externá/ }));
-  expect(screen.getByRole('status')).toHaveTextContent('Ťuknutím na stroj nastavíte EXT.');
   await userEvent.click(tile('m-0'));
   await userEvent.click(tile('m-1'));
   await vi.waitFor(async () => {
@@ -742,17 +741,35 @@ test('with EXT selected in the legend, tapping machines gives them EXT; PRIO onl
     expect([a['m-0']?.type, a['m-1']?.type]).toEqual(['EXT', 'EXT']);
   });
   expect(screen.queryByRole('dialog')).toBeNull(); // no machine card opened
+  // the same machine tapped again: free again
+  await userEvent.click(tile('m-1'));
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-1']?.type).toBeNull());
+  await userEvent.click(tile('m-1'));
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-1']?.type).toBe('EXT'));
   // PRIO: on a machine with an order on/off, a free one stays as it is
   await userEvent.click(screen.getByRole('button', { name: /^prioritná zákazka/ }));
   await userEvent.click(tile('m-0'));
   await userEvent.click(tile('m-2'));
   await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-0']?.priority).toBe(true));
   expect((await db.drafts.get('s-B'))!.assignments['m-2']?.priority).toBeFalsy();
-  // voľný clears the order; "Hotovo" ends it and a tap opens the machine again
-  await userEvent.click(screen.getByRole('button', { name: /^voľný/ }));
+  // with PRIO selected, machines with an order but no priority stay coloured (pale), free ones go grey
+  await vi.waitFor(() => expect(tile('m-1')).toHaveClass('tile--pale'));
+  expect(tile('m-2')).toHaveClass('tile--dim');
+  // voľný clears the order; tapping voľný again ends it and a tap opens the machine again
+  const free = screen.getByRole('button', { name: /^voľný/ });
+  await userEvent.click(free);
   await userEvent.click(tile('m-1'));
   await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-1']?.type).toBeNull());
-  await userEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Hotovo' }));
+  await userEvent.click(free);
   await userEvent.click(tile('m-1'));
   expect(await screen.findByRole('dialog')).toBeInTheDocument();
+});
+
+test('legend order: EXT, INT, voľný, PRIO, mimo prevádzky', async () => {
+  renderApp();
+  await pickShift('B');
+  const legend = await screen.findByRole('group', { name: /^Legenda/ });
+  expect(within(legend).getAllByRole('button').map((b) => b.getAttribute('aria-label')!.split(':')[0])).toEqual([
+    'EXT – externá', 'INT – interná', 'voľný', 'prioritná zákazka', 'mimo prevádzky',
+  ]);
 });
