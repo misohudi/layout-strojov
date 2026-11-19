@@ -1,5 +1,7 @@
+import type { MachineKind } from '../domain/types';
+
 /**
- * CNC machine icons from the supplied catalogue (outline machining centre in 3/4 view):
+ * CNC machine icons from the supplied catalogue (outline machining centre or slant-bed lathe in 3/4 view):
  * - no one on the machine: the machine alone;
  * - frézar: a standing operator at the control panel;
  * - operátor: a seated operator in front of the machine;
@@ -49,6 +51,49 @@ function Machine({ dx }: { dx: number }) {
       <line x1="84.5" y1="56.5" x2="109.5" y2="56.5" stroke={INK} strokeWidth={SW} />
       <line x1="87.5" y1="61.5" x2="96.5" y2="61.5" {...line} />
       <line x1="101.5" y1="61.5" x2="103.5" y2="61.5" {...line} />
+    </g>
+  );
+}
+
+/** CNC lathe (slant-bed turning centre) – same family, size and control panel as the milling machine. */
+function Lathe({ dx }: { dx: number }) {
+  return (
+    <g transform={dx ? `translate(${dx}, 0)` : undefined}>
+      {/* headstock cover */}
+      <path d="M18 24.8L18 18.5C18 16.8 19.2 15.5 21 15L28.5 13.5L49 13.5C51 13.5 52.5 15 52.5 17L52.5 21.5" fill={BG} {...line} />
+      <line x1="28.5" y1="13.5" x2="28.5" y2="21.5" {...line} />
+      {/* body with a slanted top and feet */}
+      <path
+        d="M28.5 21.5L23.5 21.5L13.5 27.5C12 28.5 11.5 30.2 11.5 32.5L11.5 85.5C11.5 87.5 12.5 89 14.5 90L28.5 98.5L42.5 97L44.5 90L61.5 89L61.5 95.5L73.5 94.5L75.5 87.5L84 86.5C86.8 86 88.5 84 88.5 80.5L88.5 31C88.5 28.5 87.2 26.8 85 25.5L77.5 21.5L28.5 21.5Z"
+        fill={BG}
+        {...line}
+      />
+      <line x1="28.5" y1="21.5" x2="28.5" y2="98.5" {...line} />
+      <line x1="28.5" y1="78.5" x2="84.5" y2="76.5" {...line} />
+      {/* window of the working area */}
+      <path d="M35 29.5L73.5 28L80 33L80 67.5C80 69.2 78.8 70.2 77 70.3L37.5 71.8C36 71.9 35 70.8 35 69.2Z" fill={BG} {...line} />
+      {/* chuck with jaws, stepped workpiece, turret with the cutting tool */}
+      <path d="M35 44.5L42.5 44.2C45.2 44.2 46.8 49.2 46.8 55C46.8 60.8 45.2 65.8 42.5 65.8L35 66.1" fill="none" {...line} />
+      <path d="M45.2 47.8L49.5 47.5L49.5 51.2" fill="none" {...line} />
+      <path d="M45.2 62.2L49.5 61.8L49.5 58.1" fill="none" {...line} />
+      <path d="M46.6 50.8L59.5 50.2C61 50.2 61.6 51.9 61.6 54.2C61.6 56.5 61 58.2 59.5 58.2L46.6 58.8" fill="none" {...line} />
+      <path d="M61.1 51.7L70 51.3C71.2 51.3 71.8 52.4 71.8 53.8C71.8 55.2 71.2 56.3 70 56.3L61.1 56.7" fill="none" {...line} />
+      <path d="M55.5 28.7L53.5 36.2L57.2 40.5L66.2 40.1L70 35.6L72 28.1" fill="none" {...line} />
+      <line x1="61.2" y1="28.5" x2="58.7" y2="39.8" {...line} />
+      <path d="M59.5 40.4L58.2 46.5L60.5 50.2L63.8 46.2L64.5 40.2" fill="none" {...line} />
+      {/* control panel on its arm */}
+      <path d="M88.5 79.5L96 79.5C98.5 79.5 100 78 100 75.5L100 66.8" fill="none" {...line} />
+      <path
+        d="M86.5 40L108 40C109.5 40 110.5 41 110.5 42.5L110.5 55.5L106.5 65C106 66.2 104.7 66.8 103.3 66.8L83 66.8C81.5 66.8 80.7 65.5 81.3 64L85 55.5L85 42.5C85 41 85.7 40 86.5 40Z"
+        fill={BG}
+        stroke={INK}
+        strokeWidth={SW}
+        strokeLinejoin="round"
+      />
+      <rect x="89" y="44" width="17.5" height="9.5" rx="1" fill="none" stroke={INK} strokeWidth={SW} />
+      <line x1="85" y1="56.5" x2="110" y2="56.5" stroke={INK} strokeWidth={SW} />
+      <line x1="88" y1="61.5" x2="97" y2="61.5" {...line} />
+      <line x1="102" y1="61.5" x2="104" y2="61.5" {...line} />
     </g>
   );
 }
@@ -121,7 +166,8 @@ function Seated() {
   );
 }
 
-export function MachineIcon({ figure }: { figure: IconFigure }) {
+export function MachineIcon({ figure, kind = 'mill' }: { figure: IconFigure; kind?: MachineKind }) {
+  const Body = kind === 'lathe' ? Lathe : Machine;
   return (
     <svg
       className="tile__icon"
@@ -129,8 +175,9 @@ export function MachineIcon({ figure }: { figure: IconFigure }) {
       fill="none"
       aria-hidden="true"
       data-testid={`icon-${figure === 'none' ? 'machine' : figure}`}
+      data-kind={kind}
     >
-      <Machine dx={figure === 'frezar' ? -6 : 0} />
+      <Body dx={figure === 'frezar' ? -6 : 0} />
       {figure === 'frezar' && <Standing />}
       {figure === 'operator' && <Seated />}
       {figure === 'oos' && (

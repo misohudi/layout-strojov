@@ -76,6 +76,7 @@ export function buildShiftRecord(input: {
     layout: machines.map((m) => ({
       name: m.name,
       nick: nickOf(m),
+      ...(m.kind === 'lathe' ? { kind: m.kind } : {}),
       ...(withHall ? { hallId: m.hallId, hallName: hallName.get(m.hallId) ?? '' } : {}),
       x: m.x,
       y: m.y,

@@ -1,6 +1,9 @@
 export type OrderType = 'EXT' | 'INT';
 export type MachineStatus = 'active' | 'out_of_service';
 
+/** Kind of machine: a milling machine (machining centre, the default) or a lathe – sets its icon. */
+export type MachineKind = 'mill' | 'lathe';
+
 /** A zone (workplace) of the department with its own floor plan, e.g. the milling hall or HSC. */
 export interface Hall {
   id: string;
@@ -14,6 +17,8 @@ export interface Machine {
   name: string;
   /** Short name shown on the tile (empty = made from the name automatically). */
   nick?: string;
+  /** Milling machine (default) or lathe. */
+  kind?: MachineKind;
   x: number;
   y: number;
   w: number;
@@ -107,6 +112,7 @@ export interface RecordLayoutItem {
   name: string;
   /** Zone of the machine; older records have one plan only. */
   hallId?: string;
+  kind?: MachineKind;
   hallName?: string;
   /** Tile nick at the time the shift was closed. */
   nick?: string;

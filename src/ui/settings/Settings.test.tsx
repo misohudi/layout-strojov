@@ -246,3 +246,15 @@ test('a new machine is placed on a free cell inside the 13 × 6 plan', async () 
   const others = (await db.machines.where('hallId').equals(added.hallId).toArray()).filter((m) => m.id !== added.id);
   expect(others.some((m) => m.x === added.x && m.y === added.y)).toBe(false);
 });
+
+test('machine editor: the machine type (milling machine / lathe) changes the icon', async () => {
+  wrap(<MachineEditor />);
+  await userEvent.click(await screen.findByRole('button', { name: /HERMLE C60/ }));
+  await userEvent.selectOptions(screen.getByLabelText('Typ stroja'), 'lathe');
+  await vi.waitFor(async () => expect((await db.machines.get('m-0'))!.kind).toBe('lathe'));
+  await vi.waitFor(() =>
+    expect(within(screen.getByRole('button', { name: /HERMLE C60/ })).getByTestId('icon-machine')).toHaveAttribute('data-kind', 'lathe'),
+  );
+  await userEvent.selectOptions(screen.getByLabelText('Typ stroja'), 'mill');
+  await vi.waitFor(async () => expect((await db.machines.get('m-0'))!.kind).toBeUndefined());
+});

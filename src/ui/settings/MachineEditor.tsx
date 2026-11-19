@@ -170,6 +170,13 @@ export function MachineEditor() {
                 onChange={(e) => setNick(e.target.value)}
               />
             </label>
+            <label className="field">
+              <span>Typ stroja</span>
+              <select value={sel.kind ?? 'mill'} onChange={(e) => save({ ...sel, kind: e.target.value === 'lathe' ? 'lathe' : undefined })}>
+                <option value="mill">Fréza</option>
+                <option value="lathe">Sústruh</option>
+              </select>
+            </label>
             {halls.length > 1 && (
               <label className="field">
                 <span>Oddelenie stroja</span>

@@ -1,5 +1,5 @@
 import type { HTMLAttributes } from 'react';
-import { ROLE_LABEL, type OrderType, type PersonRole } from '../domain/types';
+import { ROLE_LABEL, type MachineKind, type OrderType, type PersonRole } from '../domain/types';
 import { MachineIcon } from './MachineIcon';
 import { nickOf } from '../domain/nick';
 
@@ -14,6 +14,8 @@ interface Props {
   name: string;
   /** Short name on the tile; the full name is in the machine detail (and read by screen readers). */
   nick?: string;
+  /** Milling machine (default) or lathe – the icon shows which. */
+  kind?: MachineKind;
   x: number;
   y: number;
   w: number;
@@ -41,7 +43,7 @@ export function tileClass(type: OrderType | null, outOfService: boolean) {
 }
 
 export function MachineTile({
-  name, nick, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, onClick, dragProps,
+  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, onClick, dragProps,
 }: Props) {
   const short = nickOf({ name, nick });
   const first = people[0];
@@ -66,7 +68,7 @@ export function MachineTile({
       {...dragProps}
     >
       {/* portrait tile so the whole hall fits a tablet: icon, nick, person; the role shows in the figure */}
-      <MachineIcon figure={figure} />
+      <MachineIcon figure={figure} kind={kind} />
       <span className="tile__nick" aria-hidden="true">{short}</span>
       <span className="visually-hidden">{name}</span>
       {/* the person line is always there (empty when free), so icon and nick never move */}
