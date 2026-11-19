@@ -3,6 +3,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { formatPct } from '../report/xlsx';
 import { AutoThemeIcon, GearIcon, HistoryIcon, MoonIcon, SunIcon, svg } from './icons';
 import { useDB } from './useDB';
+import { MpsMark } from './Brand';
 import { loadTheme, nextTheme, saveTheme, themeLabel } from './theme';
 import type { PersonRole, Stats } from '../domain/types';
 
@@ -104,6 +105,7 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
           name={`Zmena ${shiftName} – zmeniť zmenu`}
           onClick={onChangeShift}
         />
+        <MpsMark className="header__mark" />
       </Section>
       <Section title="Obsadenosť ľuďmi" place="center">
         <Cell label="Obsadenosť" value={formatPct(stats.staffedPct)} variant="hcell--main" />

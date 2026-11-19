@@ -1,4 +1,9 @@
-/* Design elements of the Mühlbauer corporate design manual: hexagons and the graphic bar. */
+/* Design elements of the Mühlbauer corporate design manual: logos, hexagons and the graphic bar. */
+import mps from '../assets/brand/mps.png';
+import mpsDark from '../assets/brand/mps-dark.png';
+import mpsMark from '../assets/brand/mps-mark.png';
+import muehlbauer from '../assets/brand/muehlbauer.png';
+import muehlbauerDark from '../assets/brand/muehlbauer-dark.png';
 
 /** Points of a flat-topped hexagon around (cx, cy) with corner radius r. */
 function hexPoints(cx: number, cy: number, r: number): string {
@@ -50,28 +55,27 @@ export function BrandBar() {
   );
 }
 
-// Honeycomb cells (column, row) of the decorative group, with their palette colour.
-const GROUP: [number, number, string][] = [
-  [0, 1, 'var(--mb-100)'], [0, 2, 'var(--mb-200)'],
-  [1, 0, 'var(--mb-neutral)'], [1, 1, 'var(--mb-600)'], [1, 2, 'var(--mb-100)'],
-  [2, 0, 'var(--mb-200)'], [2, 1, 'var(--mb-orange)'], [2, 2, 'var(--mb-800)'],
-  [3, 0, 'var(--mb-100)'], [3, 1, 'var(--mb-300)'],
-  [4, 0, 'var(--mb-neutral)'], [4, 1, 'var(--mb-100)'], [5, 0, 'var(--mb-600)'],
-  [6, 0, 'var(--mb-100)'],
-];
-
-/** A loose group of hexagons for the corner of the start screen. */
-export function HexGroup({ className }: { className?: string }) {
-  const r = 26;
-  const gap = 3;
-  const dx = (r + gap) * 1.5;
-  const dy = (r + gap) * 1.732;
+/** A logo in its normal and its dark-background version; CSS shows the one that fits the theme. */
+function ThemedLogo({ light, dark, alt, className }: { light: string; dark: string; alt: string; className: string }) {
   return (
-    <svg className={className} viewBox="0 0 300 200" aria-hidden="true">
-      {LIGHT}
-      {GROUP.map(([c, row, color]) => (
-        <Hex key={`${c}-${row}`} cx={30 + c * dx} cy={30 + row * dy + (c % 2 ? dy / 2 : 0)} r={r} color={color} />
-      ))}
-    </svg>
+    <span className={`logo ${className}`}>
+      <img className="logo__light" src={light} alt={alt} />
+      <img className="logo__dark" src={dark} alt="" aria-hidden="true" />
+    </span>
   );
 }
+
+/** Mühlbauer Parts & Systems – the company logo. */
+export const MpsLogo = ({ className = '' }: { className?: string }) => (
+  <ThemedLogo light={mps} dark={mpsDark} alt="MPS – Mühlbauer Parts and Systems" className={className} />
+);
+
+/** Mühlbauer Group – "High Tech International". */
+export const MuehlbauerLogo = ({ className = '' }: { className?: string }) => (
+  <ThemedLogo light={muehlbauer} dark={muehlbauerDark} alt="Mühlbauer High Tech International" className={className} />
+);
+
+/** The MPS hexagon mark alone (header). */
+export const MpsMark = ({ className = '' }: { className?: string }) => (
+  <img className={className} src={mpsMark} alt="MPS" />
+);

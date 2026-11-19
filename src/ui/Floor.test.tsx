@@ -54,6 +54,20 @@ test('zooming scales tiles in both directions', () => {
   expect(grid.style.gridTemplateRows).toBe('120px 120px');
 });
 
+test('while the fingers move the plan is only stretched as a picture; it is laid out once they lift', () => {
+  // laying the plan out again on every finger move made the cards jitter and show twice on the tablet
+  const { scroller, grid } = setup();
+  const t = (x: number) => ({ clientX: x, clientY: 100, identifier: x });
+  fireEvent.touchStart(scroller, { touches: [t(100), t(200)] });
+  fireEvent.touchMove(scroller, { touches: [t(100), t(300)] });
+  expect(zoom(grid)).toBe(1);
+  expect(grid.style.gridTemplateColumns).toBe('60px 60px');
+  expect(grid.style.transform).toContain('scale(2)');
+  fireEvent.touchEnd(scroller, { touches: [] });
+  expect(zoom(grid)).toBe(2);
+  expect(grid.style.transform).toBe('');
+});
+
 test('at 100 % there are no zoom controls covering the plan', () => {
   const { grid } = setup();
   expect(zoom(grid)).toBe(1);

@@ -1,7 +1,7 @@
 /* Mühlbauer corporate design (Corporate Design Manual 01-2021): the colour palette is built on the
    middle Mühlbauer turquoise (Pantone 7474C) with its darker and lighter shades, plus orange, lime and
-   greys. Only these colours are used – except yellow (priority) and red (out of service), which are
-   safety signal colours like the warning stickers on the machines. */
+   greys. Only these colours are used – except the order colours (EXT blue, INT red), yellow priority and
+   the red out-of-service outline, which the shop floor reads as signals. */
 :root {
   --mb-900: #002f36; /* 547C */
   --mb-800: #004951; /* 316C */
@@ -27,10 +27,10 @@
   --heading: var(--mb-600);
   --muted: var(--mb-grey);
   --border: var(--mb-neutral);
-  --ext: var(--mb-600);
+  --ext: #2563eb; /* EXT blue and INT red stay: the shop floor knows the orders by them */
   --ext-text: #ffffff;
-  --int: var(--mb-orange);
-  --int-text: var(--mb-900);
+  --int: #dc2626;
+  --int-text: #ffffff;
   --free: var(--mb-100);
   --primary: var(--mb-600);
   --primary-text: #ffffff;
@@ -71,10 +71,10 @@
   --heading: var(--mb-300);
   --muted: var(--mb-service);
   --border: var(--mb-700);
-  --ext: var(--mb-500);
+  --ext: #3b82f6;
   --ext-text: #ffffff;
-  --int: var(--mb-orange);
-  --int-text: var(--mb-900);
+  --int: #ef4444;
+  --int-text: #ffffff;
   --free: var(--mb-800);
   --primary: var(--mb-300);
   --primary-text: var(--mb-900);
@@ -106,10 +106,10 @@
     --heading: var(--mb-300);
     --muted: var(--mb-service);
     --border: var(--mb-700);
-    --ext: var(--mb-500);
+    --ext: #3b82f6;
     --ext-text: #ffffff;
-    --int: var(--mb-orange);
-    --int-text: var(--mb-900);
+    --int: #ef4444;
+    --int-text: #ffffff;
     --free: var(--mb-800);
     --primary: var(--mb-300);
     --primary-text: var(--mb-900);
@@ -517,6 +517,21 @@ tr.clickable { cursor: pointer; }
 .brand-bar { display: flex; align-items: center; width: 100%; gap: 0; margin-top: 4px; }
 .brand-bar__hexes { flex: none; width: 62px; height: 54px; }
 .brand-bar__line { flex: 1; height: 8px; margin-left: -8px; border-radius: 0 3px 3px 0; background: var(--brand-bar); }
-/* Hexagon group in the corner of the start screen; the "light" comes from the upper half. */
-.start__hexes { position: fixed; left: -20px; top: -14px; width: min(34vw, 340px); height: auto; pointer-events: none; opacity: 0.9; }
+/* Start screen on the corporate background (dark turquoise with hexagon outlines), logos on the card. */
+.start { background: #00242a url('../assets/brand/background.webp') center / cover no-repeat; }
 .start .center-card { position: relative; }
+.start__settings { background: var(--surface); }
+.start__logos { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 100%; }
+.start__mps img { height: 72px; width: auto; display: block; }
+.start__mb img { height: 40px; width: auto; display: block; }
+/* Logos: the version with white lettering on dark backgrounds */
+.logo__dark { display: none !important; }
+:root[data-theme='dark'] .logo__light { display: none !important; }
+:root[data-theme='dark'] .logo__dark { display: block !important; }
+@media (prefers-color-scheme: dark) {
+  :root[data-theme='system'] .logo__light { display: none !important; }
+  :root[data-theme='system'] .logo__dark { display: block !important; }
+}
+/* the MPS hexagon mark next to the shift button (left out where the header is tight) */
+.header__mark { height: 40px; width: auto; margin-left: 10px; }
+@media (max-width: 1000px) { .header__mark { display: none; } }
