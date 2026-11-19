@@ -3,6 +3,8 @@ import mpsText from '../assets/brand/mps-text.png';
 import mpsTextDark from '../assets/brand/mps-text-dark.png';
 import muehlbauer from '../assets/brand/muehlbauer.png';
 import muehlbauerDark from '../assets/brand/muehlbauer-dark.png';
+import { useEffect, useRef } from 'react';
+import { hexAt } from './mpsSpin';
 
 /** Points of a flat-topped hexagon around (cx, cy) with corner radius r. */
 function hexPoints(cx: number, cy: number, r: number): string {
@@ -29,31 +31,43 @@ function ThemedLogo({ light, dark, alt, className }: { light: string; dark: stri
   );
 }
 
-// The three hexagons of the MPS logo, traced from the logo artwork (same height as the lettering image).
-const MPS_HEXES = [
-  { color: '#f07632', points: '2,193 41,95 148,113 227,213 214,313 100,318' }, // orange
-  { color: '#008998', points: '191,26 267,45 330,124 329,197 252,191 176,97' }, // turquoise
-  { color: '#a7ccd7', points: '257,227 335,233 411,318 410,419 333,436 246,326' }, // light blue
-];
+const MPS_COLORS = ['#f07632', '#008998', '#a7ccd7']; // orange, turquoise, light blue
+const SPIN_MS = 1800;
+const ease = (t: number) => 0.5 - 0.5 * Math.cos(Math.PI * t);
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /**
  * Mühlbauer Parts & Systems – the company logo. The hexagons are drawn here (the lettering is an image)
- * so they can move: each time the logo appears (a shift picked, back to the shift choice) the three of
- * them turn once together about their middle, in their own tilted plane (see .mps-spin).
+ * so they can move: each time the logo appears (a shift picked, back to the shift choice) the group
+ * turns once about its middle on its tilted plane – each hexagon moves on to the next place and takes
+ * its size there (see mpsSpin). `still` (the PDF) leaves it at rest.
  */
-export const MpsLogo = ({ className = '' }: { className?: string }) => (
-  <span className={`logo mps-logo ${className}`} role="img" aria-label="MPS – Mühlbauer Parts and Systems">
-    <svg className="mps-logo__mark" viewBox="0 0 431 638" aria-hidden="true">
-      <g className="mps-spin">
-        {MPS_HEXES.map((h) => (
-          <polygon key={h.color} points={h.points} fill={h.color} />
+export function MpsLogo({ className = '', still = false }: { className?: string; still?: boolean }) {
+  const polys = useRef<(SVGPolygonElement | null)[]>([]);
+  useEffect(() => {
+    if (still || reducedMotion() || typeof requestAnimationFrame !== 'function') return;
+    let frame = 0;
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / SPIN_MS);
+      polys.current.forEach((el, i) => el?.setAttribute('points', hexAt(i, ease(t))));
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [still]);
+  return (
+    <span className={`logo mps-logo ${className}`} role="img" aria-label="MPS – Mühlbauer Parts and Systems">
+      <svg className="mps-logo__mark" viewBox="0 0 431 638" aria-hidden="true">
+        {MPS_COLORS.map((color, i) => (
+          <polygon key={color} ref={(el) => { polys.current[i] = el; }} points={hexAt(i, 0)} fill={color} />
         ))}
-      </g>
-    </svg>
-    <img className="logo__light" src={mpsText} alt="" aria-hidden="true" />
-    <img className="logo__dark" src={mpsTextDark} alt="" aria-hidden="true" />
-  </span>
-);
+      </svg>
+      <img className="logo__light" src={mpsText} alt="" aria-hidden="true" />
+      <img className="logo__dark" src={mpsTextDark} alt="" aria-hidden="true" />
+    </span>
+  );
+}
 
 /** Mühlbauer Group – "High Tech International". */
 export const MuehlbauerLogo = ({ className = '' }: { className?: string }) => (
