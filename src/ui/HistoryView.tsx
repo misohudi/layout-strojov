@@ -4,8 +4,9 @@ import { useDB } from './useDB';
 import { BackButton } from './icons';
 import { listRecords } from '../db/repo';
 import { buildHistoryXlsx, formatPct, skDate } from '../report/xlsx';
-import { shareOrDownload } from '../report/share';
-import { PdfButtons } from './PdfButtons';
+import { downloadBlob, shareOrDownload } from '../report/share';
+import { pdfFileName } from '../report/pdf';
+import { ExportMenu, usePdf } from './ExportMenu';
 import { localDate } from '../domain/record';
 import { RecordDetail } from './RecordDetail';
 import { isPool } from '../domain/types';
@@ -16,12 +17,15 @@ export function HistoryView({ onBack }: { onBack(): void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const shifts = useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? [];
   const records = useLiveQuery(
     () => listRecords(db, { shiftId: shiftId || undefined, from: from || undefined, to: to || undefined }),
     [db, shiftId, from, to],
   );
+
+  const list = records ?? [];
+  const pdf = usePdf(list);
+  const excelName = () => `Historia_obsadenosti_${localDate(new Date().toISOString())}.xlsx`;
 
   const open = records?.find((r) => r.id === openId);
   if (open) return <RecordDetail record={open} onBack={() => setOpenId(null)} />;
@@ -31,23 +35,26 @@ export function HistoryView({ onBack }: { onBack(): void }) {
       <div className="page__head">
         <BackButton onClick={onBack} />
         <h2>História zmien</h2>
-        <div className="row">
-        <PdfButtons records={records ?? []} onError={setError} />
-        <button
-          className="btn btn--primary"
+        <ExportMenu
           disabled={!records?.length}
-          onClick={async () =>
-            shareOrDownload(
-              await buildHistoryXlsx(records ?? []),
-              `Historia_obsadenosti_${localDate(new Date().toISOString())}.xlsx`,
-            )
-          }
-        >
-          Exportovať do Excelu
-        </button>
-        </div>
+          groups={[
+            {
+              title: 'PDF – plány a tabuľky',
+              actions: [
+                { label: 'Stiahnuť PDF', run: async () => downloadBlob(await pdf(), pdfFileName(list)) },
+                { label: 'Zdieľať PDF', run: async () => shareOrDownload(await pdf(), pdfFileName(list)) },
+              ],
+            },
+            {
+              title: 'Excel – prehľad zmien',
+              actions: [
+                { label: 'Stiahnuť Excel', run: async () => downloadBlob(await buildHistoryXlsx(list), excelName()) },
+                { label: 'Zdieľať Excel', run: async () => shareOrDownload(await buildHistoryXlsx(list), excelName()) },
+              ],
+            },
+          ]}
+        />
       </div>
-      {error && <div className="notice notice--warn">{error}</div>}
       <div className="card row">
         <label className="field">
           <span>Zmena</span>

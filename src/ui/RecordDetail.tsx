@@ -4,8 +4,9 @@ import { MachineTile } from './MachineTile';
 import { PLAN_FRAME, cropped } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
-import { shareOrDownload } from '../report/share';
-import { PdfButtons } from './PdfButtons';
+import { downloadBlob, shareOrDownload } from '../report/share';
+import { pdfFileName } from '../report/pdf';
+import { ExportMenu, usePdf } from './ExportMenu';
 import {
   getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
 } from '../report/folder';
@@ -53,6 +54,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
   const db = useDB();
   const [folder, setFolder] = useState<FolderHandle | null>(null);
   const [savedTo, setSavedTo] = useState<string | null>(null);
+  const pdf = usePdf([record]);
   useEffect(() => {
     getReportFolder(db).then((h) => setFolder(h ?? null));
   }, [db]);
@@ -83,23 +85,27 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       <div className="page__head">
         <BackButton onClick={onBack} />
         <h2>{`Zmena ${record.shiftName} · ${skDate(record.date)}`}</h2>
-        <div className="row">
-        {folder && (
-          <button className="btn btn--primary" disabled={!blob} onClick={saveToFolder}>
-            Uložiť do priečinka
-          </button>
-        )}
-        <button
-          className="btn btn--primary"
-          disabled={!blob}
-          onClick={() =>
-            blob && shareOrDownload(blob, reportFileName(record)).catch((e) => setError(String(e?.message ?? e)))
-          }
-        >
-          Zdieľať report
-        </button>
-        <PdfButtons records={[record]} onError={setError} />
-        </div>
+        <ExportMenu
+          groups={[
+            {
+              title: 'PDF – plán a tabuľka',
+              actions: [
+                { label: 'Stiahnuť PDF', run: async () => downloadBlob(await pdf(), pdfFileName([record])) },
+                { label: 'Zdieľať PDF', run: async () => shareOrDownload(await pdf(), pdfFileName([record])) },
+              ],
+            },
+            {
+              title: 'Excel – report zmeny',
+              // the file is made up front, so sharing opens right inside the tap (needed on iPad)
+              note: blob ? undefined : 'Pripravujem report…',
+              actions: [
+                { label: 'Stiahnuť Excel', disabled: !blob, run: () => blob && downloadBlob(blob, reportFileName(record)) },
+                { label: 'Zdieľať Excel', disabled: !blob, run: () => blob && shareOrDownload(blob, reportFileName(record)) },
+                ...(folder ? [{ label: 'Uložiť do priečinka', disabled: !blob, run: saveToFolder }] : []),
+              ],
+            },
+          ]}
+        />
       </div>
       {savedTo && <div className="notice notice--ok">{savedTo}</div>}
       {error && <div className="notice notice--warn">{error}</div>}
