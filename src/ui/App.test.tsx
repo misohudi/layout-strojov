@@ -870,3 +870,36 @@ test('a person from the people list: free machines (and their own) first, machin
   await userEvent.click(within(panel).getByRole('button', { name: /Obsadené stroje \(1\)/ }));
   expect(names().some((n) => n?.includes('Horváth'))).toBe(true);
 });
+
+test('tapping a bar in the statistics shows the breakdown of that shift', async () => {
+  const kov = { name: 'Kováč', homeShiftName: 'A', overtime: false, role: 'frezar' as const };
+  const nov = { name: 'Novák', homeShiftName: 'A', overtime: false, role: 'operator' as const };
+  await db.records.put({
+    id: 'r', shiftId: 's-A', shiftName: 'A', foremanName: 'X', date: '2026-11-10',
+    startedAt: '2026-11-10T06:00:00Z', closedAt: '2026-11-10T14:00:00Z',
+    stats: { total: 4, staffed: 3, staffedPct: 75, frezari: 1, operatori: 1, multiPeople: 1, multiMachines: 2, occupied: 3, ext: 2, int: 1, occupancyPct: 75, extPct: 66.7, intPct: 33.3, peopleWithoutType: 0 },
+    rows: [
+      { machineName: 'M1', hallName: 'Frézovňa', type: 'EXT', outOfService: false, people: [kov] },
+      { machineName: 'M2', hallName: 'Frézovňa', type: 'EXT', outOfService: false, people: [kov] },
+      { machineName: 'M3', hallName: 'Frézovňa', type: null, outOfService: false, people: [] },
+      { machineName: 'H1', hallName: 'HSC', type: 'INT', outOfService: false, people: [nov] },
+    ],
+    layout: [],
+  });
+  await startDraft(db, 's-B', 'B', new Date());
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: /^Obsadenosť .* – rozpis a vývoj$/ }));
+  const sheet = await screen.findByRole('dialog', { name: 'Obsadenosť ľuďmi' });
+  await within(sheet).findByRole('img', { name: 'Obsadenosť ľuďmi v posledných zmenách' });
+  expect(within(sheet).getByRole('region', { name: 'Rozpis teraz' })).toBeInTheDocument();
+  fireEvent.click(sheet.querySelectorAll('.trend__bar')[0]); // the closed shift
+  const past = within(sheet).getByRole('region', { name: 'Rozpis – 10.11. · zmena A' });
+  expect(within(past).getByRole('row', { name: /^Frézovňa 2 1 1 0 1 človek na 2 strojoch/ })).toBeInTheDocument();
+  expect(within(past).getByRole('row', { name: /^HSC 1 0 0 1 nikto/ })).toBeInTheDocument();
+  expect(within(past).getByRole('row', { name: /^Spolu 3 1 1 1 1 človek na 2 strojoch 75,0 %/ })).toBeInTheDocument();
+  expect(sheet).toHaveTextContent('75,0 % · 3 / 4 strojov v prevádzke má ľudí');
+  // and back to this shift
+  fireEvent.click(sheet.querySelectorAll('.trend__bar')[1]);
+  expect(within(sheet).getByRole('region', { name: 'Rozpis teraz' })).toBeInTheDocument();
+});

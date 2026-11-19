@@ -7,7 +7,7 @@ import { byHallAndPosition } from '../domain/record';
 import { formatPct, skDate } from '../report/xlsx';
 import { tileClass } from './MachineTile';
 import { justDropped } from './dragPerson';
-import { roleOf, ROLE_LABEL, type Assignment, type Hall, type Machine, type Person, type Stats } from '../domain/types';
+import { roleOf, ROLE_LABEL, type Assignment, type Hall, type Machine, type Person, type ShiftRecord, type Stats } from '../domain/types';
 
 function Sheet({ title, onClose, children, seeThrough = false }: { title: string; onClose(): void; children: React.ReactNode; seeThrough?: boolean }) {
   return (
@@ -106,12 +106,59 @@ export function MultiSheet({ groups, assignments, halls, onPick, onClose }: {
   );
 }
 
+/** One line of a breakdown: a zone, or the total (last). */
+export interface BreakdownRow {
+  name: string;
+  s: Stats;
+  total?: boolean;
+}
+
+/**
+ * The breakdown of a closed shift, rebuilt from its rows: per zone (when it had several) and the total
+ * as stored with the shift.
+ */
+export function recordBreakdown(record: ShiftRecord, halls: Hall[]): BreakdownRow[] {
+  const names = [...new Set(record.rows.map((r) => r.hallName ?? ''))];
+  const total = { name: 'Spolu', s: record.stats, total: true };
+  if (names.length <= 1 || names.some((n) => !n)) return [total];
+  const order = (n: string) => {
+    const i = halls.findIndex((h) => h.name === n);
+    return i < 0 ? halls.length : i;
+  };
+  names.sort((a, b) => order(a) - order(b));
+  // the shift's people and machines as they were, so the usual counting applies
+  const key = (p: { name: string; homeShiftName: string }) => `${p.homeShiftName}|${p.name}`;
+  const people = new Map<string, Person>();
+  const machines: Machine[] = [];
+  const assignments: Record<string, Assignment> = {};
+  record.rows.forEach((r, i) => {
+    const id = `r${i}`;
+    machines.push({ id, hallId: r.hallName ?? '', name: r.machineName, x: 0, y: 0, w: 1, h: 1, status: r.outOfService ? 'out_of_service' : 'active' });
+    assignments[id] = { type: r.type, personIds: r.people.map(key), priority: r.priority };
+    for (const p of r.people) people.set(key(p), { id: key(p), name: p.name, shiftId: '', active: true, role: p.role });
+  });
+  return [
+    ...names.map((n) => ({ name: n, s: computeStats(machines.filter((m) => m.hallId === n), assignments, [...people.values()]) })),
+    total,
+  ];
+}
+
+const shortDate = (date: string) => skDate(date).replace(/\d{4}$/, '');
+
 /** Last closed shifts in the trend chart. */
 export const TREND_SHIFTS = 14;
 
 /** A figure of the closed shifts (oldest first) plus the open one ("teraz"), as bars. */
-function TrendChart({ points, label }: { points: { label: string; sub: string; pct: number | null; now?: boolean }[]; label: string }) {
-  const [picked, setPicked] = useState<number>(points.length - 1);
+interface TrendPoint {
+  label: string;
+  sub: string;
+  pct: number | null;
+  now?: boolean;
+  /** The breakdown of that shift (per zone and in total), shown above the chart when its bar is tapped. */
+  rows(): BreakdownRow[];
+}
+
+function TrendChart({ points, label, picked, onPick }: { points: TrendPoint[]; label: string; picked: number; onPick(i: number): void }) {
   const W = 640, H = 200, top = 22, bottom = 34, left = 34, right = 8;
   const plotH = H - top - bottom;
   const slot = (W - left - right) / Math.max(points.length, 1);
@@ -144,7 +191,7 @@ function TrendChart({ points, label }: { points: { label: string; sub: string; p
           const h = Math.max(0, y(0) - y(v));
           const r = Math.min(4, barW / 2, h);
           return (
-            <g key={i} className={`trend__bar ${p.now ? 'trend__bar--now' : ''} ${i === picked ? 'trend__bar--on' : ''}`} onClick={() => setPicked(i)}>
+            <g key={i} className={`trend__bar ${p.now ? 'trend__bar--now' : ''} ${i === picked ? 'trend__bar--on' : ''}`} onClick={() => onPick(i)}>
               {/* hit area bigger than the bar */}
               <rect x={left + i * slot} y={top} width={slot} height={plotH + bottom} className="trend__hit" />
               {h > 0 && (
@@ -160,7 +207,7 @@ function TrendChart({ points, label }: { points: { label: string; sub: string; p
         <figcaption className="trend__readout" aria-live="polite">
           <strong>{formatPct(sel.pct)}</strong>
           {` · ${sel.now ? 'táto zmena (teraz)' : `${sel.label} · zmena ${sel.sub}`}`}
-          <span className="muted"> – ťuknutím na stĺpec zobrazíte hodnotu</span>
+          <span className="muted"> – ťuknutím na stĺpec zobrazíte rozpis tej zmeny</span>
         </figcaption>
       )}
     </figure>
@@ -181,36 +228,43 @@ export function UtilizationSheet({ machines, halls, assignments, stats, onClose 
   const db = useDB();
   const records = useLiveQuery(() => listRecords(db), [db]) ?? [];
   const recent = records.slice(0, TREND_SHIFTS).reverse();
-  const points = [
-    ...recent.map((r) => ({ label: skDate(r.date).replace(/\d{4}$/, ''), sub: r.shiftName, pct: r.stats.occupancyPct })),
-    { label: 'teraz', sub: '', pct: stats.occupancyPct, now: true },
-  ];
-  const rows = [
+  const nowRows: BreakdownRow[] = [
     ...(halls.length > 1
       ? halls.map((h) => ({ name: h.name, s: computeStats(machines.filter((m) => m.hallId === h.id), assignments) }))
       : []),
     { name: 'Spolu', s: stats, total: true },
   ];
+  const points: TrendPoint[] = [
+    ...recent.map((r) => ({ label: shortDate(r.date), sub: r.shiftName, pct: r.stats.occupancyPct, rows: () => recordBreakdown(r, halls) })),
+    { label: 'teraz', sub: '', pct: stats.occupancyPct, now: true, rows: () => nowRows },
+  ];
+  // a tapped bar shows that shift's figures; this shift (teraz) until then
+  const [picked, setPicked] = useState<number | null>(null);
+  const idx = picked ?? points.length - 1;
+  const sel = points[idx];
+  const rows = sel.rows();
+  const total = rows[rows.length - 1].s;
+  const title = sel.now ? 'Rozpis teraz' : `Rozpis – ${sel.label} · zmena ${sel.sub}`;
   return (
     <Sheet title="Vyťaženie strojov" onClose={onClose}>
       <p className="insight__lead">
-        <strong>{formatPct(stats.occupancyPct)}</strong>
-        {` · ${stats.occupied} / ${stats.total} strojov v prevádzke má zákazku`}
+        <strong>{formatPct(total.occupancyPct)}</strong>
+        {` · ${total.occupied} / ${total.total} strojov v prevádzke má zákazku`}
       </p>
-      <section aria-label="Rozpis teraz">
-        <h3>Rozpis teraz</h3>
+      <section aria-label={title}>
+        <h3>{title}</h3>
         <div className="table-wrap">
           <table className="insight__table">
             <thead>
-              <tr><th>{halls.length > 1 ? 'Oddelenie' : ''}</th><th>EXT</th><th>INT</th><th>Voľné</th><th>Mimo prev.</th><th>Vyťaženie</th></tr>
+              <tr><th>{rows.length > 1 ? 'Oddelenie' : ''}</th><th>EXT</th><th>INT</th><th>Voľné</th><th>Mimo prev.</th><th>Vyťaženie</th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.name} className={'total' in r ? 'insight__total' : ''}>
+                <tr key={r.name} className={r.total ? 'insight__total' : ''}>
                   <td>{r.name}</td>
                   <td>{r.s.ext}</td>
                   <td>{r.s.int}</td>
-                  <td>{r.s.free ?? 0}</td>
+                  <td>{r.s.free ?? r.s.total - r.s.occupied}</td>
                   <td>{r.s.oos ?? 0}</td>
                   <td><strong>{formatPct(r.s.occupancyPct)}</strong>{` (${r.s.occupied}/${r.s.total})`}</td>
                 </tr>
@@ -224,7 +278,7 @@ export function UtilizationSheet({ machines, halls, assignments, stats, onClose 
         {recent.length === 0 ? (
           <p className="muted">Zatiaľ žiadne uzavreté zmeny na porovnanie.</p>
         ) : (
-          <TrendChart points={points} label="Vyťaženie strojov v posledných zmenách" />
+          <TrendChart points={points} label="Vyťaženie strojov v posledných zmenách" picked={idx} onPick={setPicked} />
         )}
       </section>
     </Sheet>
@@ -247,32 +301,39 @@ export function StaffingStatsSheet({ machines, halls, assignments, people, stats
   const records = useLiveQuery(() => listRecords(db), [db]) ?? [];
   // older records have no staffing figures – they are left out of the trend
   const recent = records.filter((r) => r.stats.staffedPct != null).slice(0, TREND_SHIFTS).reverse();
-  const points = [
-    ...recent.map((r) => ({ label: skDate(r.date).replace(/\d{4}$/, ''), sub: r.shiftName, pct: r.stats.staffedPct ?? null })),
-    { label: 'teraz', sub: '', pct: stats.staffedPct ?? null, now: true },
-  ];
-  const rows = [
+  const nowRows: BreakdownRow[] = [
     ...(halls.length > 1
       ? halls.map((h) => ({ name: h.name, s: computeStats(machines.filter((m) => m.hallId === h.id), assignments, people) }))
       : []),
     { name: 'Spolu', s: stats, total: true },
   ];
+  const points: TrendPoint[] = [
+    ...recent.map((r) => ({ label: shortDate(r.date), sub: r.shiftName, pct: r.stats.staffedPct ?? null, rows: () => recordBreakdown(r, halls) })),
+    { label: 'teraz', sub: '', pct: stats.staffedPct ?? null, now: true, rows: () => nowRows },
+  ];
+  // a tapped bar shows that shift's figures; this shift (teraz) until then
+  const [picked, setPicked] = useState<number | null>(null);
+  const idx = picked ?? points.length - 1;
+  const sel = points[idx];
+  const rows = sel.rows();
+  const total = rows[rows.length - 1].s;
+  const title = sel.now ? 'Rozpis teraz' : `Rozpis – ${sel.label} · zmena ${sel.sub}`;
   return (
     <Sheet title="Obsadenosť ľuďmi" onClose={onClose}>
       <p className="insight__lead">
-        <strong>{formatPct(stats.staffedPct ?? null)}</strong>
-        {` · ${stats.staffed ?? 0} / ${stats.total} strojov v prevádzke má ľudí`}
+        <strong>{formatPct(total.staffedPct ?? null)}</strong>
+        {` · ${total.staffed ?? 0} / ${total.total} strojov v prevádzke má ľudí`}
       </p>
-      <section aria-label="Rozpis teraz">
-        <h3>Rozpis teraz</h3>
+      <section aria-label={title}>
+        <h3>{title}</h3>
         <div className="table-wrap">
           <table className="insight__table">
             <thead>
-              <tr><th>{halls.length > 1 ? 'Oddelenie' : ''}</th><th>S ľuďmi</th><th>Bez ľudí</th><th>Frézari</th><th>Operátori</th><th>Viacobsluha</th><th>Obsadenosť</th></tr>
+              <tr><th>{rows.length > 1 ? 'Oddelenie' : ''}</th><th>S ľuďmi</th><th>Bez ľudí</th><th>Frézari</th><th>Operátori</th><th>Viacobsluha</th><th>Obsadenosť</th></tr>
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.name} className={'total' in r ? 'insight__total' : ''}>
+                <tr key={r.name} className={r.total ? 'insight__total' : ''}>
                   <td>{r.name}</td>
                   <td>{r.s.staffed ?? 0}</td>
                   <td>{r.s.total - (r.s.staffed ?? 0)}</td>
@@ -291,7 +352,7 @@ export function StaffingStatsSheet({ machines, halls, assignments, people, stats
         {recent.length === 0 ? (
           <p className="muted">Zatiaľ žiadne uzavreté zmeny na porovnanie.</p>
         ) : (
-          <TrendChart points={points} label="Obsadenosť ľuďmi v posledných zmenách" />
+          <TrendChart points={points} label="Obsadenosť ľuďmi v posledných zmenách" picked={idx} onPick={setPicked} />
         )}
       </section>
     </Sheet>
