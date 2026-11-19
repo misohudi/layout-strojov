@@ -523,28 +523,19 @@ tr.clickable { cursor: pointer; }
 /* MPS logo: drawn hexagons + lettering image, both as high as the logo box */
 .mps-logo { display: flex; align-items: stretch; }
 .mps-logo > svg, .mps-logo > img { height: 100%; width: auto; display: block; }
-.mps-hex { transform-box: fill-box; transform-origin: center; }
-.mps-hex--a { fill: #f07632; animation: mps-turn-a 1.5s ease-in-out both; }
-.mps-hex--b { fill: #008998; animation: mps-turn-b 1.5s ease-in-out 0.08s both; }
-.mps-hex--c { fill: #a7ccd7; animation: mps-turn-c 1.5s ease-in-out 0.16s both; }
-/* three flips about the hexagon's own centre; at each edge-on moment the colour moves on by one */
-@keyframes mps-turn-a {
-  0% { transform: scaleX(1); fill: #f07632; } 16.6% { transform: scaleX(0); fill: #f07632; }
-  16.7% { fill: #008998; } 33.3% { transform: scaleX(1); } 49.9% { transform: scaleX(0); fill: #008998; }
-  50% { fill: #a7ccd7; } 66.6% { transform: scaleX(1); } 83.2% { transform: scaleX(0); fill: #a7ccd7; }
-  83.3% { fill: #f07632; } 100% { transform: scaleX(1); fill: #f07632; }
+/* the hexagons pass their colours on to each other (turquoise → orange → light blue → turquoise)
+   until every one has its own colour again */
+.mps-hex--a { fill: #f07632; animation: mps-colors-a 2s ease-in-out both; }
+.mps-hex--b { fill: #008998; animation: mps-colors-b 2s ease-in-out both; }
+.mps-hex--c { fill: #a7ccd7; animation: mps-colors-c 2s ease-in-out both; }
+@keyframes mps-colors-a {
+  0%, 12% { fill: #f07632; } 22%, 37% { fill: #a7ccd7; } 47%, 62% { fill: #008998; } 72%, 100% { fill: #f07632; }
 }
-@keyframes mps-turn-b {
-  0% { transform: scaleX(1); fill: #008998; } 16.6% { transform: scaleX(0); fill: #008998; }
-  16.7% { fill: #a7ccd7; } 33.3% { transform: scaleX(1); } 49.9% { transform: scaleX(0); fill: #a7ccd7; }
-  50% { fill: #f07632; } 66.6% { transform: scaleX(1); } 83.2% { transform: scaleX(0); fill: #f07632; }
-  83.3% { fill: #008998; } 100% { transform: scaleX(1); fill: #008998; }
+@keyframes mps-colors-b {
+  0%, 12% { fill: #008998; } 22%, 37% { fill: #f07632; } 47%, 62% { fill: #a7ccd7; } 72%, 100% { fill: #008998; }
 }
-@keyframes mps-turn-c {
-  0% { transform: scaleX(1); fill: #a7ccd7; } 16.6% { transform: scaleX(0); fill: #a7ccd7; }
-  16.7% { fill: #f07632; } 33.3% { transform: scaleX(1); } 49.9% { transform: scaleX(0); fill: #f07632; }
-  50% { fill: #008998; } 66.6% { transform: scaleX(1); } 83.2% { transform: scaleX(0); fill: #008998; }
-  83.3% { fill: #a7ccd7; } 100% { transform: scaleX(1); fill: #a7ccd7; }
+@keyframes mps-colors-c {
+  0%, 12% { fill: #a7ccd7; } 22%, 37% { fill: #008998; } 47%, 62% { fill: #f07632; } 72%, 100% { fill: #a7ccd7; }
 }
 @media (prefers-reduced-motion: reduce) { .mps-hex { animation: none !important; } }
 /* Logos: the version with white lettering on dark backgrounds */
