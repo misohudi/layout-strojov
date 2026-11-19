@@ -651,3 +651,14 @@ test('the info bar about machines with people but no order type shows them on th
   await userEvent.click(within(bar).getByRole('button', { name: 'Skryť' }));
   expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim)/.test(t.className))).toBe(false);
 });
+
+test('start screen: the shift names sit at one height whether started or not, and the version is shown', async () => {
+  await startDraft(db, 's-B', 'B', new Date());
+  renderApp();
+  const a = await screen.findByRole('button', { name: /^A/ });
+  const b = screen.getByRole('button', { name: /^B\s*rozpracované od/ });
+  // both have the second line (empty for A), so the names don't move up or down
+  expect(a.querySelector('small')).not.toBeNull();
+  expect(b.querySelector('small')).toHaveTextContent('rozpracované od');
+  expect(screen.getByText(/^Verzia \d+\.\d+\.\d+ · \S+/)).toBeInTheDocument();
+});

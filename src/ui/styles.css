@@ -619,3 +619,5 @@ button.legend__stat { font: inherit; color: var(--text); cursor: pointer; }
 /* while machines are highlighted, the info bars fade so the machines under them show */
 .plan-notes { transition: opacity 0.2s ease; }
 .plan-notes--faded { opacity: 0.45; }
+/* start screen: build version in the bottom-right corner */
+.start__version { position: fixed; right: 16px; bottom: 10px; margin: 0; font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
