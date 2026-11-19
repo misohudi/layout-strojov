@@ -1,5 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+// Corporate typeface: Swiss 721 Condensed / Arial Narrow – Roboto Condensed is the closest web font,
+// bundled so the tablet shows it offline too (Latin + Latin Extended for Slovak letters only).
+import '@fontsource/roboto-condensed/latin-300.css';
+import '@fontsource/roboto-condensed/latin-ext-300.css';
+import '@fontsource/roboto-condensed/latin-400.css';
+import '@fontsource/roboto-condensed/latin-ext-400.css';
+import '@fontsource/roboto-condensed/latin-700.css';
+import '@fontsource/roboto-condensed/latin-ext-700.css';
 import App from './App';
 import { DBProvider } from './ui/useDB';
 import { ensureSeeded, openDB } from './db/db';

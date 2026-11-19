@@ -90,9 +90,9 @@ export function MachineTile({
       {unstaffedPriority && (
         <span className="tile__warn" title="Prioritná zákazka bez obsluhy">
           <svg viewBox="0 0 24 22" aria-hidden="true">
-            <path d="M12 1.5L23 20.5H1Z" fill="#facc15" stroke="#111827" strokeWidth="1.6" strokeLinejoin="round" />
-            <path d="M12 8v6" stroke="#111827" strokeWidth="2.4" strokeLinecap="round" />
-            <circle cx="12" cy="17.4" r="1.4" fill="#111827" />
+            <path d="M12 1.5L23 20.5H1Z" style={{ fill: 'var(--signal-yellow)', stroke: 'var(--prio-ink)' }} strokeWidth="1.6" strokeLinejoin="round" />
+            <path d="M12 8v6" style={{ stroke: 'var(--prio-ink)' }} strokeWidth="2.4" strokeLinecap="round" />
+            <circle cx="12" cy="17.4" r="1.4" style={{ fill: 'var(--prio-ink)' }} />
           </svg>
           <span className="visually-hidden"> Prioritná zákazka bez obsluhy</span>
         </span>

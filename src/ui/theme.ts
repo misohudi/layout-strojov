@@ -21,7 +21,7 @@ const isTheme = (v: unknown): v is Theme => v === 'light' || v === 'dark' || v =
 export function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
   const dark = theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0f141b' : '#111827');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#002f36' : '#007480');
 }
 
 export async function loadTheme(db: AppDB): Promise<Theme> {

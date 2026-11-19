@@ -16,8 +16,8 @@ export default defineConfig({
         lang: 'sk',
         display: 'standalone',
         orientation: 'any',
-        background_color: '#f3f4f6',
-        theme_color: '#111827',
+        background_color: '#eef4f5',
+        theme_color: '#007480',
         start_url: '.',
         scope: '.',
         icons: [
@@ -27,7 +27,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
       },
     }),
