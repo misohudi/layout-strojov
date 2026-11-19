@@ -147,7 +147,9 @@ test('legend shows counts and shares; tapping an item highlights its machines an
   expect(ext).toHaveAttribute('aria-pressed', 'true');
   const tiles = screen.getAllByTestId('machine-tile');
   expect(tiles.filter((t) => t.classList.contains('tile--hl'))).toHaveLength(2);
-  expect(tiles.filter((t) => t.classList.contains('tile--dim'))).toHaveLength(33);
+  // the INT machine keeps its (pale) colour, the free and out-of-service ones go grey
+  expect(tiles.filter((t) => t.classList.contains('tile--pale'))).toHaveLength(1);
+  expect(tiles.filter((t) => t.classList.contains('tile--dim'))).toHaveLength(32);
   await userEvent.click(ext); // again → back to normal
   expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim)/.test(t.className))).toBe(false);
 });

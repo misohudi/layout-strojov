@@ -371,8 +371,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   })}
                   highlighted={hit === true}
                   dimmed={hit === false}
-                  // PRIO selected: machines with an order keep a pale colour (blue / red), only free ones go grey
-                  pale={hit === false && legendKey === 'prio' && !!a?.type && m.status === 'active'}
+                  // highlighting: the other machines with an order keep a pale colour (blue / red), so the order
+                  // type stays visible; only free machines and those out of service go grey
+                  pale={hit === false && !!a?.type && m.status === 'active'}
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   machineId={m.id}
                   onClick={() => tapMachine(m)}

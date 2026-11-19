@@ -35,7 +35,7 @@ interface Props {
   /** Legend highlight: the tile stands out (slight zoom) or is greyed out. */
   highlighted?: boolean;
   dimmed?: boolean;
-  /** Dimmed but keeping its colour, only paler (machines with an order while PRIO is selected). */
+  /** Dimmed but keeping its colour, only paler (machines with an order while something is highlighted). */
   pale?: boolean;
   onClick?(): void;
   /** Pointer handlers for dragging in the machine editor. */
