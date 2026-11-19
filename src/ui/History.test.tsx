@@ -116,3 +116,13 @@ test('without a report folder the detail offers only sharing', async () => {
   await exportVia('Zdieľať Excel');
   expect(screen.queryByRole('button', { name: 'Uložiť do priečinka' })).toBeNull();
 });
+
+test('history has no foreman column; the shift detail shows occupancy big, as in the PDF, without the foreman', async () => {
+  await screen.findByText('10.11.2026');
+  expect(within(screen.getByRole('table')).queryByRole('columnheader', { name: 'Majster' })).toBeNull();
+  expect(screen.queryByText('Novák')).toBeNull();
+  await userEvent.click(screen.getByText('10.11.2026'));
+  expect(await screen.findByRole('group', { name: /^Obsadenosť/ })).toBeInTheDocument();
+  expect(screen.queryByText(/Majster/)).toBeNull();
+  expect(screen.getByText(/Vyťaženie strojov 20,0 %/)).toBeInTheDocument();
+});

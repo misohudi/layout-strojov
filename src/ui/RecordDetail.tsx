@@ -15,6 +15,31 @@ import { BackButton } from './icons';
 import type { ShiftRecord } from '../domain/types';
 import { multiText } from '../domain/stats';
 
+/** The other figures of the shift next to the occupancy (the foreman is the shift's name in the title). */
+export function statsLine(record: ShiftRecord) {
+  const s = record.stats;
+  const parts: string[] = [];
+  if (s.staffed != null) {
+    parts.push(`Frézari ${s.frezari ?? 0} · Operátori ${s.operatori ?? 0}`);
+    parts.push(`Viacobsluha ${multiText(s.multiPeople, s.multiMachines)}`);
+  }
+  parts.push(`Vyťaženie strojov ${formatPct(s.occupancyPct)} (${s.occupied} / ${s.total})`);
+  parts.push(`EXT ${s.ext} (${formatPct(s.extPct)}) · INT ${s.int} (${formatPct(s.intPct)})`);
+  return parts.join(' · ');
+}
+
+/** The figure that matters most – occupancy by people – as a large turquoise box (preview and PDF). */
+export function StaffingKpi({ record }: { record: ShiftRecord }) {
+  const s = record.stats;
+  return (
+    <div className="pdf-kpi" role="group" aria-label={`Obsadenosť ${formatPct(s.staffedPct ?? null)}`}>
+      <span className="pdf-kpi__label">Obsadenosť</span>
+      <strong className="pdf-kpi__value">{formatPct(s.staffedPct ?? null)}</strong>
+      <small className="pdf-kpi__sub">{s.staffed != null ? `${s.staffed} / ${s.total} strojov s ľuďmi` : 'nezaznamenaná'}</small>
+    </div>
+  );
+}
+
 /** A closed shift split into its zones (one plan each), with the people per machine. */
 export function recordZones(record: ShiftRecord) {
   // Records closed with machines of different sizes are shown with equally sized cells like the plan.
@@ -48,7 +73,6 @@ export function RecordZonePlan({ items, peopleByMachine }: {
 }
 
 export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack(): void }) {
-  const s = record.stats;
   // Prepare the file up front so the share sheet opens directly inside the tap (required on iPad).
   const [blob, setBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -110,17 +134,10 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       </div>
       {savedTo && <div className="notice notice--ok">{savedTo}</div>}
       {error && <div className="notice notice--warn">{error}</div>}
-      <div className="card">
-        Majster: <strong>{record.foremanName}</strong>
-        {s.staffed != null && (
-          <>
-            {' '}· Obsadenosť <strong>{formatPct(s.staffedPct)}</strong> ({s.staffed} / {s.total}) · Frézari{' '}
-            {s.frezari ?? 0} · Operátori {s.operatori ?? 0}
-            {s.multiPeople != null && ` · Viacobsluha ${multiText(s.multiPeople, s.multiMachines)}`}
-          </>
-        )}
-        {' '}· Vyťaženie strojov {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}
-        {s.int} ({formatPct(s.intPct)})
+      {/* as in the PDF: occupancy stands out, the other figures next to it */}
+      <div className="card record-summary">
+        <StaffingKpi record={record} />
+        <p className="record-summary__stats">{statsLine(record)}</p>
       </div>
       {zones.map((z) => (
         <section key={z.id} className="record-zone" aria-label={z.name || undefined}>
