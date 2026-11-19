@@ -650,5 +650,5 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 @keyframes tile-drop { 0% { transform: scale(1.08); } 40% { transform: scale(0.94); } 70% { transform: scale(1.04); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .tile--dropped { animation: none; } }
 
-/* PRIO selected: machines with an order stay blue / red, only paler; free ones go grey */
+/* highlighting: the other machines with an order stay blue / red, only paler; free ones go grey */
 .tile--pale { opacity: 0.45; }
