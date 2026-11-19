@@ -3,8 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { startDraft } from '../db/repo';
 import { isPool, type Shift } from '../domain/types';
-import { GearIcon } from './icons';
-import { BrandBar, MpsLogo, MuehlbauerLogo } from './Brand';
+import { MpsLogo, MuehlbauerLogo } from './Brand';
+import { AppButtons } from './Header';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const fmtStarted = (iso: string) => {
@@ -15,10 +15,11 @@ export const fmtStarted = (iso: string) => {
 interface Props {
   onPicked(shiftId: string): void;
   onSettings(): void;
+  onHistory(): void;
 }
 
 /** Start screen: one tap on a shift (named after its foreman) opens it. */
-export function ShiftPicker({ onPicked, onSettings }: Props) {
+export function ShiftPicker({ onPicked, onSettings, onHistory }: Props) {
   const db = useDB();
   const shifts = (useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? []).filter((s) => !isPool(s));
   const drafts = useLiveQuery(() => db.drafts.toArray(), [db]) ?? [];
@@ -38,14 +39,14 @@ export function ShiftPicker({ onPicked, onSettings }: Props) {
 
   return (
     <div className="start">
-      {/* same gear button as in the plan's header, in the top-right corner */}
-      <button type="button" className="hcell hcell--btn hcell--icon start__settings" aria-label="Nastavenia" title="Nastavenia" onClick={onSettings}>
-        <GearIcon />
-      </button>
+      {/* the same app buttons as in the plan's header, in the top-right corner */}
+      <div className="hgroup start__actions">
+        <AppButtons onHistory={onHistory} onSettings={onSettings} />
+      </div>
       <div className="center-card">
         <div className="start__logos">
-          <MpsLogo className="start__mps" />
           <MuehlbauerLogo className="start__mb" />
+          <MpsLogo className="start__mps" />
         </div>
         <h1>Vyber svoju zmenu</h1>
         <div className="row shift-buttons">
@@ -59,7 +60,6 @@ export function ShiftPicker({ onPicked, onSettings }: Props) {
             );
           })}
         </div>
-        <BrandBar />
       </div>
     </div>
   );

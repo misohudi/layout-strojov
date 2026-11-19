@@ -228,6 +228,15 @@ test('the start screen has the same icon-only gear button for settings', async (
   expect(gear.querySelector('svg')).not.toBeNull();
 });
 
+test('the start screen has the same app buttons as the header: appearance and history open from there', async () => {
+  renderApp();
+  expect(await screen.findByRole('button', { name: 'Vzhľad: Svetlý – prepnúť na Tmavý' })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'História' }));
+  expect(await screen.findByRole('heading', { name: /História/i })).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /Späť/ }));
+  expect(await screen.findByRole('heading', { name: 'Vyber svoju zmenu' })).toBeInTheDocument();
+});
+
 test('if the open shift draft disappears (shift deleted / backup restored) the user can get back to the picker', async () => {
   renderApp();
   await pickShift('B');
