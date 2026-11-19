@@ -5,6 +5,7 @@ import { startDraft } from '../db/repo';
 import { isPool, type Shift } from '../domain/types';
 import { MpsLogo, MuehlbauerLogo } from './Brand';
 import { AppButtons } from './Header';
+import { versionText } from './version';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const fmtStarted = (iso: string) => {
@@ -54,13 +55,15 @@ export function ShiftPicker({ onPicked, onSettings, onHistory }: Props) {
             const draft = drafts.find((d) => d.shiftId === s.id);
             return (
               <button key={s.id} className="btn btn--shift" disabled={busy} onClick={() => open(s)}>
-                {s.name}
-                {draft && <small> rozpracované od {fmtStarted(draft.startedAt)}</small>}
+                {/* the name keeps its height: the line below is always there, empty when not started */}
+                <span className="btn--shift__name">{s.name}</span>
+                <small aria-hidden={!draft}>{draft ? `rozpracované od ${fmtStarted(draft.startedAt)}` : '\u00a0'}</small>
               </button>
             );
           })}
         </div>
       </div>
+      <p className="start__version">{versionText()}</p>
     </div>
   );
 }
