@@ -37,10 +37,10 @@ test('pick shift, mark machine EXT, header shows order stats as secondary', asyn
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C60/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
   // order figures live in the legend now
-  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,7 %' })).toBeInTheDocument(); // 1 / 37 (both zones)
+  expect(await screen.findByRole('button', { name: /^Vyťaženie strojov 2,7\s%/ })).toBeInTheDocument(); // 1 / 37 (both zones)
   expect(screen.getByRole('button', { name: 'EXT – externá: 1, 100,0 %' })).toBeInTheDocument();
   // no people yet – occupancy by people stays at zero
-  expect(within(header).getByRole('group', { name: 'Obsadenosť 0,0 %' })).toBeInTheDocument();
+  expect(within(header).getByRole('button', { name: /^Obsadenosť 0,0\s%/ })).toBeInTheDocument();
 });
 
 test('header occupancy counts machines with people and people by role', async () => {
@@ -53,11 +53,11 @@ test('header occupancy counts machines with people and people by role', async ()
   renderApp();
   await pickShift('B');
   const header = await screen.findByRole('banner');
-  expect(await within(header).findByRole('group', { name: 'Obsadenosť 5,4 %' })).toBeInTheDocument(); // 2 / 37
+  expect(await within(header).findByRole('button', { name: /^Obsadenosť 5,4\s%/ })).toBeInTheDocument(); // 2 / 37
   expect(within(header).getByRole('button', { name: '2 / 37 strojov' })).toBeInTheDocument();
   expect(within(header).getByRole('button', { name: 'Frézari 1 – zoznam ľudí' })).toBeInTheDocument();
   expect(within(header).getByRole('button', { name: 'Operátori 1 – zoznam ľudí' })).toBeInTheDocument();
-  expect(screen.getByRole('group', { name: 'Vyťaženie strojov 0,0 %' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: /^Vyťaženie strojov 0,0\s%/ })).toBeInTheDocument();
 });
 
 test('all machines are equally sized cells with a machine icon; the figure follows the role of the person', async () => {
@@ -119,7 +119,7 @@ test('"Vyčistiť" empties the whole plan of the shift after confirmation', asyn
   await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments).toEqual({}));
   expect(confirm).toHaveBeenCalledTimes(2);
   const header = screen.getByRole('banner');
-  expect(await within(header).findByRole('group', { name: 'Obsadenosť 0,0 %' })).toBeInTheDocument();
+  expect(await within(header).findByRole('button', { name: /^Obsadenosť 0,0\s%/ })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Vyčistiť' })).toBeDisabled(); // nothing left to clear
   expect(await db.drafts.get('s-B')).toMatchObject({ foremanName: 'B' }); // the shift stays open
   confirm.mockRestore();
@@ -140,7 +140,7 @@ test('legend shows counts and shares; tapping an item highlights its machines an
   expect(screen.getByRole('button', { name: 'INT – interná: 1, 33,3 %' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'voľný: 33' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'mimo prevádzky: 1' })).toBeInTheDocument();
-  expect(screen.getByRole('group', { name: 'Vyťaženie strojov 8,3 %' })).toBeInTheDocument(); // 3 / 36
+  expect(screen.getByRole('button', { name: /^Vyťaženie strojov 8,3\s%/ })).toBeInTheDocument(); // 3 / 36
   expect(within(screen.getByRole('banner')).getByRole('group', { name: 'Viacobsluha 1 ľudí na 2 strojoch' })).toBeInTheDocument();
 
   await userEvent.click(ext);
@@ -267,7 +267,7 @@ test('a machine set out of service in settings is not counted in occupancy', asy
   expect(await within(header).findByRole('button', { name: '0 / 36 strojov' })).toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: /HERMLE C42 \/ 4/ }));
   await userEvent.click(screen.getByRole('button', { name: 'EXT' }));
-  expect(await screen.findByRole('group', { name: 'Vyťaženie strojov 2,8 %' })).toBeInTheDocument(); // 1 / 36
+  expect(await screen.findByRole('button', { name: /^Vyťaženie strojov 2,8\s%/ })).toBeInTheDocument(); // 1 / 36
 });
 
 test('tapping the machine count opens a list of machines with order type and people', async () => {
@@ -549,4 +549,57 @@ test('tapping Frézari opens the people list by shift; a person gets a machine a
 
   await userEvent.click(within(back).getByRole('button', { name: 'Operátori' }));
   expect(within(back).getByText('Horváth')).toBeInTheDocument();
+});
+
+test('tap on Obsadenosť: machines with an order but nobody on them light up and are listed with the free people', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true, role: 'frezar' });
+  await upsertPerson(db, { name: 'Novák', shiftId: 's-B', active: true, role: 'operator' });
+  await upsertPerson(db, { name: 'Iný', shiftId: 's-A', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-0', 'EXT');
+  await setMachineType(db, 's-B', 'm-1', 'INT');
+  await togglePerson(db, 's-B', 'm-0', k);
+  renderApp();
+  await pickShift('B');
+  const staffing = within(screen.getByRole('banner')).getByRole('button', { name: /^Obsadenosť .* – kde chýbajú ľudia$/ });
+  await userEvent.click(staffing);
+  const sheet = await screen.findByRole('dialog', { name: 'Kde chýbajú ľudia' });
+  // only m-1 has an order without people
+  const tiles = screen.getAllByTestId('machine-tile');
+  expect(tiles.filter((t) => t.classList.contains('tile--hl'))).toHaveLength(1);
+  const missing = within(sheet).getByRole('region', { name: 'Stroje so zákazkou bez ľudí' });
+  expect(within(missing).getAllByRole('button')).toHaveLength(1);
+  const free = within(sheet).getByRole('region', { name: 'Voľní ľudia zo zmeny' });
+  expect(within(free).getByText('Novák')).toBeInTheDocument(); // Kováč is on a machine, Iný is from shift A
+  expect(within(free).queryByText('Kováč')).toBeNull();
+  expect(within(free).queryByText('Iný')).toBeNull();
+  // the machine opens from the list and closing it comes back to the list
+  await userEvent.click(within(missing).getByRole('button'));
+  await userEvent.click(await screen.findByRole('button', { name: 'Hotovo' }));
+  expect(await screen.findByRole('dialog', { name: 'Kde chýbajú ľudia' })).toBeInTheDocument();
+  await userEvent.click(within(screen.getByRole('dialog', { name: 'Kde chýbajú ľudia' })).getByRole('button', { name: 'Zavrieť' }));
+  // the highlight stays until Obsadenosť is tapped again
+  expect(screen.getAllByTestId('machine-tile').filter((t) => t.classList.contains('tile--hl'))).toHaveLength(1);
+  await userEvent.click(staffing);
+  expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim)/.test(t.className))).toBe(false);
+});
+
+test('tap on Vyťaženie strojov: the breakdown now and the trend of the last closed shifts', async () => {
+  await db.records.put({
+    id: 'r', shiftId: 's-A', shiftName: 'A', foremanName: 'X', date: '2026-11-10',
+    startedAt: '2026-11-10T06:00:00Z', closedAt: '2026-11-10T14:00:00Z',
+    stats: { total: 37, occupied: 10, ext: 6, int: 4, occupancyPct: 27, extPct: 60, intPct: 40, peopleWithoutType: 0 },
+    rows: [], layout: [],
+  });
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-0', 'EXT');
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(await screen.findByRole('button', { name: /^Vyťaženie strojov .* – rozpis a vývoj$/ }));
+  const sheet = await screen.findByRole('dialog', { name: 'Vyťaženie strojov' });
+  const now = within(sheet).getByRole('region', { name: 'Rozpis teraz' });
+  expect(within(now).getByRole('row', { name: /^Spolu 1 0/ })).toBeInTheDocument();
+  expect(within(now).getByRole('row', { name: /^Frézovňa/ })).toBeInTheDocument(); // one row per zone
+  expect(within(sheet).getByRole('img', { name: 'Vyťaženie strojov v posledných zmenách' })).toBeInTheDocument();
+  expect(within(sheet).getByText(/táto zmena \(teraz\)/)).toBeInTheDocument();
 });

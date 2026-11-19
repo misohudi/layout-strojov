@@ -568,3 +568,34 @@ tr.clickable { cursor: pointer; }
 .export-menu__group { display: flex; flex-direction: column; gap: 8px; }
 .export-menu__group h3 { margin: 0; }
 .export-menu__note { margin: 0; font-size: 13px; }
+
+/* Obsadenosť / Vyťaženie strojov: tappable, with a sheet each */
+button.legend__stat { font: inherit; color: var(--text); cursor: pointer; }
+.hcell.hcell--on { outline: 3px solid var(--mb-orange); outline-offset: 2px; }
+.zone__arrow--hl-unstaffed { background: var(--mb-orange); color: var(--mb-900); }
+/* a lighter backdrop, so the highlighted machines stay visible above the sheet */
+.sheet-backdrop--light { background: rgba(0, 31, 36, 0.18); }
+.insight__lead { margin: 0; }
+.insight__chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.insight__machine {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 12px; cursor: pointer;
+  border: 2px solid var(--outline); border-radius: var(--radius); background: var(--surface); color: var(--text); font: inherit; font-size: 15px;
+}
+.insight__machine .prio-badge--inline { margin-right: 0; }
+.insight__people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.insight__people li { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border: 1px solid var(--border); border-radius: 999px; }
+.insight__table td, .insight__table th { text-align: right; }
+.insight__table td:first-child, .insight__table th:first-child { text-align: left; }
+.insight__total td { border-top: 2px solid var(--mb-300); font-weight: 700; }
+/* trend chart: one series (the turquoise), today's bar darker; recessive grid and axes */
+.trend { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.trend__svg { width: 100%; height: auto; display: block; }
+.trend__grid { stroke: var(--border); stroke-width: 1; opacity: 0.6; }
+.trend__avg { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.trend__axis { font-size: 11px; fill: var(--muted); }
+.trend__bar path { fill: var(--mb-300); }
+.trend__bar--now path { fill: var(--mb-600); }
+.trend__bar--on path { stroke: var(--text); stroke-width: 2; }
+.trend__bar { cursor: pointer; }
+.trend__hit { fill: transparent; }
+.trend__readout { font-size: 15px; }

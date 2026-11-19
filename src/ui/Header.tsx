@@ -18,6 +18,9 @@ interface Props {
   onMachineList(): void;
   /** Tap on Frézari / Operátori: the list of people of that role. */
   onPeopleList(role: PersonRole): void;
+  /** Tap on Obsadenosť: where people are missing (highlighted while `staffingOn`). */
+  onStaffing?(): void;
+  staffingOn?: boolean;
 }
 
 /** One header field: small label on top, value below. Every field has the same size. */
@@ -103,7 +106,7 @@ function Section({ title, place, children }: { title: string; place: 'start' | '
   );
 }
 
-export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList }: Props) {
+export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList, onStaffing = () => {}, staffingOn = false }: Props) {
   return (
     <header className="header">
       <Section title="Zmena" place="start">
@@ -119,7 +122,13 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
         />
       </Section>
       <Section title="Obsadenosť ľuďmi" place="center">
-        <Cell label="Obsadenosť" value={formatPct(stats.staffedPct)} variant="hcell--main" />
+        <CellButton
+          label="Obsadenosť"
+          value={formatPct(stats.staffedPct)}
+          variant={`hcell--main ${staffingOn ? 'hcell--on' : ''}`}
+          name={`Obsadenosť ${formatPct(stats.staffedPct)} – kde chýbajú ľudia`}
+          onClick={onStaffing}
+        />
         <CellButton
           label="Stroje"
           value={`${stats.staffed ?? 0} / ${stats.total}`}
