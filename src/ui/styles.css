@@ -652,3 +652,6 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 
 /* highlighting: the other machines with an order stay blue / red, only paler; free ones go grey */
 .tile--pale { opacity: 0.45; }
+
+/* holding a machine picks up its person: no text selection or callout menu on the tiles */
+.tile { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

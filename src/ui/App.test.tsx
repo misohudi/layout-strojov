@@ -775,3 +775,47 @@ test('legend order: EXT, INT, voľný, PRIO, mimo prevádzky', async () => {
     'EXT – externá', 'INT – interná', 'voľný', 'prioritná zákazka', 'mimo prevádzky',
   ]);
 });
+
+test('a tap on the empty plan ends a legend selection', async () => {
+  renderApp();
+  await pickShift('B');
+  const ext = await screen.findByRole('button', { name: /^EXT – externá/ });
+  await userEvent.click(ext);
+  expect(ext).toHaveAttribute('aria-pressed', 'true');
+  await userEvent.click(document.querySelector('.floor__grid')!);
+  expect(ext).toHaveAttribute('aria-pressed', 'false');
+  expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim|pale)/.test(t.className))).toBe(false);
+});
+
+/** Holds a machine with a finger until its person comes off, then lets go over `target`. */
+async function holdAndDrop(tile: HTMLElement, target: Element | null) {
+  Object.defineProperty(document, 'elementFromPoint', { value: () => target, configurable: true });
+  const ev = (type: string, x: number, y: number) =>
+    fireEvent(tile, new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 5, clientX: x, clientY: y, button: 0 }));
+  ev('pointerdown', 10, 10);
+  await new Promise((r) => setTimeout(r, 520)); // held
+  ev('pointermove', 60, 90);
+  ev('pointerup', 60, 90);
+  delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+}
+
+test('holding a machine picks up its person: onto another machine = moved, beside the machines = taken off', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-0', k);
+  renderApp();
+  await pickShift('B');
+  const tile = (id: string) => screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === id)!;
+  await screen.findAllByTestId('machine-tile');
+  await holdAndDrop(tile('m-0'), tile('m-3'));
+  await vi.waitFor(async () => {
+    const a = (await db.drafts.get('s-B'))!.assignments;
+    expect([a['m-0']?.personIds, a['m-3']?.personIds]).toEqual([[], [k]]);
+  });
+  expect(screen.queryByRole('dialog')).toBeNull(); // the tap after the drag opened no machine card
+  await holdAndDrop(tile('m-3'), document.querySelector('.floor__grid'));
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-3']?.personIds).toEqual([]));
+  // a short tap still opens the machine
+  await userEvent.click(tile('m-3'));
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+});
