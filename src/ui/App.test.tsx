@@ -819,3 +819,20 @@ test('holding a machine picks up its person: onto another machine = moved, besid
   await userEvent.click(tile('m-3'));
   expect(await screen.findByRole('dialog')).toBeInTheDocument();
 });
+
+test('moving a person across the plan does not switch to the other zone', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-10', k);
+  renderApp();
+  await pickShift('B');
+  await screen.findByRole('heading', { name: 'Frézovňa' });
+  const zone = document.querySelector('.zone')!;
+  const tile = (id: string) => screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === id)!;
+  // the finger goes down on the machine, the person comes off and is carried far to the left
+  fireEvent.touchStart(zone, { touches: [{ clientX: 600, clientY: 200 }] });
+  await holdAndDrop(tile('m-10'), tile('m-0'));
+  fireEvent.touchEnd(zone, { changedTouches: [{ clientX: 100, clientY: 210 }] });
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-0']?.personIds).toEqual([k]));
+  expect(screen.getByRole('heading', { name: 'Frézovňa' })).toBeInTheDocument(); // still the same zone
+});

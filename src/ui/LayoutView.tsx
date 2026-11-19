@@ -185,12 +185,15 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   };
   const onTouchMove = (e: TouchEvent) => {
     if (e.touches.length > 1) swipe.current = null; // pinch zoom, not a swipe
+    // a person hanging on the finger is being moved, not the zone swiped
+    if (document.body.classList.contains('is-dragging-person')) swipe.current = null;
   };
   const onTouchEnd = (e: TouchEvent) => {
     const s = swipe.current;
     swipe.current = null;
     const t = e.changedTouches[0];
-    if (!s || !t || !multiZone) return;
+    // a person was just dragged across the plan: that was no swipe to the next zone
+    if (!s || !t || !multiZone || justDropped()) return;
     const dx = t.clientX - s.x;
     const dy = t.clientY - s.y;
     if (Math.abs(dx) < SWIPE_PX || Math.abs(dx) < 1.5 * Math.abs(dy)) return;
