@@ -12,8 +12,8 @@ import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { MultiSheet, multiGroups, StaffingSheet, UtilizationSheet } from './ShiftInsights';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
-import { clearDraft, copyFromLastRecord, togglePerson } from '../db/repo';
-import { isPool, type Hall, type PersonRole } from '../domain/types';
+import { clearDraft, copyFromLastRecord, setMachinePriority, setMachineType, togglePerson } from '../db/repo';
+import { isPool, type Hall, type Machine, type PersonRole } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
 /** Slovak plural: 1 stroj, 2–4 stroje, 5+ (and 0) strojov. */
@@ -134,6 +134,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const draft = draftResult;
   const shift = shifts.find((s) => s.id === shiftId);
   const stats = computeStats(machines, draft.assignments, people);
+  // "Zobraziť" from the info bar: once no machine has people without an order type, the bar is gone –
+  // the highlight goes with it, so the plan shows every machine's colours again
+  if (legendKey === 'notype' && stats.peopleWithoutType === 0) setLegendKey(null);
   const counts: Record<string, number> = {};
   for (const m of machines) {
     if (m.status !== 'active') continue;
@@ -192,6 +195,24 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   /** Does a zone have machines of the given legend item (priority, EXT, INT, out of service…)? */
   const zoneHas = (key: LegendKey, hallId: string) =>
     machines.some((m) => m.hallId === hallId && matchesLegend(key, m, draft.assignments[m.id], multiPeople));
+  /**
+   * While EXT, INT, voľný or PRIO is selected in the legend, tapping a machine gives it that (PRIO: only
+   * a machine with an order, on/off); otherwise – and on a machine out of service – the tap opens it.
+   */
+  const paint = legendKey === 'EXT' || legendKey === 'INT' || legendKey === 'free' || legendKey === 'prio' ? legendKey : null;
+  const tapMachine = (m: Machine) => {
+    const a = draft.assignments[m.id];
+    if (!paint || m.status !== 'active') {
+      setOpenId(m.id);
+      return;
+    }
+    if (paint === 'prio') {
+      if (a?.type) void setMachinePriority(db, shiftId, m.id, !a.priority);
+      return;
+    }
+    const type = paint === 'free' ? null : paint;
+    if ((a?.type ?? null) !== type) void setMachineType(db, shiftId, m.id, type);
+  };
   /**
    * Tapping a legend item: when the shown zone has no such machine but another zone does, the view
    * switches to the nearest of those zones.
@@ -254,6 +275,14 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         }}
       />
       <div className="plan-area">
+        {paint && (
+          <p className={`paint-hint paint-hint--${paint}`} role="status">
+            {paint === 'prio'
+              ? 'Ťuknutím na stroj so zákazkou zapnete alebo vypnete PRIO.'
+              : `Ťuknutím na stroj nastavíte ${paint === 'free' ? 'voľný' : paint}.`}
+            <button type="button" className="btn btn--small" onClick={() => selectLegend(null)}>Hotovo</button>
+          </p>
+        )}
         {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
         {(showOffer || stats.peopleWithoutType > 0 || banner) && (
           <div className={`plan-notes ${legendKey ? 'plan-notes--faded' : ''}`}>
@@ -350,7 +379,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   dimmed={hit === false}
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   machineId={m.id}
-                  onClick={() => setOpenId(m.id)}
+                  onClick={() => tapMachine(m)}
                 />
               );
             })}
