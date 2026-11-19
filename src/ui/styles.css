@@ -2,7 +2,8 @@
    middle Mühlbauer turquoise (Pantone 7474C) with its darker and lighter shades, plus orange, lime and
    greys. Only these colours are used – except the order colours (EXT blue, INT red), yellow priority and
    the red out-of-service outline, which the shop floor reads as signals. */
-:root {
+/* .pdf-host: PDF pages are always drawn in the light theme */
+:root, .pdf-host {
   --mb-900: #002f36; /* 547C */
   --mb-800: #004951; /* 316C */
   --mb-700: #005f6a; /* 7715C */
@@ -517,8 +518,35 @@ tr.clickable { cursor: pointer; }
 .start .center-card { position: relative; }
 .start__actions { position: absolute; top: 16px; right: 16px; }
 .start__logos { display: flex; align-items: center; justify-content: space-between; gap: 24px; width: 100%; }
-.start__mps img { height: 72px; width: auto; display: block; }
+.start__mps { height: 72px; }
 .start__mb img { height: 40px; width: auto; display: block; }
+/* MPS logo: drawn hexagons + lettering image, both as high as the logo box */
+.mps-logo { display: flex; align-items: stretch; }
+.mps-logo > svg, .mps-logo > img { height: 100%; width: auto; display: block; }
+.mps-hex { transform-box: fill-box; transform-origin: center; }
+.mps-hex--a { fill: #f07632; animation: mps-turn-a 1.5s ease-in-out both; }
+.mps-hex--b { fill: #008998; animation: mps-turn-b 1.5s ease-in-out 0.08s both; }
+.mps-hex--c { fill: #a7ccd7; animation: mps-turn-c 1.5s ease-in-out 0.16s both; }
+/* three flips about the hexagon's own centre; at each edge-on moment the colour moves on by one */
+@keyframes mps-turn-a {
+  0% { transform: scaleX(1); fill: #f07632; } 16.6% { transform: scaleX(0); fill: #f07632; }
+  16.7% { fill: #008998; } 33.3% { transform: scaleX(1); } 49.9% { transform: scaleX(0); fill: #008998; }
+  50% { fill: #a7ccd7; } 66.6% { transform: scaleX(1); } 83.2% { transform: scaleX(0); fill: #a7ccd7; }
+  83.3% { fill: #f07632; } 100% { transform: scaleX(1); fill: #f07632; }
+}
+@keyframes mps-turn-b {
+  0% { transform: scaleX(1); fill: #008998; } 16.6% { transform: scaleX(0); fill: #008998; }
+  16.7% { fill: #a7ccd7; } 33.3% { transform: scaleX(1); } 49.9% { transform: scaleX(0); fill: #a7ccd7; }
+  50% { fill: #f07632; } 66.6% { transform: scaleX(1); } 83.2% { transform: scaleX(0); fill: #f07632; }
+  83.3% { fill: #008998; } 100% { transform: scaleX(1); fill: #008998; }
+}
+@keyframes mps-turn-c {
+  0% { transform: scaleX(1); fill: #a7ccd7; } 16.6% { transform: scaleX(0); fill: #a7ccd7; }
+  16.7% { fill: #f07632; } 33.3% { transform: scaleX(1); } 49.9% { transform: scaleX(0); fill: #f07632; }
+  50% { fill: #008998; } 66.6% { transform: scaleX(1); } 83.2% { transform: scaleX(0); fill: #008998; }
+  83.3% { fill: #a7ccd7; } 100% { transform: scaleX(1); fill: #a7ccd7; }
+}
+@media (prefers-reduced-motion: reduce) { .mps-hex { animation: none !important; } }
 /* Logos: the version with white lettering on dark backgrounds */
 .logo__dark { display: none !important; }
 :root[data-theme='dark'] .logo__light { display: none !important; }
@@ -529,7 +557,31 @@ tr.clickable { cursor: pointer; }
 }
 /* the full MPS logo in the top-left corner, before the shift button (left out where the header is tight) */
 .header__logo { flex: none; margin-right: 8px; }
-.header__logo img { height: 46px; width: auto; display: block; }
+.header__logo { height: 46px; }
 @media (max-width: 1000px) { .header__logo { display: none; } }
 /* three outlined hexagons in the bottom-left corner, before the legend */
 .legend__hexes { flex: none; width: 60px; height: 60px; align-self: center; }
+
+/* ---- PDF export: A4 landscape pages drawn off-screen, then turned into images ---- */
+.pdf-host { position: fixed; left: -20000px; top: 0; pointer-events: none; background: #fff; }
+.pdf-host .logo .logo__light { display: block !important; }
+.pdf-host .logo .logo__dark { display: none !important; }
+.pdf-host .mps-hex, .pdf-host .scroll-text__inner, .pdf-host .tile { animation: none !important; transition: none !important; }
+.pdf-page {
+  display: flex; flex-direction: column; gap: 10px; padding: 24px 32px 22px; overflow: hidden;
+  background: #fff; color: var(--text);
+}
+.pdf-page__head {
+  flex: none; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+  padding-bottom: 10px; border-bottom: 3px solid var(--mb-300);
+}
+.pdf-page__title { margin: 0; font-size: 26px; }
+.pdf-page__stats { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.pdf-page__logo { flex: none; height: 52px; }
+.pdf-page__plans { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
+.pdf-page__zone { flex-basis: 0; min-height: 170px; display: flex; flex-direction: column; }
+.pdf-host .floor__scroll { overflow: hidden; }
+.pdf-page__zone-name { margin: 0 0 2px; font-size: 15px; text-align: center; }
+.pdf-page__zone .floor { flex: 1; min-height: 0; padding: 0; }
+.pdf-page__table { font-size: 13px; }
+.pdf-page__table th, .pdf-page__table td { padding: 6px 8px; }

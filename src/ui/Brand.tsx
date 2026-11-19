@@ -1,6 +1,6 @@
 /* Design elements of the Mühlbauer corporate design manual: logos, hexagons and the graphic bar. */
-import mps from '../assets/brand/mps.png';
-import mpsDark from '../assets/brand/mps-dark.png';
+import mpsText from '../assets/brand/mps-text.png';
+import mpsTextDark from '../assets/brand/mps-text-dark.png';
 import muehlbauer from '../assets/brand/muehlbauer.png';
 import muehlbauerDark from '../assets/brand/muehlbauer-dark.png';
 
@@ -29,9 +29,28 @@ function ThemedLogo({ light, dark, alt, className }: { light: string; dark: stri
   );
 }
 
-/** Mühlbauer Parts & Systems – the company logo. */
+// The three hexagons of the MPS logo, traced from the logo artwork (same height as the lettering image).
+const MPS_HEXES = [
+  { cls: 'mps-hex--a', points: '2,193 41,95 148,113 227,213 214,313 100,318' }, // orange
+  { cls: 'mps-hex--b', points: '191,26 267,45 330,124 329,197 252,191 176,97' }, // turquoise
+  { cls: 'mps-hex--c', points: '257,227 335,233 411,318 410,419 333,436 246,326' }, // light blue
+];
+
+/**
+ * Mühlbauer Parts & Systems – the company logo. The hexagons are drawn here (the lettering is an image)
+ * so they can turn: each time the logo appears (a shift picked, back to the shift choice) every hexagon
+ * flips about its own centre a few times and hands its colour on to the next one, then they settle.
+ */
 export const MpsLogo = ({ className = '' }: { className?: string }) => (
-  <ThemedLogo light={mps} dark={mpsDark} alt="MPS – Mühlbauer Parts and Systems" className={className} />
+  <span className={`logo mps-logo ${className}`} role="img" aria-label="MPS – Mühlbauer Parts and Systems">
+    <svg className="mps-logo__mark" viewBox="0 0 431 638" aria-hidden="true">
+      {MPS_HEXES.map((h) => (
+        <polygon key={h.cls} className={`mps-hex ${h.cls}`} points={h.points} />
+      ))}
+    </svg>
+    <img className="logo__light" src={mpsText} alt="" aria-hidden="true" />
+    <img className="logo__dark" src={mpsTextDark} alt="" aria-hidden="true" />
+  </span>
 );
 
 /** Mühlbauer Group – "High Tech International". */

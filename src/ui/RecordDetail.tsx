@@ -5,11 +5,45 @@ import { PLAN_FRAME, cropped } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
+import { buildRecordsPdf, pdfFileName } from '../report/pdf';
 import {
   getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
 } from '../report/folder';
 import { useDB } from './useDB';
+import { BackButton } from './icons';
 import type { ShiftRecord } from '../domain/types';
+
+/** A closed shift split into its zones (one plan each), with the people per machine. */
+export function recordZones(record: ShiftRecord) {
+  // Records closed with machines of different sizes are shown with equally sized cells like the plan.
+  const layout = isUniform(record.layout) ? record.layout : hallLayout(record.layout);
+  const peopleByMachine = new Map(record.rows.map((r) => [r.machineName, r.people]));
+  // one plan per zone (older records: one plan)
+  const zones: { id: string; name: string; items: typeof layout }[] = [];
+  for (const l of layout) {
+    const id = l.hallId ?? '';
+    let z = zones.find((x) => x.id === id);
+    if (!z) zones.push((z = { id, name: l.hallName ?? '', items: [] }));
+    z.items.push(l);
+  }
+  const withZones = zones.length > 1 || record.rows.some((r) => r.hallName);
+  return { zones, peopleByMachine, withZones };
+}
+
+/** The plan of one zone of a closed shift, as in the history. */
+export function RecordZonePlan({ items, peopleByMachine }: {
+  items: ShiftRecord['layout'];
+  peopleByMachine: Map<string, ShiftRecord['rows'][number]['people']>;
+}) {
+  const shown = cropped(items);
+  return (
+    <Floor items={shown} frame={PLAN_FRAME} fill>
+      {shown.map((l) => (
+        <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
+      ))}
+    </Floor>
+  );
+}
 
 export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack(): void }) {
   const s = record.stats;
@@ -19,6 +53,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
   const db = useDB();
   const [folder, setFolder] = useState<FolderHandle | null>(null);
   const [savedTo, setSavedTo] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
   useEffect(() => {
     getReportFolder(db).then((h) => setFolder(h ?? null));
   }, [db]);
@@ -43,22 +78,11 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       alive = false;
     };
   }, [record]);
-  // Records closed with machines of different sizes are shown with equally sized cells like the plan.
-  const layout = isUniform(record.layout) ? record.layout : hallLayout(record.layout);
-  const peopleByMachine = new Map(record.rows.map((r) => [r.machineName, r.people]));
-  // one plan per zone (older records: one plan)
-  const zones: { id: string; name: string; items: typeof layout }[] = [];
-  for (const l of layout) {
-    const id = l.hallId ?? '';
-    let z = zones.find((x) => x.id === id);
-    if (!z) zones.push((z = { id, name: l.hallName ?? '', items: [] }));
-    z.items.push(l);
-  }
-  const withZones = zones.length > 1 || record.rows.some((r) => r.hallName);
+  const { zones, peopleByMachine, withZones } = recordZones(record);
   return (
     <div className="page">
       <div className="page__head">
-        <button className="btn" onClick={onBack}>← Späť</button>
+        <BackButton onClick={onBack} />
         <h2>{`Zmena ${record.shiftName} · ${skDate(record.date)}`}</h2>
         <div className="row">
         {folder && (
@@ -74,6 +98,23 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
           }
         >
           Zdieľať report
+        </button>
+        <button
+          className="btn btn--primary"
+          disabled={pdfBusy}
+          onClick={async () => {
+            setPdfBusy(true);
+            setError(null);
+            try {
+              await shareOrDownload(await buildRecordsPdf([record]), pdfFileName([record]));
+            } catch (e) {
+              setError(e instanceof Error ? e.message : String(e));
+            } finally {
+              setPdfBusy(false);
+            }
+          }}
+        >
+          {pdfBusy ? 'Pripravujem PDF…' : 'Zdieľať PDF'}
         </button>
         </div>
       </div>
@@ -94,11 +135,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
       {zones.map((z) => (
         <section key={z.id} className="record-zone" aria-label={z.name || undefined}>
           {zones.length > 1 && <h3 className="record-zone__name">{z.name}</h3>}
-          <Floor items={cropped(z.items)} frame={PLAN_FRAME} fill>
-            {cropped(z.items).map((l) => (
-              <MachineTile key={l.name} {...l} people={peopleByMachine.get(l.name) ?? []} />
-            ))}
-          </Floor>
+          <RecordZonePlan items={z.items} peopleByMachine={peopleByMachine} />
         </section>
       ))}
       <div className="card table-wrap">

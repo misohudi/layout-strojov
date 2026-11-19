@@ -6,7 +6,7 @@ import { BackupSettings } from './BackupSettings';
 import { AppearanceSettings } from './AppearanceSettings';
 import { ReportSettings } from './ReportSettings';
 import { HallSettings } from './HallSettings';
-import { BackIcon } from '../icons';
+import { BackButton } from '../icons';
 
 const TABS = [
   { id: 'halls', label: 'Oddelenia' },
@@ -75,9 +75,7 @@ export function SettingsView({ onBack, initialTab = 'people' }: { onBack(): void
       <h2 className="visually-hidden">Nastavenia</h2>
       {/* round back button in one row with the tabs */}
       <div className="tabs settings__bar">
-        <button type="button" className="chip chip--round" aria-label="Späť" title="Späť" onClick={onBack}>
-          <BackIcon />
-        </button>
+        <BackButton onClick={onBack} />
         <div className="tabs" role="tablist" aria-label="Nastavenia">
           {TABS.map((t) => (
             <button

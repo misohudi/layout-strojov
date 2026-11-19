@@ -44,7 +44,6 @@ export function Legend({ stats, selected, onSelect, children }: Props) {
   ];
   return (
     <div className="legend">
-      <HexOutlines className="legend__hexes" />
       {/* legend + "Vyťaženie strojov" always stay together; only the actions wrap to a new row on narrow screens */}
       <div className="legend__info">
         <div className="legend__items" role="group" aria-label="Legenda – ťuknutím zvýrazníte stroje">
@@ -72,7 +71,11 @@ export function Legend({ stats, selected, onSelect, children }: Props) {
           <small className="legend__stat-sub">{`${stats.occupied} / ${stats.total} so zákazkou`}</small>
         </div>
       </div>
-      <div className="legend__actions">{children}</div>
+      <div className="legend__actions">
+        {children}
+        {/* the three outlined hexagons close the row on the right, after "Uzavrieť zmenu" */}
+        <HexOutlines className="legend__hexes" />
+      </div>
     </div>
   );
 }

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
+import { BackButton } from './icons';
 import { listRecords } from '../db/repo';
 import { buildHistoryXlsx, formatPct, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
+import { buildRecordsPdf, pdfFileName } from '../report/pdf';
 import { localDate } from '../domain/record';
 import { RecordDetail } from './RecordDetail';
 import { isPool } from '../domain/types';
@@ -14,6 +16,8 @@ export function HistoryView({ onBack }: { onBack(): void }) {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const shifts = useLiveQuery(() => db.shifts.orderBy('order').toArray(), [db]) ?? [];
   const records = useLiveQuery(
     () => listRecords(db, { shiftId: shiftId || undefined, from: from || undefined, to: to || undefined }),
@@ -26,8 +30,26 @@ export function HistoryView({ onBack }: { onBack(): void }) {
   return (
     <div className="page">
       <div className="page__head">
-        <button className="btn" onClick={onBack}>← Späť</button>
+        <BackButton onClick={onBack} />
         <h2>História zmien</h2>
+        <div className="row">
+        <button
+          className="btn btn--primary"
+          disabled={!records?.length || pdfBusy}
+          onClick={async () => {
+            setPdfBusy(true);
+            setError(null);
+            try {
+              await shareOrDownload(await buildRecordsPdf(records ?? []), pdfFileName(records ?? []));
+            } catch (e) {
+              setError(e instanceof Error ? e.message : String(e));
+            } finally {
+              setPdfBusy(false);
+            }
+          }}
+        >
+          {pdfBusy ? 'Pripravujem PDF…' : 'Exportovať do PDF'}
+        </button>
         <button
           className="btn btn--primary"
           disabled={!records?.length}
@@ -40,7 +62,9 @@ export function HistoryView({ onBack }: { onBack(): void }) {
         >
           Exportovať do Excelu
         </button>
+        </div>
       </div>
+      {error && <div className="notice notice--warn">{error}</div>}
       <div className="card row">
         <label className="field">
           <span>Zmena</span>
