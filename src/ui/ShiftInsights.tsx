@@ -6,6 +6,7 @@ import { computeStats } from '../domain/stats';
 import { byHallAndPosition } from '../domain/record';
 import { formatPct, skDate } from '../report/xlsx';
 import { tileClass } from './MachineTile';
+import { justDropped, usePersonDrag } from './dragPerson';
 import { roleOf, ROLE_LABEL, type Assignment, type Hall, type Machine, type Person, type Stats } from '../domain/types';
 
 /** Machines with an order (EXT/INT) but nobody on them – where people are missing. */
@@ -20,10 +21,10 @@ export function freePeople(people: Person[], shiftId: string, assignments: Recor
     .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
 }
 
-function Sheet({ title, onClose, children }: { title: string; onClose(): void; children: React.ReactNode }) {
+function Sheet({ title, onClose, children, seeThrough = false }: { title: string; onClose(): void; children: React.ReactNode; seeThrough?: boolean }) {
   return (
-    <div className="sheet-backdrop sheet-backdrop--light" onClick={onClose}>
-      <div className="sheet" role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
+    <div className={`sheet-backdrop sheet-backdrop--light ${seeThrough ? 'sheet-backdrop--drag' : ''}`} onClick={() => !justDropped() && onClose()}>
+      <div className={`sheet ${seeThrough ? 'sheet--see-through' : ''}`} role="dialog" aria-label={title} onClick={(e) => e.stopPropagation()}>
         <div className="sheet__top">
           <div className="sheet__head">
             <h2>{title}</h2>
@@ -41,7 +42,7 @@ function Sheet({ title, onClose, children }: { title: string; onClose(): void; c
  * nobody on them; this sheet lists them (tap = open the machine) and the people of the shift who are
  * still free.
  */
-export function StaffingSheet({ machines, halls, assignments, people, shiftId, stats, onPick, onClose }: {
+export function StaffingSheet({ machines, halls, assignments, people, shiftId, stats, onPick, onPlace = () => {}, onClose }: {
   machines: Machine[];
   halls: Hall[];
   assignments: Record<string, Assignment>;
@@ -49,13 +50,16 @@ export function StaffingSheet({ machines, halls, assignments, people, shiftId, s
   shiftId: string;
   stats: Stats;
   onPick(machineId: string): void;
+  /** A free person dragged onto a machine on the plan. */
+  onPlace?(personId: string, machineId: string): unknown;
   onClose(): void;
 }) {
+  const drag = usePersonDrag(onPlace);
   const missing = machines.filter((m) => unstaffed(m, assignments[m.id])).sort(byHallAndPosition(halls));
   const free = freePeople(people, shiftId, assignments);
   const hallName = new Map(halls.map((h) => [h.id, h.name]));
   return (
-    <Sheet title="Kde chýbajú ľudia" onClose={onClose}>
+    <Sheet title="Kde chýbajú ľudia" onClose={onClose} seeThrough>
       <p className="insight__lead">
         <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
         {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi`}
@@ -89,14 +93,17 @@ export function StaffingSheet({ machines, halls, assignments, people, shiftId, s
               : 'V tejto zmene nie sú zadaní žiadni ľudia (Nastavenia → Ľudia).'}
           </p>
         ) : (
-          <ul className="insight__people">
-            {free.map((p) => (
-              <li key={p.id}>
-                <span>{p.name}</span>
-                <span className={`role-badge ${roleOf(p) === 'operator' ? 'role-badge--operator' : ''}`}>{ROLE_LABEL[roleOf(p)]}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="muted drag-hint">Človeka potiahnite prstom na stroj (svietiace stroje nemajú nikoho).</p>
+            <div className="people-list">
+              {free.map((p) => (
+                <button key={p.id} type="button" className="person person--drag" aria-label={`${p.name} – ${ROLE_LABEL[roleOf(p)]}`} {...drag.bind(p.id)}>
+                  <span>{p.name}</span>
+                  <span className={`role-badge ${roleOf(p) === 'operator' ? 'role-badge--operator' : ''}`}>{ROLE_LABEL[roleOf(p)]}</span>
+                </button>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </Sheet>
