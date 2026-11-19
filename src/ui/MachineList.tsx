@@ -2,6 +2,7 @@ import { formatPct } from '../report/xlsx';
 import { tileClass } from './MachineTile';
 import { byHallAndPosition } from '../domain/record';
 import type { Assignment, Hall, Machine, Stats } from '../domain/types';
+import { multiText } from '../domain/stats';
 
 interface Props {
   machines: Machine[];
@@ -35,7 +36,7 @@ export function MachineList({ machines, halls = [], assignments, stats, nameOf, 
           </div>
           <p>
             <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
-            {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0} · Viacobsluha ${stats.multiPeople ?? 0} ľ / ${stats.multiMachines ?? 0} str`}
+            {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi · Frézari ${stats.frezari ?? 0} · Operátori ${stats.operatori ?? 0} · Viacobsluha ${multiText(stats.multiPeople ?? 0, stats.multiMachines)}`}
             <br />
             <span className="muted">
               {`Vyťaženie strojov ${formatPct(stats.occupancyPct)} (${stats.occupied}) · EXT ${stats.ext} · INT ${stats.int}`}

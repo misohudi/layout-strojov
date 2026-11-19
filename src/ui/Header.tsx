@@ -6,6 +6,7 @@ import { useDB } from './useDB';
 import { MpsLogo } from './Brand';
 import { loadTheme, nextTheme, saveTheme, themeLabel } from './theme';
 import type { PersonRole, Stats } from '../domain/types';
+import { multiText } from '../domain/stats';
 
 interface Props {
   shiftName: string;
@@ -141,7 +142,7 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
               {stats.multiMachines ?? 0}
             </span>
           }
-          name={`Viacobsluha ${stats.multiPeople ?? 0} ľudí na ${stats.multiMachines ?? 0} strojoch – kto na čom robí`}
+          name={`Viacobsluha ${multiText(stats.multiPeople ?? 0, stats.multiMachines)} – kto na čom robí`}
           variant={multiOn ? 'hcell--on' : ''}
           onClick={onMulti}
         />

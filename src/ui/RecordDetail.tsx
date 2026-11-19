@@ -13,6 +13,7 @@ import {
 import { useDB } from './useDB';
 import { BackButton } from './icons';
 import type { ShiftRecord } from '../domain/types';
+import { multiText } from '../domain/stats';
 
 /** A closed shift split into its zones (one plan each), with the people per machine. */
 export function recordZones(record: ShiftRecord) {
@@ -115,7 +116,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
           <>
             {' '}· Obsadenosť <strong>{formatPct(s.staffedPct)}</strong> ({s.staffed} / {s.total}) · Frézari{' '}
             {s.frezari ?? 0} · Operátori {s.operatori ?? 0}
-            {s.multiPeople != null && ` · Viacobsluha ${s.multiPeople} ľ / ${s.multiMachines ?? 0} str`}
+            {s.multiPeople != null && ` · Viacobsluha ${multiText(s.multiPeople, s.multiMachines)}`}
           </>
         )}
         {' '}· Vyťaženie strojov {formatPct(s.occupancyPct)} ({s.occupied} / {s.total}) · EXT {s.ext} ({formatPct(s.extPct)}) · INT{' '}

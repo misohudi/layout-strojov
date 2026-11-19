@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { listRecords } from '../db/repo';
-import { computeStats } from '../domain/stats';
+import { computeStats, multiText } from '../domain/stats';
 import { byHallAndPosition } from '../domain/record';
 import { formatPct, skDate } from '../report/xlsx';
 import { tileClass } from './MachineTile';
@@ -278,7 +278,7 @@ export function StaffingStatsSheet({ machines, halls, assignments, people, stats
                   <td>{r.s.total - (r.s.staffed ?? 0)}</td>
                   <td>{r.s.frezari ?? 0}</td>
                   <td>{r.s.operatori ?? 0}</td>
-                  <td>{`${r.s.multiPeople ?? 0} ľ / ${r.s.multiMachines ?? 0} str`}</td>
+                  <td>{multiText(r.s.multiPeople ?? 0, r.s.multiMachines)}</td>
                   <td><strong>{formatPct(r.s.staffedPct ?? null)}</strong>{` (${r.s.staffed ?? 0}/${r.s.total})`}</td>
                 </tr>
               ))}

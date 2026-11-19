@@ -89,7 +89,7 @@ test('header groups related fields into sections', async () => {
   expect(within(section('Zmena')).getByRole('button', { name: /^Zmena B/ })).toHaveTextContent('B');
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: 'Frézari 0 – zoznam ľudí' })).toBeInTheDocument();
   expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: '0 / 37 strojov' })).toBeInTheDocument();
-  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: /^Viacobsluha 0 ľudí na 0 strojoch/ })).toBeInTheDocument();
+  expect(within(section('Obsadenosť ľuďmi')).getByRole('button', { name: /^Viacobsluha nikto/ })).toBeInTheDocument();
   expect(within(header).queryByRole('region', { name: 'Zákazky' })).toBeNull(); // moved to the legend
   expect(within(section('Aplikácia')).getByRole('button', { name: 'Nastavenia' })).toBeInTheDocument();
   // História and Nastavenia are icon-only buttons; viacobsluha shows a person and a machine icon
@@ -141,7 +141,7 @@ test('legend shows counts and shares; tapping an item highlights its machines an
   expect(screen.getByRole('button', { name: 'voľný: 33' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'mimo prevádzky: 1' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /^Vyťaženie strojov 8,3\s%/ })).toBeInTheDocument(); // 3 / 36
-  expect(within(screen.getByRole('banner')).getByRole('button', { name: /^Viacobsluha 1 ľudí na 2 strojoch/ })).toBeInTheDocument();
+  expect(within(screen.getByRole('banner')).getByRole('button', { name: /^Viacobsluha 1 človek na 2 strojoch/ })).toBeInTheDocument();
 
   await userEvent.click(ext);
   expect(ext).toHaveAttribute('aria-pressed', 'true');
@@ -584,7 +584,7 @@ test('tap on Viacobsluha: the machines of people on several machines carry the p
   await togglePerson(db, 's-B', 'm-3', await upsertPerson(db, { name: 'Sám', shiftId: 's-B', active: true }));
   renderApp();
   await pickShift('B');
-  const multi = within(screen.getByRole('banner')).getByRole('button', { name: /^Viacobsluha 2 ľudí na 4 strojoch/ });
+  const multi = within(screen.getByRole('banner')).getByRole('button', { name: /^Viacobsluha 2 ľudia na 4 strojoch/ });
   await userEvent.click(multi);
   const sheet = await screen.findByRole('dialog', { name: 'Viacobsluha – kto na čom robí' });
   const kovac = within(sheet).getByRole('listitem', { name: 'Kováč' });
@@ -827,7 +827,7 @@ test('tap on Obsadenosť: staffing now per zone and in the last closed shifts', 
   const sheet = await screen.findByRole('dialog', { name: 'Obsadenosť ľuďmi' });
   const now = within(sheet).getByRole('region', { name: 'Rozpis teraz' });
   // Spolu: 2 machines with people, 35 without, 1 milling operator, 0 operators, 1 person on 2 machines
-  expect(within(now).getByRole('row', { name: /^Spolu 2 35 1 0 1 ľ \/ 2 str/ })).toBeInTheDocument();
+  expect(within(now).getByRole('row', { name: /^Spolu 2 35 1 0 1 človek na 2 strojoch/ })).toBeInTheDocument();
   expect(within(now).getByRole('row', { name: /^Frézovňa/ })).toBeInTheDocument();
   expect(await within(sheet).findByRole('img', { name: 'Obsadenosť ľuďmi v posledných zmenách' })).toBeInTheDocument();
   // no highlight on the plan any more

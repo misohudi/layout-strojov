@@ -311,6 +311,9 @@ h4 { font-size: 14px; font-weight: 400; color: var(--muted); letter-spacing: 0.0
 .page .floor { flex: none; padding: 0; }
 .page .floor__reset { top: 8px; right: 10px; }
 .page .floor__scroll { height: 70vh; height: 70dvh; }
+/* there the page itself must scroll when a swipe starts on the plan (the plan only keeps it when it can
+   scroll itself, e.g. zoomed in) */
+.page .floor__scroll { overscroll-behavior: auto; }
 .floor__grid { display: grid; width: max-content; min-width: 0; min-height: 0; }
 
 /* Machine tile: portrait, so the whole hall fits a tablet – icon on top, nick, person below. */
