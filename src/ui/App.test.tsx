@@ -713,3 +713,46 @@ test('a free person dragged from Obsadenosť onto a machine with an order but no
   // Novák is no longer free and the machine is no longer missing people
   await vi.waitFor(() => expect(within(sheet).getByText('Na každom stroji so zákazkou niekto je.')).toBeInTheDocument());
 });
+
+test('the info bar highlight goes away with the bar: every machine shows its colours again', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-0', k);
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(within(await screen.findByRole('alert')).getByRole('button', { name: 'Zobraziť' }));
+  expect(screen.getAllByTestId('machine-tile').filter((t) => t.classList.contains('tile--dim')).length).toBeGreaterThan(0);
+  await setMachineType(db, 's-B', 'm-0', 'EXT'); // the machine gets an order type → the bar goes
+  await vi.waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim)/.test(t.className))).toBe(false);
+});
+
+test('with EXT selected in the legend, tapping machines gives them EXT; PRIO only on machines with an order', async () => {
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-1', 'INT');
+  renderApp();
+  await pickShift('B');
+  const tile = (id: string) => screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === id)!;
+  await userEvent.click(await screen.findByRole('button', { name: /^EXT – externá/ }));
+  expect(screen.getByRole('status')).toHaveTextContent('Ťuknutím na stroj nastavíte EXT.');
+  await userEvent.click(tile('m-0'));
+  await userEvent.click(tile('m-1'));
+  await vi.waitFor(async () => {
+    const a = (await db.drafts.get('s-B'))!.assignments;
+    expect([a['m-0']?.type, a['m-1']?.type]).toEqual(['EXT', 'EXT']);
+  });
+  expect(screen.queryByRole('dialog')).toBeNull(); // no machine card opened
+  // PRIO: on a machine with an order on/off, a free one stays as it is
+  await userEvent.click(screen.getByRole('button', { name: /^prioritná zákazka/ }));
+  await userEvent.click(tile('m-0'));
+  await userEvent.click(tile('m-2'));
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-0']?.priority).toBe(true));
+  expect((await db.drafts.get('s-B'))!.assignments['m-2']?.priority).toBeFalsy();
+  // voľný clears the order; "Hotovo" ends it and a tap opens the machine again
+  await userEvent.click(screen.getByRole('button', { name: /^voľný/ }));
+  await userEvent.click(tile('m-1'));
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-1']?.type).toBeNull());
+  await userEvent.click(within(screen.getByRole('status')).getByRole('button', { name: 'Hotovo' }));
+  await userEvent.click(tile('m-1'));
+  expect(await screen.findByRole('dialog')).toBeInTheDocument();
+});
