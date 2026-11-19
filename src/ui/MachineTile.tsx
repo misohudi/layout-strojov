@@ -28,6 +28,8 @@ interface Props {
   people?: TilePerson[];
   selected?: boolean;
   dragging?: boolean;
+  /** Viacobsluha shown (tap on the header field): the numbers of the people working on this machine. */
+  marks?: number[];
   /** Legend highlight: the tile stands out (slight zoom) or is greyed out. */
   highlighted?: boolean;
   dimmed?: boolean;
@@ -44,7 +46,7 @@ export function tileClass(type: OrderType | null, outOfService: boolean) {
 }
 
 export function MachineTile({
-  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, onClick, dragProps,
+  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, marks = [], onClick, dragProps,
 }: Props) {
   const short = nickOf({ name, nick });
   const first = people[0];
@@ -95,6 +97,14 @@ export function MachineTile({
             <circle cx="12" cy="17.4" r="1.4" style={{ fill: 'var(--prio-ink)' }} />
           </svg>
           <span className="visually-hidden"> Prioritná zákazka bez obsluhy</span>
+        </span>
+      )}
+      {marks.length > 0 && (
+        <span className="tile__marks">
+          {marks.map((n) => (
+            <span key={n} className="tile__mark">{n}</span>
+          ))}
+          <span className="visually-hidden">{` viacobsluha ${marks.join(', ')}`}</span>
         </span>
       )}
       {isPriority && (

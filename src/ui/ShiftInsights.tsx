@@ -103,6 +103,87 @@ export function StaffingSheet({ machines, halls, assignments, people, shiftId, s
   );
 }
 
+/** Farther apart than this many cells (in one zone), a person's machines get a warning. */
+export const FAR_CELLS = 3;
+
+export interface MultiGroup {
+  person: Person;
+  /** Number shown on the person's machines on the plan (1, 2, …). */
+  no: number;
+  machines: Machine[];
+  /** Why the machines are impractical together, if they are. */
+  warning: string | null;
+}
+
+/** People working on several active machines (viacobsluha), numbered by name, with their machines. */
+export function multiGroups(machines: Machine[], halls: Hall[], assignments: Record<string, Assignment>, people: Person[]): MultiGroup[] {
+  const active = machines.filter((m) => m.status === 'active').sort(byHallAndPosition(halls));
+  const byPerson = new Map<string, Machine[]>();
+  for (const m of active) for (const pid of assignments[m.id]?.personIds ?? []) byPerson.set(pid, [...(byPerson.get(pid) ?? []), m]);
+  return people
+    .filter((p) => (byPerson.get(p.id)?.length ?? 0) > 1)
+    .sort((a, b) => a.name.localeCompare(b.name, 'sk'))
+    .map((person, i) => {
+      const ms = byPerson.get(person.id)!;
+      let warning: string | null = null;
+      if (new Set(ms.map((m) => m.hallId)).size > 1) warning = 'Stroje sú v rôznych oddeleniach.';
+      else {
+        let far = 0;
+        for (const a of ms) for (const b of ms) far = Math.max(far, Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+        if (far > FAR_CELLS) warning = `Stroje sú ďaleko od seba (${far} polí).`;
+      }
+      return { person, no: i + 1, machines: ms, warning };
+    });
+}
+
+/**
+ * Tap on "Viacobsluha": who works on which machines. The plan highlights those machines with the
+ * person's number; this sheet has one row per person with their machines (tap = open the machine) and
+ * a warning when the machines are in different zones or far apart.
+ */
+export function MultiSheet({ groups, assignments, halls, onPick, onClose }: {
+  groups: MultiGroup[];
+  assignments: Record<string, Assignment>;
+  halls: Hall[];
+  onPick(machineId: string): void;
+  onClose(): void;
+}) {
+  const hallName = new Map(halls.map((h) => [h.id, h.name]));
+  return (
+    <Sheet title="Viacobsluha – kto na čom robí" onClose={onClose}>
+      {groups.length === 0 ? (
+        <p className="muted">Nikto teraz nerobí na viacerých strojoch.</p>
+      ) : (
+        <ul className="insight__multi">
+          {groups.map((g) => (
+            <li key={g.person.id} aria-label={g.person.name}>
+              <div className="insight__multi-who">
+                <span className="tile__mark" aria-hidden="true">{g.no}</span>
+                <strong>{g.person.name}</strong>
+                <span className={`role-badge ${roleOf(g.person) === 'operator' ? 'role-badge--operator' : ''}`}>{ROLE_LABEL[roleOf(g.person)]}</span>
+                <span className="muted">{`${g.machines.length} stroje`}</span>
+              </div>
+              <div className="insight__chips">
+                {g.machines.map((m) => {
+                  const a = assignments[m.id];
+                  return (
+                    <button key={m.id} type="button" className="insight__machine" onClick={() => onPick(m.id)}>
+                      <span className={`type-badge ${tileClass(a?.type ?? null, false)}`}>{a?.type ?? 'voľný'}</span>
+                      <span>{m.name}</span>
+                      {halls.length > 1 && <span className="muted">{hallName.get(m.hallId)}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+              {g.warning && <p className="insight__warn" role="note">{`⚠ ${g.warning}`}</p>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Sheet>
+  );
+}
+
 /** Last closed shifts in the trend chart. */
 export const TREND_SHIFTS = 14;
 
