@@ -650,14 +650,5 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 @keyframes tile-drop { 0% { transform: scale(1.08); } 40% { transform: scale(0.94); } 70% { transform: scale(1.04); } 100% { transform: scale(1); } }
 @media (prefers-reduced-motion: reduce) { .tile--dropped { animation: none; } }
 
-/* legend item selected (EXT / INT / voľný / PRIO): tapping machines gives them that – a hint says so */
-.paint-hint {
-  position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); white-space: nowrap;
-  margin: 0; padding: 4px 6px 4px 14px; display: flex; align-items: center; gap: 12px;
-  border-radius: 999px; border: 2px solid var(--outline); background: var(--surface); font-size: 15px; font-weight: 700;
-  box-shadow: 0 2px 8px var(--shadow); z-index: 6;
-}
-.paint-hint .btn { min-height: 34px; }
-.paint-hint--EXT { border-color: var(--ext); }
-.paint-hint--INT { border-color: var(--int); }
-.paint-hint--prio { border-color: var(--prio-ink); background: #fef9c3; color: var(--prio-ink); }
+/* PRIO selected: machines with an order stay blue / red, only paler; free ones go grey */
+.tile--pale { opacity: 0.45; }

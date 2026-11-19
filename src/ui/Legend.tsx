@@ -51,11 +51,11 @@ export function Legend({ stats, selected, onSelect, onUtilization, children }: P
     { key: 'EXT', label: 'EXT – externá', short: 'EXT', mark: <i className="sw tile--ext" />, count: stats.ext, pct: stats.extPct },
     { key: 'INT', label: 'INT – interná', short: 'INT', mark: <i className="sw tile--int" />, count: stats.int, pct: stats.intPct },
     { key: 'free', label: 'voľný', short: 'voľný', mark: <i className="sw tile--free" />, count: stats.free ?? 0 },
-    { key: 'oos', label: 'mimo prevádzky', short: 'mimo prev.', mark: <i className="sw tile--oos" />, count: stats.oos ?? 0 },
     {
       key: 'prio', label: 'prioritná zákazka', short: '',
       mark: <span className="prio-badge prio-badge--inline">PRIO</span>, count: stats.prio ?? 0,
     },
+    { key: 'oos', label: 'mimo prevádzky', short: 'mimo prev.', mark: <i className="sw tile--oos" />, count: stats.oos ?? 0 },
   ];
   return (
     <div className="legend">

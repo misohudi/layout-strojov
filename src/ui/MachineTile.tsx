@@ -35,6 +35,8 @@ interface Props {
   /** Legend highlight: the tile stands out (slight zoom) or is greyed out. */
   highlighted?: boolean;
   dimmed?: boolean;
+  /** Dimmed but keeping its colour, only paler (machines with an order while PRIO is selected). */
+  pale?: boolean;
   onClick?(): void;
   /** Pointer handlers for dragging in the machine editor. */
   dragProps?: Pick<HTMLAttributes<HTMLButtonElement>, 'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel'>;
@@ -48,7 +50,7 @@ export function tileClass(type: OrderType | null, outOfService: boolean) {
 }
 
 export function MachineTile({
-  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, marks = [], machineId, onClick, dragProps,
+  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, pale, marks = [], machineId, onClick, dragProps,
 }: Props) {
   const short = nickOf({ name, nick });
   const first = people[0];
@@ -64,7 +66,7 @@ export function MachineTile({
       data-machine-id={machineId}
       data-machine-active={machineId ? String(!outOfService) : undefined}
       title={name}
-      className={`tile ${tileClass(type, outOfService)} ${isPriority ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''} ${highlighted ? 'tile--hl' : ''} ${dimmed ? 'tile--dim' : ''}`}
+      className={`tile ${tileClass(type, outOfService)} ${isPriority ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''} ${highlighted ? 'tile--hl' : ''} ${dimmed ? (pale ? 'tile--pale' : 'tile--dim') : ''}`}
       style={{
         gridColumn: `${x + 1} / span ${w}`,
         gridRow: `${y + 1} / span ${h}`,

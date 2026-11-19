@@ -196,8 +196,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const zoneHas = (key: LegendKey, hallId: string) =>
     machines.some((m) => m.hallId === hallId && matchesLegend(key, m, draft.assignments[m.id], multiPeople));
   /**
-   * While EXT, INT, voľný or PRIO is selected in the legend, tapping a machine gives it that (PRIO: only
-   * a machine with an order, on/off); otherwise – and on a machine out of service – the tap opens it.
+   * While EXT, INT, voľný or PRIO is selected in the legend, tapping a machine gives it that – EXT / INT
+   * tapped again on the same machine makes it free; PRIO only on a machine with an order, on/off.
+   * Otherwise – and on a machine out of service – the tap opens it.
    */
   const paint = legendKey === 'EXT' || legendKey === 'INT' || legendKey === 'free' || legendKey === 'prio' ? legendKey : null;
   const tapMachine = (m: Machine) => {
@@ -210,8 +211,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
       if (a?.type) void setMachinePriority(db, shiftId, m.id, !a.priority);
       return;
     }
-    const type = paint === 'free' ? null : paint;
-    if ((a?.type ?? null) !== type) void setMachineType(db, shiftId, m.id, type);
+    const now = a?.type ?? null;
+    const type = paint === 'free' || now === paint ? null : paint;
+    if (now !== type) void setMachineType(db, shiftId, m.id, type);
   };
   /**
    * Tapping a legend item: when the shown zone has no such machine but another zone does, the view
@@ -275,14 +277,6 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         }}
       />
       <div className="plan-area">
-        {paint && (
-          <p className={`paint-hint paint-hint--${paint}`} role="status">
-            {paint === 'prio'
-              ? 'Ťuknutím na stroj so zákazkou zapnete alebo vypnete PRIO.'
-              : `Ťuknutím na stroj nastavíte ${paint === 'free' ? 'voľný' : paint}.`}
-            <button type="button" className="btn btn--small" onClick={() => selectLegend(null)}>Hotovo</button>
-          </p>
-        )}
         {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
         {(showOffer || stats.peopleWithoutType > 0 || banner) && (
           <div className={`plan-notes ${legendKey ? 'plan-notes--faded' : ''}`}>
@@ -377,6 +371,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   })}
                   highlighted={hit === true}
                   dimmed={hit === false}
+                  // PRIO selected: machines with an order keep a pale colour (blue / red), only free ones go grey
+                  pale={hit === false && legendKey === 'prio' && !!a?.type && m.status === 'active'}
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   machineId={m.id}
                   onClick={() => tapMachine(m)}
