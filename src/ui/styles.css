@@ -680,3 +680,6 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 @keyframes sheet-from-right { from { transform: translateX(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
 @keyframes sheet-from-left { from { transform: translateX(-40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .sheet--enter-right, .sheet--enter-left { animation: none; } }
+/* shift detail in the history: occupancy box + the other figures, as in the PDF header */
+.record-summary { display: flex; align-items: center; gap: 18px; }
+.record-summary__stats { margin: 0; font-size: 15px; line-height: 1.45; color: var(--muted); }
