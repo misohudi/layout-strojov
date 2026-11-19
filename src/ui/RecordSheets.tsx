@@ -2,13 +2,17 @@ import { recordZones, RecordZonePlan } from './RecordDetail';
 import { MpsLogo } from './Brand';
 import { cropped } from './grid';
 import { formatPct, skDate } from '../report/xlsx';
+import { multiText } from '../domain/stats';
 import type { ShiftRecord } from '../domain/types';
 
 /** A4 landscape at 96 dpi: the size of one PDF page as it is drawn before it becomes an image. */
 export const PAGE_W = 1123;
 export const PAGE_H = 794;
-/** Machines per table page (the rest continues on the next page). */
-export const ROWS_PER_PAGE = 26;
+/**
+ * Machines per table page (the rest continues on the next page). Rows have a fixed height (long lists
+ * of people end in "…"), so this many always fit under the header – none is cut off at the bottom.
+ */
+export const ROWS_PER_PAGE = 22;
 
 /** Splits the machine rows into pages of the table. */
 export function chunkRows<T>(rows: T[], size = ROWS_PER_PAGE): T[][] {
@@ -20,12 +24,13 @@ export function chunkRows<T>(rows: T[], size = ROWS_PER_PAGE): T[][] {
 /** Rows of a zone's plan as drawn (cropped to its machines). */
 const zoneRows = (items: ShiftRecord['layout']) => Math.max(1, ...cropped(items).map((l) => l.y + l.h));
 
-function statsLine(record: ShiftRecord) {
+/** The other figures of the shift, under the title (the foreman is the shift's name in the title). */
+export function statsLine(record: ShiftRecord) {
   const s = record.stats;
-  const parts = [`Majster: ${record.foremanName}`];
+  const parts: string[] = [];
   if (s.staffed != null) {
-    parts.push(`Obsadenosť ${formatPct(s.staffedPct)} (${s.staffed} / ${s.total})`);
     parts.push(`Frézari ${s.frezari ?? 0} · Operátori ${s.operatori ?? 0}`);
+    parts.push(`Viacobsluha ${multiText(s.multiPeople, s.multiMachines)}`);
   }
   parts.push(`Vyťaženie strojov ${formatPct(s.occupancyPct)} (${s.occupied} / ${s.total})`);
   parts.push(`EXT ${s.ext} (${formatPct(s.extPct)}) · INT ${s.int} (${formatPct(s.intPct)})`);
@@ -33,11 +38,18 @@ function statsLine(record: ShiftRecord) {
 }
 
 function PageHead({ record, sub }: { record: ShiftRecord; sub?: string }) {
+  const s = record.stats;
   return (
     <header className="pdf-page__head">
-      <div>
+      <div className="pdf-page__headline">
         <h1 className="pdf-page__title">{`Zmena ${record.shiftName} · ${skDate(record.date)}${sub ? ` · ${sub}` : ''}`}</h1>
         <p className="pdf-page__stats">{statsLine(record)}</p>
+      </div>
+      {/* the figure that matters most: occupancy by people */}
+      <div className="pdf-kpi">
+        <span className="pdf-kpi__label">Obsadenosť</span>
+        <strong className="pdf-kpi__value">{formatPct(s.staffedPct ?? null)}</strong>
+        <small className="pdf-kpi__sub">{s.staffed != null ? `${s.staffed} / ${s.total} strojov s ľuďmi` : 'nezaznamenaná'}</small>
       </div>
       <MpsLogo className="pdf-page__logo" still />
     </header>

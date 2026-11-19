@@ -553,19 +553,30 @@ tr.clickable { cursor: pointer; }
   background: #fff; color: var(--text);
 }
 .pdf-page__head {
-  flex: none; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px;
+  flex: none; display: flex; justify-content: space-between; align-items: center; gap: 20px;
   padding-bottom: 10px; border-bottom: 3px solid var(--mb-300);
 }
+.pdf-page__headline { flex: 1; min-width: 0; }
 .pdf-page__title { margin: 0; font-size: 26px; }
-.pdf-page__stats { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+.pdf-page__stats { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.35; }
 .pdf-page__logo { flex: none; height: 52px; }
+/* occupancy, the main figure, stands out in the header */
+.pdf-kpi {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-width: 170px; padding: 6px 16px; border-radius: 8px; background: var(--mb-600); color: #fff;
+}
+.pdf-kpi__label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; opacity: 0.85; }
+.pdf-kpi__value { font-size: 30px; line-height: 1.1; }
+.pdf-kpi__sub { font-size: 12px; opacity: 0.9; }
 .pdf-page__plans { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
 .pdf-page__zone { flex-basis: 0; min-height: 170px; display: flex; flex-direction: column; }
 .pdf-host .floor__scroll { overflow: hidden; }
 .pdf-page__zone-name { margin: 0 0 2px; font-size: 15px; text-align: center; }
 .pdf-page__zone .floor { flex: 1; min-height: 0; padding: 0; }
-.pdf-page__table { font-size: 13px; }
-.pdf-page__table th, .pdf-page__table td { padding: 6px 8px; }
+/* fixed row height (long lists of people end in "…"): ROWS_PER_PAGE rows always fit on a page */
+.pdf-page__table { font-size: 13px; table-layout: fixed; }
+.pdf-page__table th, .pdf-page__table td { padding: 0 8px; height: 26px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pdf-page__table th:last-child, .pdf-page__table td:last-child { width: 45%; }
 
 /* Export: one button, the choices (PDF / Excel, download / share) in a sheet */
 .export-menu__group { display: flex; flex-direction: column; gap: 8px; }
