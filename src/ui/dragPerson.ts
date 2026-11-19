@@ -5,8 +5,9 @@ import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent
  * above the finger (a small shadow marks the spot under it), a see-through sheet it came from turns
  * almost invisible so the plan shows, and the machine under the finger lights up.
  *
- * - From a sheet (people list, Obsadenosť) the badge is grabbed by moving it; let go on a machine and
- *   the person is placed there, anywhere else and the badge flies back to the sheet.
+ * - From a sheet (the people list) the badge is held for a moment and then dragged; let go on a machine
+ *   and the person is placed there, anywhere else and the badge flies back to the sheet. Moving the
+ *   finger before that scrolls the list.
  * - From a machine on the plan the person is picked up by holding the machine for a moment; let go on
  *   another machine and the person moves there, anywhere else and the person is taken off the machine.
  *
@@ -17,6 +18,8 @@ import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent
 const DRAG_PX = 8;
 /** Holding a machine this long picks its person up. */
 const HOLD_MS = 450;
+/** A badge in a sheet comes off after a shorter hold (moving before it scrolls the list). */
+const HOLD_SHEET_MS = 300;
 /** The badge rides this far above the finger, so the finger doesn't cover it. */
 const LIFT_PX = 52;
 
@@ -188,13 +191,10 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     if (!d || d.pointerId !== e.pointerId) return;
     if (!d.ghost) {
       if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_PX) return;
-      if (d.from) {
-        // on the plan only holding picks a person up – moving first is scrolling the plan
-        clearTimeout(d.hold);
-        drag.current = null;
-        return;
-      }
-      start(d, e.clientX, e.clientY);
+      // only holding picks a person up – moving first is scrolling (the plan or the list)
+      clearTimeout(d.hold);
+      drag.current = null;
+      return;
     }
     place(d.ghost!, e.clientX, e.clientY - LIFT_PX);
     place(d.shadow!, e.clientX, e.clientY);
@@ -221,16 +221,27 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     },
   };
 
-  /** A person's badge in a sheet: moved = dragged. */
+  /** Waits for the hold, then the person comes off onto the finger. */
+  function press(d: Drag, ms: number) {
+    d.hold = setTimeout(() => {
+      if (drag.current === d && !d.ghost) start(d, d.startX, d.startY);
+    }, ms);
+    drag.current = d;
+  }
+
+  /** A person's badge in a sheet: held for a moment = dragged. */
   const bind = (personId: string) => ({
     ...common,
     onPointerDown(e: ReactPointerEvent<HTMLElement>) {
       if (e.button !== 0) return;
       const source = e.currentTarget;
-      drag.current = {
+      press({
         personId, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
         source, look: () => source, ghost: null, shadow: null, target: null,
-      };
+      }, HOLD_SHEET_MS);
+    },
+    onContextMenu(e: ReactMouseEvent) {
+      e.preventDefault(); // holding must not open the browser's menu
     },
   });
 
@@ -240,14 +251,10 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     onPointerDown(e: ReactPointerEvent<HTMLElement>) {
       if (e.button !== 0 || !personId) return;
       const source = e.currentTarget;
-      const d: Drag = {
+      press({
         personId, from: machineId, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
         source, look: () => badge(name), ghost: null, shadow: null, target: null,
-      };
-      d.hold = setTimeout(() => {
-        if (drag.current === d && !d.ghost) start(d, d.startX, d.startY);
       }, HOLD_MS);
-      drag.current = d;
     },
     onContextMenu(e: ReactMouseEvent) {
       if (personId) e.preventDefault(); // holding must not open the browser's menu

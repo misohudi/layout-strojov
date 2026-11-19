@@ -18,9 +18,8 @@ interface Props {
   onMachineList(): void;
   /** Tap on Frézari / Operátori: the list of people of that role. */
   onPeopleList(role: PersonRole): void;
-  /** Tap on Obsadenosť: where people are missing (highlighted while `staffingOn`). */
+  /** Tap on Obsadenosť: staffing now and in the last shifts. */
   onStaffing?(): void;
-  staffingOn?: boolean;
   /** Tap on Viacobsluha: who works on which machines (highlighted while `multiOn`). */
   onMulti?(): void;
   multiOn?: boolean;
@@ -100,7 +99,7 @@ function Section({ title, place, children }: { title: string; place: 'start' | '
   );
 }
 
-export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList, onStaffing = () => {}, staffingOn = false, onMulti = () => {}, multiOn = false }: Props) {
+export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList, onStaffing = () => {}, onMulti = () => {}, multiOn = false }: Props) {
   return (
     <header className="header">
       <Section title="Zmena" place="start">
@@ -119,8 +118,8 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
         <CellButton
           label="Obsadenosť"
           value={formatPct(stats.staffedPct)}
-          variant={`hcell--main ${staffingOn ? 'hcell--on' : ''}`}
-          name={`Obsadenosť ${formatPct(stats.staffedPct)} – kde chýbajú ľudia`}
+          variant="hcell--main"
+          name={`Obsadenosť ${formatPct(stats.staffedPct)} – rozpis a vývoj`}
           onClick={onStaffing}
         />
         <CellButton

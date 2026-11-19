@@ -6,20 +6,8 @@ import { computeStats } from '../domain/stats';
 import { byHallAndPosition } from '../domain/record';
 import { formatPct, skDate } from '../report/xlsx';
 import { tileClass } from './MachineTile';
-import { justDropped, usePersonDrag } from './dragPerson';
+import { justDropped } from './dragPerson';
 import { roleOf, ROLE_LABEL, type Assignment, type Hall, type Machine, type Person, type Stats } from '../domain/types';
-
-/** Machines with an order (EXT/INT) but nobody on them – where people are missing. */
-export const unstaffed = (m: Machine, a: Assignment | undefined) =>
-  m.status === 'active' && !!a?.type && (a.personIds?.length ?? 0) === 0;
-
-/** People of the shift (active, own shift) who are not on any machine yet. */
-export function freePeople(people: Person[], shiftId: string, assignments: Record<string, Assignment>): Person[] {
-  const busy = new Set(Object.values(assignments).flatMap((a) => a.personIds));
-  return people
-    .filter((p) => p.active && p.shiftId === shiftId && !busy.has(p.id))
-    .sort((a, b) => a.name.localeCompare(b.name, 'sk'));
-}
 
 function Sheet({ title, onClose, children, seeThrough = false }: { title: string; onClose(): void; children: React.ReactNode; seeThrough?: boolean }) {
   return (
@@ -34,79 +22,6 @@ function Sheet({ title, onClose, children, seeThrough = false }: { title: string
         {children}
       </div>
     </div>
-  );
-}
-
-/**
- * Tap on "Obsadenosť": where people are missing. The plan highlights the machines with an order but
- * nobody on them; this sheet lists them (tap = open the machine) and the people of the shift who are
- * still free.
- */
-export function StaffingSheet({ machines, halls, assignments, people, shiftId, stats, onPick, onPlace = () => {}, onClose }: {
-  machines: Machine[];
-  halls: Hall[];
-  assignments: Record<string, Assignment>;
-  people: Person[];
-  shiftId: string;
-  stats: Stats;
-  onPick(machineId: string): void;
-  /** A free person dragged onto a machine on the plan. */
-  onPlace?(personId: string, machineId: string): unknown;
-  onClose(): void;
-}) {
-  const drag = usePersonDrag(onPlace);
-  const missing = machines.filter((m) => unstaffed(m, assignments[m.id])).sort(byHallAndPosition(halls));
-  const free = freePeople(people, shiftId, assignments);
-  const hallName = new Map(halls.map((h) => [h.id, h.name]));
-  return (
-    <Sheet title="Kde chýbajú ľudia" onClose={onClose} seeThrough>
-      <p className="insight__lead">
-        <strong>{`Obsadenosť ${formatPct(stats.staffedPct)}`}</strong>
-        {` · ${stats.staffed ?? 0} / ${stats.total} strojov s ľuďmi`}
-      </p>
-      <section aria-label="Stroje so zákazkou bez ľudí">
-        <h3>{`Stroje so zákazkou bez ľudí (${missing.length})`}</h3>
-        {missing.length === 0 ? (
-          <p className="muted">Na každom stroji so zákazkou niekto je.</p>
-        ) : (
-          <div className="insight__chips">
-            {missing.map((m) => {
-              const a = assignments[m.id];
-              return (
-                <button key={m.id} type="button" className="insight__machine" onClick={() => onPick(m.id)}>
-                  <span className={`type-badge ${tileClass(a?.type ?? null, false)}`}>{a?.type}</span>
-                  {a?.priority && <span className="prio-badge prio-badge--inline">PRIO</span>}
-                  <span>{m.name}</span>
-                  {halls.length > 1 && <span className="muted">{hallName.get(m.hallId)}</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-      <section aria-label="Voľní ľudia zo zmeny">
-        <h3>{`Voľní ľudia zo zmeny (${free.length})`}</h3>
-        {free.length === 0 ? (
-          <p className="muted">
-            {people.some((p) => p.active && p.shiftId === shiftId)
-              ? 'Všetci ľudia zmeny sú na strojoch.'
-              : 'V tejto zmene nie sú zadaní žiadni ľudia (Nastavenia → Ľudia).'}
-          </p>
-        ) : (
-          <>
-            <p className="muted drag-hint">Človeka potiahnite prstom na stroj (svietiace stroje nemajú nikoho).</p>
-            <div className="people-list">
-              {free.map((p) => (
-                <button key={p.id} type="button" className="person person--drag" aria-label={`${p.name} – ${ROLE_LABEL[roleOf(p)]}`} {...drag.bind(p.id)}>
-                  <span>{p.name}</span>
-                  <span className={`role-badge ${roleOf(p) === 'operator' ? 'role-badge--operator' : ''}`}>{ROLE_LABEL[roleOf(p)]}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </section>
-    </Sheet>
   );
 }
 
@@ -194,8 +109,8 @@ export function MultiSheet({ groups, assignments, halls, onPick, onClose }: {
 /** Last closed shifts in the trend chart. */
 export const TREND_SHIFTS = 14;
 
-/** Utilisation of the closed shifts (oldest first) plus the open one ("teraz"). */
-function TrendChart({ points }: { points: { label: string; sub: string; pct: number | null; now?: boolean }[] }) {
+/** A figure of the closed shifts (oldest first) plus the open one ("teraz"), as bars. */
+function TrendChart({ points, label }: { points: { label: string; sub: string; pct: number | null; now?: boolean }[]; label: string }) {
   const [picked, setPicked] = useState<number>(points.length - 1);
   const W = 640, H = 200, top = 22, bottom = 34, left = 34, right = 8;
   const plotH = H - top - bottom;
@@ -210,7 +125,7 @@ function TrendChart({ points }: { points: { label: string; sub: string; pct: num
   const sel = points[picked];
   return (
     <figure className="trend">
-      <svg viewBox={`0 0 ${W} ${H}`} className="trend__svg" role="img" aria-label="Vyťaženie strojov v posledných zmenách">
+      <svg viewBox={`0 0 ${W} ${H}`} className="trend__svg" role="img" aria-label={label}>
         {[0, yMax / 2, yMax].map((v) => (
           <g key={v}>
             <line x1={left} x2={W - right} y1={y(v)} y2={y(v)} className="trend__grid" />
@@ -309,7 +224,74 @@ export function UtilizationSheet({ machines, halls, assignments, stats, onClose 
         {recent.length === 0 ? (
           <p className="muted">Zatiaľ žiadne uzavreté zmeny na porovnanie.</p>
         ) : (
-          <TrendChart points={points} />
+          <TrendChart points={points} label="Vyťaženie strojov v posledných zmenách" />
+        )}
+      </section>
+    </Sheet>
+  );
+}
+
+/**
+ * Tap on "Obsadenosť": machines with people now (per zone: with / without people, milling operators,
+ * operators, viacobsluha) and how the staffing went in the last closed shifts.
+ */
+export function StaffingStatsSheet({ machines, halls, assignments, people, stats, onClose }: {
+  machines: Machine[];
+  halls: Hall[];
+  assignments: Record<string, Assignment>;
+  people: Person[];
+  stats: Stats;
+  onClose(): void;
+}) {
+  const db = useDB();
+  const records = useLiveQuery(() => listRecords(db), [db]) ?? [];
+  // older records have no staffing figures – they are left out of the trend
+  const recent = records.filter((r) => r.stats.staffedPct != null).slice(0, TREND_SHIFTS).reverse();
+  const points = [
+    ...recent.map((r) => ({ label: skDate(r.date).replace(/\d{4}$/, ''), sub: r.shiftName, pct: r.stats.staffedPct ?? null })),
+    { label: 'teraz', sub: '', pct: stats.staffedPct ?? null, now: true },
+  ];
+  const rows = [
+    ...(halls.length > 1
+      ? halls.map((h) => ({ name: h.name, s: computeStats(machines.filter((m) => m.hallId === h.id), assignments, people) }))
+      : []),
+    { name: 'Spolu', s: stats, total: true },
+  ];
+  return (
+    <Sheet title="Obsadenosť ľuďmi" onClose={onClose}>
+      <p className="insight__lead">
+        <strong>{formatPct(stats.staffedPct ?? null)}</strong>
+        {` · ${stats.staffed ?? 0} / ${stats.total} strojov v prevádzke má ľudí`}
+      </p>
+      <section aria-label="Rozpis teraz">
+        <h3>Rozpis teraz</h3>
+        <div className="table-wrap">
+          <table className="insight__table">
+            <thead>
+              <tr><th>{halls.length > 1 ? 'Oddelenie' : ''}</th><th>S ľuďmi</th><th>Bez ľudí</th><th>Frézari</th><th>Operátori</th><th>Viacobsluha</th><th>Obsadenosť</th></tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.name} className={'total' in r ? 'insight__total' : ''}>
+                  <td>{r.name}</td>
+                  <td>{r.s.staffed ?? 0}</td>
+                  <td>{r.s.total - (r.s.staffed ?? 0)}</td>
+                  <td>{r.s.frezari ?? 0}</td>
+                  <td>{r.s.operatori ?? 0}</td>
+                  <td>{`${r.s.multiPeople ?? 0} ľ / ${r.s.multiMachines ?? 0} str`}</td>
+                  <td><strong>{formatPct(r.s.staffedPct ?? null)}</strong>{` (${r.s.staffed ?? 0}/${r.s.total})`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      <section aria-label="Vývoj">
+        <h3>Vývoj – posledné zmeny</h3>
+        {recent.length === 0 ? (
+          <p className="muted">Zatiaľ žiadne uzavreté zmeny na porovnanie.</p>
+        ) : (
+          <TrendChart points={points} label="Obsadenosť ľuďmi v posledných zmenách" />
         )}
       </section>
     </Sheet>

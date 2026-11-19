@@ -629,7 +629,8 @@ button.legend__stat { font: inherit; color: var(--text); cursor: pointer; }
 body.is-dragging-person .sheet--see-through { opacity: 0.12; pointer-events: none; }
 body.is-dragging-person .sheet-backdrop--drag { background: transparent; pointer-events: none; }
 body.is-dragging-person { cursor: grabbing; user-select: none; }
-.person--drag { touch-action: none; user-select: none; cursor: grab; font: inherit; background: var(--surface); }
+/* a badge scrolls the list when moved at once; held, it comes off (see dragPerson) */
+.person--drag { touch-action: pan-y; -webkit-touch-callout: none; user-select: none; cursor: grab; font: inherit; background: var(--surface); }
 .person--drag.person--on { background: var(--primary); }
 .person--drag .person__count { white-space: nowrap; }
 .drag-source { opacity: 0.35; }
@@ -655,3 +656,13 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 
 /* holding a machine picks up its person: no text selection or callout menu on the tiles */
 .tile { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* machine card: page to the previous / next machine (arrows or a swipe) */
+.machine-pager { gap: 8px; flex-wrap: nowrap; }
+.machine-pager__next .hicon { transform: scaleX(-1); }
+.machine-pager__pos { font-size: 13px; min-width: 52px; text-align: center; }
+.sheet--enter-right { animation: sheet-from-right 0.22s ease-out; }
+.sheet--enter-left { animation: sheet-from-left 0.22s ease-out; }
+@keyframes sheet-from-right { from { transform: translateX(40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@keyframes sheet-from-left { from { transform: translateX(-40px); opacity: 0.4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .sheet--enter-right, .sheet--enter-left { animation: none; } }

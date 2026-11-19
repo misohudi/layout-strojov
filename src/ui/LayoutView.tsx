@@ -9,8 +9,9 @@ import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
 import { PeopleList } from './PeopleList';
 import { Legend, matchesLegend, type LegendKey } from './Legend';
-import { MultiSheet, multiGroups, StaffingSheet, UtilizationSheet } from './ShiftInsights';
+import { MultiSheet, multiGroups, StaffingStatsSheet, UtilizationSheet } from './ShiftInsights';
 import { justDropped, usePersonDrag, type DropHandlers } from './dragPerson';
+import { byHallAndPosition } from '../domain/record';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord, setMachinePriority, setMachineType, togglePerson } from '../db/repo';
@@ -106,7 +107,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const [utilOpen, setUtilOpen] = useState(false);
   const [multiOpen, setMultiOpen] = useState(false);
   /** A machine opened from a list returns to that list when closed. */
-  const [backTo, setBackTo] = useState<'list' | 'staffing' | 'multi' | null>(null);
+  const [backTo, setBackTo] = useState<'list' | 'multi' | null>(null);
+  /** The machine card was paged: it slides in from this side. */
+  const [enter, setEnter] = useState<'left' | 'right' | null>(null);
   const egg = useEasterEgg();
   // holding a machine picks up its person: onto another machine = moved there, beside = taken off
   // (the handlers need the open shift, filled in below once it is loaded)
@@ -168,6 +171,20 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   const personOf = new Map(people.map((p) => [p.id, p]));
   const open = machines.find((m) => m.id === openId);
+  // the machine card pages through the machines in the plan's order (zone by zone)
+  const ordered = [...machines].sort(byHallAndPosition(halls));
+  const openIdx = open ? ordered.findIndex((m) => m.id === open.id) : -1;
+  const pageTo = (delta: number) => {
+    const next = ordered[openIdx + delta];
+    if (!next) return;
+    setEnter(delta > 0 ? 'right' : 'left');
+    setOpenId(next.id);
+    // the plan follows into the machine's zone
+    if (next.hallId !== zoneId) {
+      setZoneId(next.hallId);
+      storeZone(next.hallId);
+    }
+  };
   const zoneIdx = Math.max(0, halls.findIndex((h) => h.id === zoneId));
   const hall = halls[zoneIdx] as Hall | undefined;
   const inZone = hall ? machines.filter((m) => m.hallId === hall.id) : machines;
@@ -275,7 +292,6 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onSettings={onSettings}
         onMachineList={() => setListOpen(true)}
         onPeopleList={setPeopleRole}
-        staffingOn={legendKey === 'unstaffed'}
         multiOn={legendKey === 'multi'}
         onMulti={() => {
           if (legendKey === 'multi' && !multiOpen) {
@@ -285,15 +301,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           selectLegend('multi');
           setMultiOpen(true);
         }}
-        onStaffing={() => {
-          // first tap: highlight the machines without people and list them; tapped again: off
-          if (legendKey === 'unstaffed' && !staffingOpen) {
-            selectLegend(null);
-            return;
-          }
-          selectLegend('unstaffed');
-          setStaffingOpen(true);
-        }}
+        onStaffing={() => setStaffingOpen(true)}
       />
       <div className="plan-area">
         {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
@@ -399,6 +407,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   pale={hit === false && !!a?.type && m.status === 'active'}
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   machineId={m.id}
+                  selected={m.id === openId}
                   pressProps={tileDrag.bindHold(m.id, a?.personIds[0], personOf.get(a?.personIds[0] ?? '')?.name ?? '')}
                   onClick={() => tapMachine(m)}
                 />
@@ -447,19 +456,12 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         />
       )}
       {staffingOpen && (
-        <StaffingSheet
+        <StaffingStatsSheet
           machines={machines}
           halls={halls}
           assignments={draft.assignments}
           people={people}
-          shiftId={shiftId}
           stats={stats}
-          onPick={(id) => {
-            setStaffingOpen(false);
-            setBackTo('staffing');
-            setOpenId(id);
-          }}
-          onPlace={placePerson}
           onClose={() => setStaffingOpen(false)}
         />
       )}
@@ -500,7 +502,12 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
       )}
       {open && (
         <MachinePanel
+          key={open.id}
           machine={open}
+          enter={enter}
+          position={`${openIdx + 1} / ${ordered.length}`}
+          onPrev={openIdx > 0 ? () => pageTo(-1) : undefined}
+          onNext={openIdx < ordered.length - 1 ? () => pageTo(1) : undefined}
           assignment={draft.assignments[open.id]}
           shiftId={shiftId}
           people={people}
@@ -508,8 +515,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           counts={counts}
           onClose={() => {
             setOpenId(null);
+            setEnter(null);
             if (backTo === 'list') setListOpen(true);
-            if (backTo === 'staffing') setStaffingOpen(true);
             if (backTo === 'multi') setMultiOpen(true);
             setBackTo(null);
           }}
