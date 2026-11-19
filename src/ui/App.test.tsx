@@ -600,7 +600,8 @@ test('tap on Vyťaženie strojov: the breakdown now and the trend of the last cl
   const now = within(sheet).getByRole('region', { name: 'Rozpis teraz' });
   expect(within(now).getByRole('row', { name: /^Spolu 1 0/ })).toBeInTheDocument();
   expect(within(now).getByRole('row', { name: /^Frézovňa/ })).toBeInTheDocument(); // one row per zone
-  expect(within(sheet).getByRole('img', { name: 'Vyťaženie strojov v posledných zmenách' })).toBeInTheDocument();
+  // the closed shifts load after the sheet opens
+  expect(await within(sheet).findByRole('img', { name: 'Vyťaženie strojov v posledných zmenách' })).toBeInTheDocument();
   expect(within(sheet).getByText(/táto zmena \(teraz\)/)).toBeInTheDocument();
 });
 
@@ -632,4 +633,21 @@ test('tap on Viacobsluha: the machines of people on several machines carry the p
   expect(screen.getAllByTestId('machine-tile').filter((t) => t.querySelector('.tile__mark'))).toHaveLength(3);
   await userEvent.click(multi);
   expect(screen.getAllByTestId('machine-tile').some((t) => t.querySelector('.tile__mark'))).toBe(false);
+});
+
+test('the info bar about machines with people but no order type shows them on the plan', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-0', k);
+  await togglePerson(db, 's-B', 'm-1', k);
+  await setMachineType(db, 's-B', 'm-1', 'EXT'); // has a type – not shown
+  renderApp();
+  await pickShift('B');
+  const bar = await screen.findByRole('alert');
+  expect(bar).toHaveTextContent('1 stroj má ľudí, ale nemá určený typ zakázky.');
+  await userEvent.click(within(bar).getByRole('button', { name: 'Zobraziť' }));
+  const tiles = screen.getAllByTestId('machine-tile');
+  expect(tiles.filter((t) => t.classList.contains('tile--hl'))).toHaveLength(1);
+  await userEvent.click(within(bar).getByRole('button', { name: 'Skryť' }));
+  expect(screen.getAllByTestId('machine-tile').some((t) => /tile--(hl|dim)/.test(t.className))).toBe(false);
 });
