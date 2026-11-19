@@ -10,6 +10,7 @@ import { MachineList } from './MachineList';
 import { PeopleList } from './PeopleList';
 import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { MultiSheet, multiGroups, StaffingSheet, UtilizationSheet } from './ShiftInsights';
+import { justDropped, usePersonDrag, type DropHandlers } from './dragPerson';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord, setMachinePriority, setMachineType, togglePerson } from '../db/repo';
@@ -107,6 +108,13 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   /** A machine opened from a list returns to that list when closed. */
   const [backTo, setBackTo] = useState<'list' | 'staffing' | 'multi' | null>(null);
   const egg = useEasterEgg();
+  // holding a machine picks up its person: onto another machine = moved there, beside = taken off
+  // (the handlers need the open shift, filled in below once it is loaded)
+  const drop = useRef<DropHandlers>({ place: () => {} });
+  const tileDrag = usePersonDrag({
+    place: (p, m, from) => drop.current.place(p, m, from),
+    discard: (p, from) => drop.current.discard?.(p, from),
+  });
   // per open shift: whether the "take over from the last shift" card was closed, and which zones the
   // foreman has already looked at (the arrows towards the others pulse)
   const draftKey = draftResult ? `layout-strojov.shift.${shiftId}.${draftResult.startedAt}` : null;
@@ -150,6 +158,13 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   /** A person dragged onto a machine: added to it (already there – nothing changes). */
   const placePerson = (personId: string, machineId: string) =>
     draft.assignments[machineId]?.personIds.includes(personId) ? undefined : togglePerson(db, shiftId, machineId, personId);
+  drop.current = {
+    place: async (personId, machineId, from) => {
+      if (from) await togglePerson(db, shiftId, from, personId); // off the machine it was picked up from
+      await placePerson(personId, machineId);
+    },
+    discard: (personId, from) => togglePerson(db, shiftId, from, personId),
+  };
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   const personOf = new Map(people.map((p) => [p.id, p]));
   const open = machines.find((m) => m.id === openId);
@@ -202,6 +217,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
    */
   const paint = legendKey === 'EXT' || legendKey === 'INT' || legendKey === 'free' || legendKey === 'prio' ? legendKey : null;
   const tapMachine = (m: Machine) => {
+    if (justDropped()) return; // the tap that ended a drag
     const a = draft.assignments[m.id];
     if (!paint || m.status !== 'active') {
       setOpenId(m.id);
@@ -353,7 +369,11 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             items={visible}
             frame={PLAN_FRAME}
             fill
-            onPlanClick={egg.onPlanClick}
+            onPlanClick={(e) => {
+              egg.onPlanClick(e);
+              // a tap on the empty plan ends a legend selection (highlight / assigning by tapping)
+              if (legendKey && !justDropped() && !(e.target as HTMLElement).closest('.tile, button')) selectLegend(null);
+            }}
           >
             {visible.map((m) => {
               const a = draft.assignments[m.id];
@@ -376,6 +396,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   pale={hit === false && !!a?.type && m.status === 'active'}
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   machineId={m.id}
+                  pressProps={tileDrag.bindHold(m.id, a?.personIds[0], personOf.get(a?.personIds[0] ?? '')?.name ?? '')}
                   onClick={() => tapMachine(m)}
                 />
               );

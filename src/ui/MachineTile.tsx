@@ -38,6 +38,8 @@ interface Props {
   /** Dimmed but keeping its colour, only paler (machines with an order while something is highlighted). */
   pale?: boolean;
   onClick?(): void;
+  /** Pointer handlers on the plan: holding the machine picks up its person (see dragPerson). */
+  pressProps?: Pick<HTMLAttributes<HTMLButtonElement>, 'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel' | 'onClickCapture' | 'onContextMenu'>;
   /** Pointer handlers for dragging in the machine editor. */
   dragProps?: Pick<HTMLAttributes<HTMLButtonElement>, 'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel'>;
 }
@@ -50,7 +52,7 @@ export function tileClass(type: OrderType | null, outOfService: boolean) {
 }
 
 export function MachineTile({
-  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, pale, marks = [], machineId, onClick, dragProps,
+  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, pale, marks = [], machineId, onClick, pressProps, dragProps,
 }: Props) {
   const short = nickOf({ name, nick });
   const first = people[0];
@@ -74,6 +76,7 @@ export function MachineTile({
         touchAction: dragProps ? 'none' : undefined,
       }}
       onClick={onClick}
+      {...pressProps}
       {...dragProps}
     >
       {/* portrait tile so the whole hall fits a tablet: icon, nick, person; the role shows in the figure */}
