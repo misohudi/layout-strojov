@@ -38,8 +38,9 @@ const MPS_HEXES = [
 
 /**
  * Mühlbauer Parts & Systems – the company logo. The hexagons are drawn here (the lettering is an image)
- * so they can turn: each time the logo appears (a shift picked, back to the shift choice) every hexagon
- * flips about its own centre a few times and hands its colour on to the next one, then they settle.
+ * so they can change colour: each time the logo appears (a shift picked, back to the shift choice) the
+ * hexagons swap their colours round – turquoise becomes orange, orange light blue, light blue turquoise –
+ * until each has its own colour again.
  */
 export const MpsLogo = ({ className = '' }: { className?: string }) => (
   <span className={`logo mps-logo ${className}`} role="img" aria-label="MPS – Mühlbauer Parts and Systems">
