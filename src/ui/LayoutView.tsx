@@ -253,7 +253,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
       <div className="plan-area">
         {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
         {(showOffer || stats.peopleWithoutType > 0 || banner) && (
-          <div className="plan-notes">
+          <div className={`plan-notes ${legendKey ? 'plan-notes--faded' : ''}`}>
             {/* backup reminder (from the app) – the same see-through bar as the others */}
             {banner && (
               <div className="plan-offer" role="note">
@@ -269,6 +269,14 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                     ? '1 stroj má ľudí, ale nemá určený typ zakázky.'
                     : `${machinesCount(stats.peopleWithoutType)} ${stats.peopleWithoutType <= 4 ? 'majú' : 'má'} ľudí, ale ${stats.peopleWithoutType <= 4 ? 'nemajú' : 'nemá'} určený typ zakázky.`}
                 </span>
+                {/* highlights those machines on the plan (switching to their zone if needed); again = off */}
+                <button
+                  className="btn btn--small"
+                  aria-pressed={legendKey === 'notype'}
+                  onClick={() => selectLegend(legendKey === 'notype' ? null : 'notype')}
+                >
+                  {legendKey === 'notype' ? 'Skryť' : 'Zobraziť'}
+                </button>
               </div>
             )}
             {showOffer && (

@@ -613,3 +613,9 @@ button.legend__stat { font: inherit; color: var(--text); cursor: pointer; }
 .insight__multi > li { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .insight__multi-who { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 16px; }
 .insight__warn { margin: 0; padding: 6px 10px; border-radius: var(--radius); background: var(--note-bg); color: var(--note-text); font-size: 14px; }
+
+/* info bar "people but no order type" → Zobraziť */
+.zone__arrow--hl-notype { background: var(--signal-yellow); color: var(--prio-ink); }
+/* while machines are highlighted, the info bars fade so the machines under them show */
+.plan-notes { transition: opacity 0.2s ease; }
+.plan-notes--faded { opacity: 0.45; }
