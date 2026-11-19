@@ -4,11 +4,10 @@ import { HexOutlines } from './Brand';
 import type { Assignment, Machine, Stats } from '../domain/types';
 
 /**
- * Legend items, plus 'unstaffed' (tap on Obsadenosť: machines with an order but nobody on them) and
- * 'multi' (tap on Viacobsluha: machines of people working on several machines) and 'notype' (the info
+ * Legend items, plus 'multi' (tap on Viacobsluha: machines of people working on several machines) and 'notype' (the info
  * bar's "Zobraziť": machines with people but no order type).
  */
-export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio' | 'unstaffed' | 'multi' | 'notype';
+export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio' | 'multi' | 'notype';
 
 /** Does a machine belong to a legend item? Used to highlight those machines on the plan. */
 export function matchesLegend(
@@ -25,8 +24,6 @@ export function matchesLegend(
       return !active;
     case 'prio':
       return active && !!a?.type && !!a.priority;
-    case 'unstaffed':
-      return active && !!a?.type && (a.personIds?.length ?? 0) === 0;
     case 'notype':
       return active && !a?.type && (a?.personIds?.length ?? 0) > 0;
     case 'multi':

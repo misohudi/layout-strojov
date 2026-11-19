@@ -52,7 +52,28 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
       people: shown.filter((p) => p.shiftId === s.id).sort(byName),
     }))
     .filter((g) => g.people.length > 0);
+  const own = sections.find((g) => g.shift.id === currentShiftId);
+  const others = sections.filter((g) => g.shift.id !== currentShiftId);
+  const [othersOpen, setOthersOpen] = useState(false);
+  /** Folded away, people of other shifts already on machines still show. */
+  const othersOnMachines = others.flatMap((g) => g.people).filter((p) => machinesOf(p.id).length > 0);
   const open = people.find((p) => p.id === openId);
+  const personBadge = (p: Person) => {
+    const mine = machinesOf(p.id);
+    return (
+      <button
+        key={p.id}
+        type="button"
+        className={`person person--drag ${mine.length ? 'person--on' : ''}`}
+        aria-label={mine.length ? `${p.name} – ${mine.map((m) => m.name).join(', ')}` : `${p.name} – voľný`}
+        {...drag.bind(p.id)}
+        onClick={() => setOpenId(p.id)}
+      >
+        <span>{p.name}</span>
+        <small className="person__count">{mine.length > 0 ? mine.map((m) => nickOf(m)).join(' · ') : 'voľný'}</small>
+      </button>
+    );
+  };
 
   if (open) {
     return (
@@ -88,36 +109,31 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
               </button>
             ))}
           </div>
-          <p className="muted drag-hint">Človeka potiahnite prstom na stroj. Ťuknutím otvoríte jeho stroje.</p>
+          <p className="muted drag-hint">Človeka podržte a potiahnite na stroj. Ťuknutím otvoríte jeho stroje.</p>
         </div>
         {sections.length === 0 && <p className="muted">Žiadni ľudia – pridajte ich v nastaveniach.</p>}
-        {sections.map((g) => (
-          <section key={g.shift.id} className="people-section" aria-label={g.title}>
-            <h3>{g.title}</h3>
-            <div className="people-list">
-              {g.people.map((p) => {
-                const own = machinesOf(p.id);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className={`person person--drag ${own.length ? 'person--on' : ''}`}
-                    aria-label={own.length ? `${p.name} – ${own.map((m) => m.name).join(', ')}` : `${p.name} – voľný`}
-                    {...drag.bind(p.id)}
-                    onClick={() => setOpenId(p.id)}
-                  >
-                    <span>{p.name}</span>
-                    {own.length > 0 ? (
-                      <small className="person__count">{own.map((m) => nickOf(m)).join(' · ')}</small>
-                    ) : (
-                      <small className="person__count">voľný</small>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+        {own && (
+          <section className="people-section" aria-label={own.title}>
+            <h3>{own.title}</h3>
+            <div className="people-list">{own.people.map(personBadge)}</div>
           </section>
-        ))}
+        )}
+        {/* the other shifts and "Ostatní" are folded away, as on the machine card */}
+        {others.length > 0 && (
+          <button type="button" className="link-btn" aria-expanded={othersOpen} onClick={() => setOthersOpen(!othersOpen)}>
+            {othersOpen ? '▾' : '▸'} Iné zmeny (nadčas) a ostatní
+          </button>
+        )}
+        {!othersOpen && othersOnMachines.length > 0 && (
+          <div className="people-list">{othersOnMachines.map(personBadge)}</div>
+        )}
+        {othersOpen &&
+          others.map((g) => (
+            <section key={g.shift.id} className="people-section" aria-label={g.title}>
+              <h4>{g.title}</h4>
+              <div className="people-list">{g.people.map(personBadge)}</div>
+            </section>
+          ))}
       </div>
     </div>
   );
