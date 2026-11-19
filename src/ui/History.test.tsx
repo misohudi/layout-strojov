@@ -35,6 +35,13 @@ afterEach(() => {
   db.close();
 });
 
+/** One "Exportovať" button; the way out is chosen in its menu. */
+async function exportVia(label: string) {
+  await userEvent.click(screen.getByRole('button', { name: 'Exportovať' }));
+  const menu = await screen.findByRole('dialog', { name: 'Exportovať' });
+  return within(menu).getByRole('button', { name: label });
+}
+
 const bodyRows = () => within(screen.getByRole('table')).getAllByRole('row').slice(1);
 
 test('lists records newest first and filters by shift', async () => {
@@ -46,20 +53,23 @@ test('lists records newest first and filters by shift', async () => {
   expect(bodyRows()[0]).toHaveTextContent('9.11.2026');
 });
 
-test('exports filtered records to Excel', async () => {
+test('one export button: Excel is shared or downloaded from its menu, which closes afterwards', async () => {
   await screen.findByText('10.11.2026');
-  await userEvent.click(screen.getByRole('button', { name: 'Exportovať do Excelu' }));
+  await userEvent.click(await exportVia('Zdieľať Excel'));
   await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^Historia_obsadenosti_.*\.xlsx$/)));
+  await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Exportovať' })).toBeNull());
+  await userEvent.click(await exportVia('Stiahnuť Excel'));
+  await vi.waitFor(() => expect(vi.mocked(downloadBlob)).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/\.xlsx$/)));
 });
 
 test('the filtered records download straight to the device as a PDF; sharing reuses the same file', async () => {
   // on Android the share sheet has no "save to the device" target, so the PDF is downloaded directly
   await screen.findByText('10.11.2026');
   await userEvent.selectOptions(screen.getByLabelText('Zmena'), 'A');
-  await userEvent.click(screen.getByRole('button', { name: 'Stiahnuť PDF' }));
+  await userEvent.click(await exportVia('Stiahnuť PDF'));
   await vi.waitFor(() => expect(vi.mocked(downloadBlob)).toHaveBeenCalledWith(expect.any(Blob), 'Historia_layoutov.pdf'));
   expect(vi.mocked(buildRecordsPdf).mock.calls[0][0].map((r) => r.id)).toEqual(['r1']);
-  await userEvent.click(screen.getByRole('button', { name: 'Zdieľať PDF' }));
+  await userEvent.click(await exportVia('Zdieľať PDF'));
   await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Historia_layoutov.pdf'));
   expect(vi.mocked(buildRecordsPdf)).toHaveBeenCalledTimes(1); // made once
 });
@@ -73,8 +83,8 @@ test('history and the shift detail have the same round back button as the settin
 test('detail shows the record and can share its report', async () => {
   await userEvent.click(await screen.findByText('10.11.2026'));
   expect(await screen.findByRole('heading', { name: /Zmena B · 10\.11\.2026/ })).toBeInTheDocument();
-  const share = screen.getByRole('button', { name: 'Zdieľať report' });
-  expect(share).toBeDisabled(); // file is prepared first so sharing happens directly in the tap
+  const share = await exportVia('Zdieľať Excel');
+  // the file is prepared first so sharing happens directly in the tap (the choice waits until it is ready)
   await vi.waitFor(() => expect(share).toBeEnabled(), { timeout: 8000 });
   await userEvent.click(share);
   await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Obsadenost_Frezy_2026-11-10_zmena-B.xlsx'));
@@ -92,7 +102,8 @@ test('detail can save its report into the report folder', async () => {
   (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker = async () => dir;
   await pickReportFolder(db);
   await userEvent.click(await screen.findByText('9.11.2026'));
-  const save = await screen.findByRole('button', { name: 'Uložiť do priečinka' });
+  await screen.findByRole('heading', { name: /Zmena A/ });
+  const save = await exportVia('Uložiť do priečinka');
   await vi.waitFor(() => expect(save).toBeEnabled(), { timeout: 8000 });
   await userEvent.click(save);
   expect(await screen.findByText('Report uložený do priečinka REPORT_OBSADENOST.')).toBeInTheDocument();
@@ -102,6 +113,6 @@ test('detail can save its report into the report folder', async () => {
 
 test('without a report folder the detail offers only sharing', async () => {
   await userEvent.click(await screen.findByText('10.11.2026'));
-  await screen.findByRole('button', { name: 'Zdieľať report' });
+  await exportVia('Zdieľať Excel');
   expect(screen.queryByRole('button', { name: 'Uložiť do priečinka' })).toBeNull();
 });
