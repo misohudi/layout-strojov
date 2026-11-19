@@ -7,8 +7,10 @@ import { saveRecordAndReset } from '../db/repo';
 import type { ShiftRecord } from '../domain/types';
 import { shareOrDownload } from '../report/share';
 import { pickReportFolder } from '../report/folder';
+import { buildRecordsPdf } from '../report/pdf';
 
 vi.mock('../report/share', () => ({ shareOrDownload: vi.fn(async () => 'shared') }));
+vi.mock('../report/pdf', () => ({ buildRecordsPdf: vi.fn(async () => new Blob(['%PDF'])), pdfFileName: () => 'Historia_layoutov.pdf' }));
 
 const rec = (id: string, shiftId: string, shiftName: string, date: string): ShiftRecord => ({
   id, shiftId, shiftName, foremanName: 'Novák', date,
@@ -48,6 +50,20 @@ test('exports filtered records to Excel', async () => {
   await screen.findByText('10.11.2026');
   await userEvent.click(screen.getByRole('button', { name: 'Exportovať do Excelu' }));
   await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^Historia_obsadenosti_.*\.xlsx$/)));
+});
+
+test('exports the filtered records to a PDF with their plans', async () => {
+  await screen.findByText('10.11.2026');
+  await userEvent.selectOptions(screen.getByLabelText('Zmena'), 'A');
+  await userEvent.click(screen.getByRole('button', { name: 'Exportovať do PDF' }));
+  await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Historia_layoutov.pdf'));
+  expect(vi.mocked(buildRecordsPdf).mock.calls[0][0].map((r) => r.id)).toEqual(['r1']);
+});
+
+test('history and the shift detail have the same round back button as the settings', async () => {
+  expect(screen.getByRole('button', { name: 'Späť' })).toHaveClass('chip--round');
+  await userEvent.click(await screen.findByText('10.11.2026'));
+  expect(await screen.findByRole('button', { name: 'Späť' })).toHaveClass('chip--round');
 });
 
 test('detail shows the record and can share its report', async () => {

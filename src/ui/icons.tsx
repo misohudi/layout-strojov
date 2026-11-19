@@ -58,3 +58,12 @@ export const BackIcon = () => (
     <path d="M19 12H5M11 6l-6 6 6 6" />
   </svg>
 );
+
+/** Round back button with a left arrow – the same in settings, history and the shift report. */
+export function BackButton({ onClick }: { onClick(): void }) {
+  return (
+    <button type="button" className="chip chip--round" aria-label="Späť" title="Späť" onClick={onClick}>
+      <BackIcon />
+    </button>
+  );
+}
