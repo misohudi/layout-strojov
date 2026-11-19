@@ -1,7 +1,6 @@
 /* Design elements of the Mühlbauer corporate design manual: logos, hexagons and the graphic bar. */
 import mps from '../assets/brand/mps.png';
 import mpsDark from '../assets/brand/mps-dark.png';
-import mpsMark from '../assets/brand/mps-mark.png';
 import muehlbauer from '../assets/brand/muehlbauer.png';
 import muehlbauerDark from '../assets/brand/muehlbauer-dark.png';
 
@@ -75,7 +74,17 @@ export const MuehlbauerLogo = ({ className = '' }: { className?: string }) => (
   <ThemedLogo light={muehlbauer} dark={muehlbauerDark} alt="Mühlbauer High Tech International" className={className} />
 );
 
-/** The MPS hexagon mark alone (header). */
-export const MpsMark = ({ className = '' }: { className?: string }) => (
-  <img className={className} src={mpsMark} alt="MPS" />
-);
+
+/** Three outlined hexagons (orange, light and dark turquoise) – the corner mark before the legend. */
+export function HexOutlines({ className = '' }: { className?: string }) {
+  const hex = (cx: number, cy: number) => hexPoints(cx, cy, 100);
+  return (
+    <svg className={className} viewBox="0 0 410 410" aria-hidden="true">
+      <g fill="none" strokeWidth={14} strokeLinejoin="round">
+        <polygon points={hex(117, 108)} style={{ stroke: 'var(--mb-orange)' }} />
+        <polygon points={hex(117, 304)} style={{ stroke: 'var(--mb-600)' }} />
+        <polygon points={hex(295, 206)} style={{ stroke: '#8bc0c7' }} />
+      </g>
+    </svg>
+  );
+}

@@ -221,11 +221,17 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onMachineList={() => setListOpen(true)}
         onPeopleList={setPeopleRole}
       />
-      {banner}
       <div className="plan-area">
         {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
-        {(showOffer || stats.peopleWithoutType > 0) && (
+        {(showOffer || stats.peopleWithoutType > 0 || banner) && (
           <div className="plan-notes">
+            {/* backup reminder (from the app) – the same see-through bar as the others */}
+            {banner && (
+              <div className="plan-offer" role="note">
+                <InfoIcon />
+                {banner}
+              </div>
+            )}
             {stats.peopleWithoutType > 0 && (
               <div className="plan-offer" role="alert">
                 <InfoIcon />

@@ -53,10 +53,10 @@ export default function App() {
         onCloseShift={() => setScreen('close')}
         banner={
           backupDue && (
-            <div className="notice notice--warn">
-              Odporúčame uložiť zálohu dát (posledná je staršia ako 7 dní).
+            <>
+              <span>Odporúčame uložiť zálohu dát (posledná je staršia ako 7 dní).</span>
               <button className="btn btn--small" onClick={() => setScreen('backup')}>Uložiť zálohu teraz</button>
-            </div>
+            </>
           )
         }
       />

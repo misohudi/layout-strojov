@@ -532,6 +532,9 @@ tr.clickable { cursor: pointer; }
   :root[data-theme='system'] .logo__light { display: none !important; }
   :root[data-theme='system'] .logo__dark { display: block !important; }
 }
-/* the MPS hexagon mark next to the shift button (left out where the header is tight) */
-.header__mark { height: 40px; width: auto; margin-left: 10px; }
-@media (max-width: 1000px) { .header__mark { display: none; } }
+/* the full MPS logo in the top-left corner, before the shift button (left out where the header is tight) */
+.header__logo { flex: none; margin-right: 8px; }
+.header__logo img { height: 46px; width: auto; display: block; }
+@media (max-width: 1000px) { .header__logo { display: none; } }
+/* three outlined hexagons in the bottom-left corner, before the legend */
+.legend__hexes { flex: none; width: 60px; height: 60px; align-self: center; }
