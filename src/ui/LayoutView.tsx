@@ -7,13 +7,19 @@ import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
 import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
+import { PeopleList } from './PeopleList';
 import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
-import { isPool, type Hall } from '../domain/types';
+import { isPool, type Hall, type PersonRole } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
+/** Slovak plural: 1 stroj, 2–4 stroje, 5+ (and 0) strojov. */
+export function machinesCount(n: number): string {
+  return `${n} ${n === 1 ? 'stroj' : n >= 2 && n <= 4 ? 'stroje' : 'strojov'}`;
+}
+
 const ZONE_KEY = 'layout-strojov.zone';
 function readZone(): string | null {
   try {
@@ -89,6 +95,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const recordCount = useLiveQuery(() => db.records.count(), [db]) ?? 0;
   const [openId, setOpenId] = useState<string | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  /** List of people opened from Frézari / Operátori in the header (the role shown first). */
+  const [peopleRole, setPeopleRole] = useState<PersonRole | null>(null);
   /** Legend item whose machines are highlighted on the plan. */
   const [legendKey, setLegendKey] = useState<LegendKey | null>(null);
   /** A machine opened from the machine list returns to the list when closed. */
@@ -211,6 +219,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onHistory={onHistory}
         onSettings={onSettings}
         onMachineList={() => setListOpen(true)}
+        onPeopleList={setPeopleRole}
       />
       {banner}
       <div className="plan-area">
@@ -223,7 +232,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                 <span>
                   {stats.peopleWithoutType === 1
                     ? '1 stroj má ľudí, ale nemá určený typ zakázky.'
-                    : `${stats.peopleWithoutType} stroje/strojov majú ľudí, ale nemajú určený typ zakázky.`}
+                    : `${machinesCount(stats.peopleWithoutType)} ${stats.peopleWithoutType <= 4 ? 'majú' : 'má'} ľudí, ale ${stats.peopleWithoutType <= 4 ? 'nemajú' : 'nemá'} určený typ zakázky.`}
                 </span>
               </div>
             )}
@@ -337,6 +346,18 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             setOpenId(id);
           }}
           onClose={() => setListOpen(false)}
+        />
+      )}
+      {peopleRole && (
+        <PeopleList
+          people={people}
+          shifts={shifts}
+          currentShiftId={shiftId}
+          machines={machines}
+          halls={halls}
+          assignments={draft.assignments}
+          initialRole={peopleRole}
+          onClose={() => setPeopleRole(null)}
         />
       )}
       {open && (

@@ -2,6 +2,7 @@ import type { HTMLAttributes } from 'react';
 import { ROLE_LABEL, type MachineKind, type OrderType, type PersonRole } from '../domain/types';
 import { MachineIcon } from './MachineIcon';
 import { nickOf } from '../domain/nick';
+import { ScrollText } from './ScrollText';
 
 export interface TilePerson {
   name: string;
@@ -69,13 +70,13 @@ export function MachineTile({
     >
       {/* portrait tile so the whole hall fits a tablet: icon, nick, person; the role shows in the figure */}
       <MachineIcon figure={figure} kind={kind} />
-      <span className="tile__nick" aria-hidden="true">{short}</span>
+      <span className="tile__nick" aria-hidden="true"><ScrollText text={short} /></span>
       <span className="visually-hidden">{name}</span>
       {/* the person line is always there (empty when free), so icon and nick never move */}
       {!first && <span className="tile__person" aria-hidden="true">{' '}</span>}
       {first && (
         <span className="tile__person">
-          <span className="tile__person-name">{` ${first.name}`}</span>
+          <ScrollText className="tile__person-name" text={first.name} />
           {multi > 0 && (
             <span className="tile__multi" title={`Viacobsluha – ${multi} stroje`}>
               {` ${multi}×`}

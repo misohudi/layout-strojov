@@ -8,6 +8,13 @@ export const THEMES: { value: Theme; label: string }[] = [
   { value: 'system', label: 'Podľa zariadenia' },
 ];
 
+/** Header button cycles light → dark → by device → light. */
+export function nextTheme(theme: Theme): Theme {
+  return theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light';
+}
+
+export const themeLabel = (theme: Theme) => THEMES.find((t) => t.value === theme)!.label;
+
 const isTheme = (v: unknown): v is Theme => v === 'light' || v === 'dark' || v === 'system';
 
 /** Switches the colours: styles.css defines the dark palette for data-theme="dark" (and "system" when the device is dark). */

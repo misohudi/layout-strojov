@@ -1,8 +1,13 @@
 export type OrderType = 'EXT' | 'INT';
 export type MachineStatus = 'active' | 'out_of_service';
 
-/** Kind of machine: a milling machine (machining centre, the default) or a lathe – sets its icon. */
+/** Kind of machine; machines without one are mills (all machines were mills before). */
 export type MachineKind = 'mill' | 'lathe';
+
+export const MACHINE_KINDS: { value: MachineKind; label: string }[] = [
+  { value: 'mill', label: 'Fréza' },
+  { value: 'lathe', label: 'Sústruh' },
+];
 
 /** A zone (workplace) of the department with its own floor plan, e.g. the milling hall or HSC. */
 export interface Hall {
@@ -17,13 +22,13 @@ export interface Machine {
   name: string;
   /** Short name shown on the tile (empty = made from the name automatically). */
   nick?: string;
-  /** Milling machine (default) or lathe. */
-  kind?: MachineKind;
   x: number;
   y: number;
   w: number;
   h: number;
   status: MachineStatus;
+  /** Fréza or sústruh (empty = fréza). */
+  kind?: MachineKind;
 }
 
 export interface Shift {

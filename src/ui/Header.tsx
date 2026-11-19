@@ -1,7 +1,10 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { formatPct } from '../report/xlsx';
-import { GearIcon, HistoryIcon, svg } from './icons';
-import type { Stats } from '../domain/types';
+import { AutoThemeIcon, GearIcon, HistoryIcon, MoonIcon, SunIcon, svg } from './icons';
+import { useDB } from './useDB';
+import { loadTheme, nextTheme, saveTheme, themeLabel } from './theme';
+import type { PersonRole, Stats } from '../domain/types';
 
 interface Props {
   shiftName: string;
@@ -12,6 +15,8 @@ interface Props {
   onHistory(): void;
   onSettings(): void;
   onMachineList(): void;
+  /** Tap on Frézari / Operátori: the list of people of that role. */
+  onPeopleList(role: PersonRole): void;
 }
 
 /** One header field: small label on top, value below. Every field has the same size. */
@@ -39,6 +44,22 @@ function IconButton({ name, icon, onClick }: { name: string; icon: ReactNode; on
     <button type="button" className="hcell hcell--btn hcell--icon" aria-label={name} title={name} onClick={onClick}>
       {icon}
     </button>
+  );
+}
+
+/** Appearance: the icon shows the current mode, a tap switches to the next one. */
+function ThemeButton() {
+  const db = useDB();
+  const maskId = `theme-a-${useId().replace(/:/g, '')}`;
+  const theme = useLiveQuery(() => loadTheme(db), [db]) ?? 'light';
+  const next = nextTheme(theme);
+  const icon = theme === 'dark' ? <MoonIcon /> : theme === 'system' ? <AutoThemeIcon id={maskId} /> : <SunIcon />;
+  return (
+    <IconButton
+      name={`Vzhľad: ${themeLabel(theme)} – prepnúť na ${themeLabel(next)}`}
+      icon={icon}
+      onClick={() => saveTheme(db, next)}
+    />
   );
 }
 
@@ -70,7 +91,7 @@ function Section({ title, place, children }: { title: string; place: 'start' | '
   );
 }
 
-export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList }: Props) {
+export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, onHistory, onSettings, onMachineList, onPeopleList }: Props) {
   return (
     <header className="header">
       <Section title="Zmena" place="start">
@@ -92,8 +113,8 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
           name={`${stats.staffed ?? 0} / ${stats.total} strojov`}
           onClick={onMachineList}
         />
-        <Cell label="Frézari" value={stats.frezari ?? 0} />
-        <Cell label="Operátori" value={stats.operatori ?? 0} />
+        <CellButton label="Frézari" value={stats.frezari ?? 0} name={`Frézari ${stats.frezari ?? 0} – zoznam ľudí`} onClick={() => onPeopleList('frezar')} />
+        <CellButton label="Operátori" value={stats.operatori ?? 0} name={`Operátori ${stats.operatori ?? 0} – zoznam ľudí`} onClick={() => onPeopleList('operator')} />
         <Cell
           label="Viacobsluha"
           value={
@@ -109,6 +130,7 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
         />
       </Section>
       <Section title="Aplikácia" place="end">
+        <ThemeButton />
         <IconButton name="História" icon={<HistoryIcon />} onClick={onHistory} />
         <IconButton name="Nastavenia" icon={<GearIcon />} onClick={onSettings} />
       </Section>
