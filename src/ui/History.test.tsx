@@ -5,11 +5,11 @@ import { DBProvider } from './useDB';
 import { openDB, ensureSeeded, type AppDB } from '../db/db';
 import { saveRecordAndReset } from '../db/repo';
 import type { ShiftRecord } from '../domain/types';
-import { shareOrDownload } from '../report/share';
+import { downloadBlob, shareOrDownload } from '../report/share';
 import { pickReportFolder } from '../report/folder';
 import { buildRecordsPdf } from '../report/pdf';
 
-vi.mock('../report/share', () => ({ shareOrDownload: vi.fn(async () => 'shared') }));
+vi.mock('../report/share', () => ({ shareOrDownload: vi.fn(async () => 'shared'), downloadBlob: vi.fn() }));
 vi.mock('../report/pdf', () => ({ buildRecordsPdf: vi.fn(async () => new Blob(['%PDF'])), pdfFileName: () => 'Historia_layoutov.pdf' }));
 
 const rec = (id: string, shiftId: string, shiftName: string, date: string): ShiftRecord => ({
@@ -52,12 +52,16 @@ test('exports filtered records to Excel', async () => {
   await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), expect.stringMatching(/^Historia_obsadenosti_.*\.xlsx$/)));
 });
 
-test('exports the filtered records to a PDF with their plans', async () => {
+test('the filtered records download straight to the device as a PDF; sharing reuses the same file', async () => {
+  // on Android the share sheet has no "save to the device" target, so the PDF is downloaded directly
   await screen.findByText('10.11.2026');
   await userEvent.selectOptions(screen.getByLabelText('Zmena'), 'A');
-  await userEvent.click(screen.getByRole('button', { name: 'Exportovať do PDF' }));
-  await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Historia_layoutov.pdf'));
+  await userEvent.click(screen.getByRole('button', { name: 'Stiahnuť PDF' }));
+  await vi.waitFor(() => expect(vi.mocked(downloadBlob)).toHaveBeenCalledWith(expect.any(Blob), 'Historia_layoutov.pdf'));
   expect(vi.mocked(buildRecordsPdf).mock.calls[0][0].map((r) => r.id)).toEqual(['r1']);
+  await userEvent.click(screen.getByRole('button', { name: 'Zdieľať PDF' }));
+  await vi.waitFor(() => expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Historia_layoutov.pdf'));
+  expect(vi.mocked(buildRecordsPdf)).toHaveBeenCalledTimes(1); // made once
 });
 
 test('history and the shift detail have the same round back button as the settings', async () => {
