@@ -9,6 +9,7 @@ import { MachinePanel } from './MachinePanel';
 import { MachineList } from './MachineList';
 import { PeopleList } from './PeopleList';
 import { Legend, matchesLegend, type LegendKey } from './Legend';
+import { StaffingSheet, UtilizationSheet } from './ShiftInsights';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
 import { clearDraft, copyFromLastRecord } from '../db/repo';
@@ -99,8 +100,11 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const [peopleRole, setPeopleRole] = useState<PersonRole | null>(null);
   /** Legend item whose machines are highlighted on the plan. */
   const [legendKey, setLegendKey] = useState<LegendKey | null>(null);
-  /** A machine opened from the machine list returns to the list when closed. */
-  const [backToList, setBackToList] = useState(false);
+  /** Sheets opened from Obsadenosť ("kde chýbajú ľudia") and Vyťaženie strojov. */
+  const [staffingOpen, setStaffingOpen] = useState(false);
+  const [utilOpen, setUtilOpen] = useState(false);
+  /** A machine opened from a list returns to that list when closed. */
+  const [backTo, setBackTo] = useState<'list' | 'staffing' | null>(null);
   const egg = useEasterEgg();
   // per open shift: whether the "take over from the last shift" card was closed, and which zones the
   // foreman has already looked at (the arrows towards the others pulse)
@@ -220,6 +224,16 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
         onSettings={onSettings}
         onMachineList={() => setListOpen(true)}
         onPeopleList={setPeopleRole}
+        staffingOn={legendKey === 'unstaffed'}
+        onStaffing={() => {
+          // first tap: highlight the machines without people and list them; tapped again: off
+          if (legendKey === 'unstaffed' && !staffingOpen) {
+            selectLegend(null);
+            return;
+          }
+          selectLegend('unstaffed');
+          setStaffingOpen(true);
+        }}
       />
       <div className="plan-area">
         {/* info bars: a see-through yellowish layer over the zone name, not pushing the plan down */}
@@ -326,7 +340,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           )}
         </div>
       </div>
-      <Legend stats={stats} selected={legendKey} onSelect={selectLegend}>
+      <Legend stats={stats} selected={legendKey} onSelect={selectLegend} onUtilization={() => setUtilOpen(true)}>
         <button
           className="btn btn--danger-outline"
           disabled={isEmpty}
@@ -348,10 +362,35 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           nameOf={nameOf}
           onPick={(id) => {
             setListOpen(false);
-            setBackToList(true);
+            setBackTo('list');
             setOpenId(id);
           }}
           onClose={() => setListOpen(false)}
+        />
+      )}
+      {staffingOpen && (
+        <StaffingSheet
+          machines={machines}
+          halls={halls}
+          assignments={draft.assignments}
+          people={people}
+          shiftId={shiftId}
+          stats={stats}
+          onPick={(id) => {
+            setStaffingOpen(false);
+            setBackTo('staffing');
+            setOpenId(id);
+          }}
+          onClose={() => setStaffingOpen(false)}
+        />
+      )}
+      {utilOpen && (
+        <UtilizationSheet
+          machines={machines}
+          halls={halls}
+          assignments={draft.assignments}
+          stats={stats}
+          onClose={() => setUtilOpen(false)}
         />
       )}
       {peopleRole && (
@@ -376,10 +415,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           counts={counts}
           onClose={() => {
             setOpenId(null);
-            if (backToList) {
-              setBackToList(false);
-              setListOpen(true);
-            }
+            if (backTo === 'list') setListOpen(true);
+            if (backTo === 'staffing') setStaffingOpen(true);
+            setBackTo(null);
           }}
         />
       )}

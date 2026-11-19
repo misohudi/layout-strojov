@@ -3,7 +3,8 @@ import { formatPct } from '../report/xlsx';
 import { HexOutlines } from './Brand';
 import type { Assignment, Machine, Stats } from '../domain/types';
 
-export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio';
+/** Legend items, plus 'unstaffed' (tap on Obsadenosť: machines with an order but nobody on them). */
+export type LegendKey = 'EXT' | 'INT' | 'free' | 'oos' | 'prio' | 'unstaffed';
 
 /** Does a machine belong to a legend item? Used to highlight those machines on the plan. */
 export function matchesLegend(key: LegendKey, m: Machine, a: Assignment | undefined): boolean {
@@ -18,6 +19,8 @@ export function matchesLegend(key: LegendKey, m: Machine, a: Assignment | undefi
       return !active;
     case 'prio':
       return active && !!a?.type && !!a.priority;
+    case 'unstaffed':
+      return active && !!a?.type && (a.personIds?.length ?? 0) === 0;
   }
 }
 
@@ -26,11 +29,13 @@ interface Props {
   /** Highlighted legend item (its machines are zoomed slightly, the rest greyed out). */
   selected: LegendKey | null;
   onSelect(key: LegendKey | null): void;
+  /** Tap on "Vyťaženie strojov": the breakdown and the trend. */
+  onUtilization?(): void;
   /** Buttons on the right (Vyčistiť, Uzavrieť…). */
   children: ReactNode;
 }
 
-export function Legend({ stats, selected, onSelect, children }: Props) {
+export function Legend({ stats, selected, onSelect, onUtilization, children }: Props) {
   // short labels on screen so the legend, "Vyťaženie strojov" and the actions fit one row; full names for screen readers
   const items: { key: LegendKey; label: string; short: string; mark: ReactNode; count: number; pct?: number | null }[] = [
     { key: 'EXT', label: 'EXT – externá', short: 'EXT', mark: <i className="sw tile--ext" />, count: stats.ext, pct: stats.extPct },
@@ -65,11 +70,16 @@ export function Legend({ stats, selected, onSelect, children }: Props) {
             </button>
           ))}
         </div>
-        <div className="legend__stat" role="group" aria-label={`Vyťaženie strojov ${formatPct(stats.occupancyPct)}`}>
+        <button
+          type="button"
+          className="legend__stat"
+          aria-label={`Vyťaženie strojov ${formatPct(stats.occupancyPct)} – rozpis a vývoj`}
+          onClick={onUtilization}
+        >
           <span className="legend__stat-label">Vyťaženie strojov</span>
           <strong className="legend__stat-value">{formatPct(stats.occupancyPct)}</strong>
           <small className="legend__stat-sub">{`${stats.occupied} / ${stats.total} so zákazkou`}</small>
-        </div>
+        </button>
       </div>
       <div className="legend__actions">
         {children}
