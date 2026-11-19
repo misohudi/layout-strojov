@@ -19,41 +19,6 @@ function hexPoints(cx: number, cy: number, r: number): string {
     .join(' ');
 }
 
-/** One hexagon lit from above: a lighter top half over the base colour. */
-function Hex({ cx, cy, r, color }: { cx: number; cy: number; r: number; color: string }) {
-  return (
-    <g>
-      <polygon points={hexPoints(cx, cy, r)} style={{ fill: color }} />
-      <polygon points={hexPoints(cx, cy, r)} fill="url(#mb-hex-light)" />
-    </g>
-  );
-}
-
-const LIGHT = (
-  <defs>
-    <linearGradient id="mb-hex-light" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stopColor="#fff" stopOpacity="0.35" />
-      <stop offset="0.5" stopColor="#fff" stopOpacity="0.05" />
-      <stop offset="1" stopColor="#000" stopOpacity="0.08" />
-    </linearGradient>
-  </defs>
-);
-
-/** The graphic bar: always exactly three hexagons, then the gradient line. */
-export function BrandBar() {
-  return (
-    <div className="brand-bar" aria-hidden="true">
-      <svg className="brand-bar__hexes" viewBox="0 0 46 40">
-        {LIGHT}
-        <Hex cx={12} cy={11} r={10} color="var(--mb-neutral)" />
-        <Hex cx={27} cy={20} r={10} color="var(--mb-200)" />
-        <Hex cx={12} cy={29} r={10} color="var(--mb-600)" />
-      </svg>
-      <span className="brand-bar__line" />
-    </div>
-  );
-}
-
 /** A logo in its normal and its dark-background version; CSS shows the one that fits the theme. */
 function ThemedLogo({ light, dark, alt, className }: { light: string; dark: string; alt: string; className: string }) {
   return (

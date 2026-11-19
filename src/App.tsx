@@ -17,6 +17,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('picker');
   const [shiftId, setShiftId] = useState<string | null>(null);
   const [settingsFromStart, setSettingsFromStart] = useState(false);
+  const [historyFromStart, setHistoryFromStart] = useState(false);
   const backupDue = useLiveQuery(async () => {
     if ((await db.records.count()) === 0) return false;
     return isBackupDue(await getMeta<string>(db, 'lastBackupAt'), new Date());
@@ -26,6 +27,8 @@ export default function App() {
     return <SettingsView initialTab="shifts" onBack={() => setSettingsFromStart(false)} />;
   }
 
+  if (historyFromStart) return <HistoryView onBack={() => setHistoryFromStart(false)} />;
+
   if (screen === 'picker' || !shiftId) {
     return (
       <ShiftPicker
@@ -34,6 +37,7 @@ export default function App() {
           setScreen('layout');
         }}
         onSettings={() => setSettingsFromStart(true)}
+        onHistory={() => setHistoryFromStart(true)}
       />
     );
   }

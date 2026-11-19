@@ -64,6 +64,17 @@ function ThemeButton() {
   );
 }
 
+/** The app's buttons: appearance, history, settings – in the header and on the start screen. */
+export function AppButtons({ onHistory, onSettings }: { onHistory(): void; onSettings(): void }) {
+  return (
+    <>
+      <ThemeButton />
+      <IconButton name="História" icon={<HistoryIcon />} onClick={onHistory} />
+      <IconButton name="Nastavenia" icon={<GearIcon />} onClick={onSettings} />
+    </>
+  );
+}
+
 /** Small person and machine pictograms for the viacobsluha count. */
 const PersonIcon = () => (
   <svg {...svg} className="hicon hicon--sm" data-testid="icon-people">
@@ -132,9 +143,7 @@ export function Header({ shiftName, longestShiftName = 0, stats, onChangeShift, 
         />
       </Section>
       <Section title="Aplikácia" place="end">
-        <ThemeButton />
-        <IconButton name="História" icon={<HistoryIcon />} onClick={onHistory} />
-        <IconButton name="Nastavenia" icon={<GearIcon />} onClick={onSettings} />
+        <AppButtons onHistory={onHistory} onSettings={onSettings} />
       </Section>
     </header>
   );
