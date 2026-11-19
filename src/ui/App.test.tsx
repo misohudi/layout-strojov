@@ -851,3 +851,22 @@ test('the machine card pages to the previous / next machine without closing', as
   fireEvent.touchEnd(card2, { changedTouches: [{ clientX: 260, clientY: 305 }] });
   await vi.waitFor(() => expect(screen.getByRole('dialog').getAttribute('aria-label')).toBe(name1));
 });
+
+test('a person from the people list: free machines (and their own) first, machines of other people folded away', async () => {
+  const k = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true, role: 'frezar' });
+  const h = await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true, role: 'frezar' });
+  await startDraft(db, 's-B', 'B', new Date());
+  await togglePerson(db, 's-B', 'm-0', k); // Kováč's own
+  await togglePerson(db, 's-B', 'm-1', h); // taken by Horváth
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(screen.getByRole('button', { name: /^Frézari 2/ }));
+  const list = await screen.findByRole('dialog', { name: 'Zoznam ľudí' });
+  await userEvent.click(within(list).getByRole('button', { name: /^Kováč – / }));
+  const panel = await screen.findByRole('dialog', { name: /Kováč/ });
+  const names = () => within(panel).getAllByRole('checkbox').map((c) => c.closest('label')!.textContent);
+  expect(names().some((n) => n?.startsWith('HERMLE C60'))).toBe(true); // own machine stays
+  expect(names().some((n) => n?.includes('Horváth'))).toBe(false); // the taken one is folded away
+  await userEvent.click(within(panel).getByRole('button', { name: /Obsadené stroje \(1\)/ }));
+  expect(names().some((n) => n?.includes('Horváth'))).toBe(true);
+});
