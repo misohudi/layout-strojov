@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { buildShiftRecord } from '../domain/record';
-import { computeStats } from '../domain/stats';
+import { multiText, computeStats } from '../domain/stats';
 import { saveRecordAndReset } from '../db/repo';
 import { buildReportXlsx, formatPct, reportFileName } from '../report/xlsx';
 import { APP_UPDATED_MESSAGE, loadExcel } from '../report/excel';
@@ -131,8 +131,8 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
         <h2>{closed ? 'Zmena uzavretá' : 'Uzavrieť zmenu'}</h2>
         <p>
           Obsadenosť <strong>{formatPct(stats.staffedPct)}</strong> ({stats.staffed ?? 0} / {stats.total} strojov s ľuďmi) ·
-          Frézari {stats.frezari ?? 0} · Operátori {stats.operatori ?? 0} · Viacobsluha {stats.multiPeople ?? 0} ľ /{' '}
-          {stats.multiMachines ?? 0} str
+          Frézari {stats.frezari ?? 0} · Operátori {stats.operatori ?? 0} · Viacobsluha{' '}
+          {multiText(stats.multiPeople ?? 0, stats.multiMachines)}
           <br />
           <span className="muted">
             Vyťaženie strojov {formatPct(stats.occupancyPct)} ({stats.occupied}) · EXT {stats.ext} ({formatPct(stats.extPct)}) ·

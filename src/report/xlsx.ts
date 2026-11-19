@@ -1,6 +1,7 @@
 import type ExcelJS from 'exceljs';
 import { loadExcel } from './excel';
 import type { RecordRow, ShiftRecord } from '../domain/types';
+import { multiText } from '../domain/stats';
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const FILL = { EXT: 'FF93C5FD', INT: 'FFFCA5A5' } as const;
@@ -45,7 +46,7 @@ export async function buildReportXlsx(r: ShiftRecord): Promise<Blob> {
   ws.getCell('A3').value =
     `Strojov: ${s.total}   Obsadené ľuďmi: ${s.staffed ?? '–'} (${formatPct(s.staffedPct)})   ` +
     `Frézari: ${s.frezari ?? '–'}   Operátori: ${s.operatori ?? '–'}   ` +
-    `Viacobsluha: ${s.multiPeople ?? '–'} ľudí / ${s.multiMachines ?? '–'} strojov`;
+    `Viacobsluha: ${multiText(s.multiPeople, s.multiMachines)}`;
   ws.getCell('A4').value =
     `Vyťaženie strojov: ${s.occupied} (${formatPct(s.occupancyPct)})   ` +
     `EXT: ${s.ext} (${formatPct(s.extPct)})   INT: ${s.int} (${formatPct(s.intPct)})`;

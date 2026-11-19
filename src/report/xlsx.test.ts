@@ -43,7 +43,7 @@ test('report header and stats', async () => {
   expect(text).toContain('Frézari: 2');
   expect(text).toContain('Operátori: 1');
   expect(text).toContain('Vyťaženie strojov: 3 (75,0 %)');
-  expect(text).toContain('Viacobsluha: 1 ľudí / 2 strojov');
+  expect(text).toContain('Viacobsluha: 1 človek na 2 strojoch');
   expect(text).toContain('EXT: 2 (67,0 %)');
 });
 

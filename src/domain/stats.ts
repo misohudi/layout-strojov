@@ -62,3 +62,21 @@ export function computeStats(
     peopleWithoutType,
   };
 }
+
+/** "1 človek", "2 ľudia", "5 ľudí". */
+export function peopleCount(n: number): string {
+  if (n === 1) return '1 človek';
+  if (n >= 2 && n <= 4) return `${n} ľudia`;
+  return `${n} ľudí`;
+}
+
+/**
+ * Viacobsluha in words: "2 ľudia na 5 strojoch", "1 človek na 2 strojoch", "nikto" – instead of the
+ * unclear "2 ľ / 5 str". Unknown figures (old records): "–".
+ */
+export function multiText(people: number | null | undefined, machines: number | null | undefined): string {
+  if (people == null) return '–';
+  if (people === 0) return 'nikto';
+  const m = machines ?? 0;
+  return `${peopleCount(people)} na ${m === 1 ? '1 stroji' : `${m} strojoch`}`;
+}
