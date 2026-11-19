@@ -5,7 +5,7 @@ import { PLAN_FRAME, cropped } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
 import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
 import { shareOrDownload } from '../report/share';
-import { buildRecordsPdf, pdfFileName } from '../report/pdf';
+import { PdfButtons } from './PdfButtons';
 import {
   getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
 } from '../report/folder';
@@ -53,7 +53,6 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
   const db = useDB();
   const [folder, setFolder] = useState<FolderHandle | null>(null);
   const [savedTo, setSavedTo] = useState<string | null>(null);
-  const [pdfBusy, setPdfBusy] = useState(false);
   useEffect(() => {
     getReportFolder(db).then((h) => setFolder(h ?? null));
   }, [db]);
@@ -99,23 +98,7 @@ export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack()
         >
           Zdieľať report
         </button>
-        <button
-          className="btn btn--primary"
-          disabled={pdfBusy}
-          onClick={async () => {
-            setPdfBusy(true);
-            setError(null);
-            try {
-              await shareOrDownload(await buildRecordsPdf([record]), pdfFileName([record]));
-            } catch (e) {
-              setError(e instanceof Error ? e.message : String(e));
-            } finally {
-              setPdfBusy(false);
-            }
-          }}
-        >
-          {pdfBusy ? 'Pripravujem PDF…' : 'Zdieľať PDF'}
-        </button>
+        <PdfButtons records={[record]} onError={setError} />
         </div>
       </div>
       {savedTo && <div className="notice notice--ok">{savedTo}</div>}

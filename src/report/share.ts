@@ -12,13 +12,18 @@ export async function shareOrDownload(blob: Blob, fileName: string): Promise<Sha
       // Share failed for another reason (e.g. permission) – fall back to download.
     }
   }
-  const url = URL.createObjectURL(file);
+  downloadBlob(file, fileName);
+  return 'downloaded';
+}
+
+/** Saves the file straight to the device (Downloads), without the share sheet. */
+export function downloadBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  return 'downloaded';
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
