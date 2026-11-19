@@ -79,6 +79,7 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
     return (
       <PersonPanel
         person={open}
+        people={people}
         shiftId={currentShiftId}
         machines={active}
         halls={halls}
@@ -140,8 +141,10 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
 }
 
 /** One person: tap machines to assign or remove them; set the order type of each assigned machine. */
-function PersonPanel({ person, shiftId, machines, halls, assignments, onClose }: {
+function PersonPanel({ person, people, shiftId, machines, halls, assignments, onClose }: {
   person: Person;
+  /** Everyone, for the names of the people on taken machines. */
+  people: Person[];
   shiftId: string;
   machines: Machine[];
   halls: Hall[];
@@ -151,6 +154,35 @@ function PersonPanel({ person, shiftId, machines, halls, assignments, onClose }:
   const db = useDB();
   const mine = machines.filter((m) => assignments[m.id]?.personIds.includes(person.id));
   const zones = halls.length > 1 ? halls : [{ id: '', name: '' } as Hall];
+  const [showTaken, setShowTaken] = useState(false);
+  const nameOf = new Map(people.map((p) => [p.id, p.name]));
+  /** Machines nobody works on yet, and this person's own (so they can be taken off again). */
+  const free = machines.filter((m) => mine.includes(m) || (assignments[m.id]?.personIds.length ?? 0) === 0);
+  /** Machines other people work on. */
+  const taken = machines.filter((m) => !free.includes(m));
+  const machineGroups = (list: Machine[]) =>
+    zones.map((z) => {
+      const inZone = halls.length > 1 ? list.filter((m) => m.hallId === z.id) : list;
+      if (inZone.length === 0) return null;
+      return (
+        <div key={z.id}>
+          {halls.length > 1 && <h4>{z.name}</h4>}
+          <div className="people-list">
+            {inZone.map((m) => {
+              const on = mine.includes(m);
+              const others = (assignments[m.id]?.personIds ?? []).filter((id) => id !== person.id).map((id) => nameOf.get(id) ?? '?');
+              return (
+                <label key={m.id} className={`person ${on ? 'person--on' : ''}`}>
+                  <input type="checkbox" checked={on} onChange={() => togglePerson(db, shiftId, m.id, person.id)} />
+                  <span>{m.name}</span>
+                  {others.length > 0 && <small className="person__count">{others.join(', ')}</small>}
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      );
+    });
   return (
     <div className="sheet-backdrop" onClick={onClose}>
       <div className="sheet sheet--tall" role="dialog" aria-label={person.name} onClick={(e) => e.stopPropagation()}>
@@ -181,26 +213,14 @@ function PersonPanel({ person, shiftId, machines, halls, assignments, onClose }:
           );
         })}
         <h3>Stroje</h3>
-        {zones.map((z) => {
-          const list = halls.length > 1 ? machines.filter((m) => m.hallId === z.id) : machines;
-          if (list.length === 0) return null;
-          return (
-            <div key={z.id}>
-              {halls.length > 1 && <h4>{z.name}</h4>}
-              <div className="people-list">
-                {list.map((m) => {
-                  const on = mine.includes(m);
-                  return (
-                    <label key={m.id} className={`person ${on ? 'person--on' : ''}`}>
-                      <input type="checkbox" checked={on} onChange={() => togglePerson(db, shiftId, m.id, person.id)} />
-                      <span>{m.name}</span>
-                    </label>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+        {/* free machines (and this person's own) first; machines other people work on folded away */}
+        {machineGroups(free)}
+        {taken.length > 0 && (
+          <button type="button" className="link-btn" aria-expanded={showTaken} onClick={() => setShowTaken(!showTaken)}>
+            {showTaken ? '▾' : '▸'} Obsadené stroje ({taken.length})
+          </button>
+        )}
+        {showTaken && machineGroups(taken)}
       </div>
     </div>
   );
