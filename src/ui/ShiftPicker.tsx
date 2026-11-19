@@ -4,7 +4,7 @@ import { useDB } from './useDB';
 import { startDraft } from '../db/repo';
 import { isPool, type Shift } from '../domain/types';
 import { GearIcon } from './icons';
-import { BrandBar, HexGroup } from './Brand';
+import { BrandBar, MpsLogo, MuehlbauerLogo } from './Brand';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 export const fmtStarted = (iso: string) => {
@@ -38,12 +38,15 @@ export function ShiftPicker({ onPicked, onSettings }: Props) {
 
   return (
     <div className="start">
-      <HexGroup className="start__hexes" />
       {/* same gear button as in the plan's header, in the top-right corner */}
       <button type="button" className="hcell hcell--btn hcell--icon start__settings" aria-label="Nastavenia" title="Nastavenia" onClick={onSettings}>
         <GearIcon />
       </button>
       <div className="center-card">
+        <div className="start__logos">
+          <MpsLogo className="start__mps" />
+          <MuehlbauerLogo className="start__mb" />
+        </div>
         <h1>Vyber svoju zmenu</h1>
         <div className="row shift-buttons">
           {shifts.map((s) => {

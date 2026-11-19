@@ -19,6 +19,15 @@ interface Pinch {
   /** Point of the plan under the fingers, as a fraction of the plan's size. */
   fx: number;
   fy: number;
+  /** Fingers' midpoint at the start (scroll-area coordinates) and that point on the grid itself. */
+  x0: number;
+  y0: number;
+  gx: number;
+  gy: number;
+  /** Latest zoom and midpoint – committed when the fingers lift. */
+  zoom: number;
+  x: number;
+  y: number;
 }
 
 /** Where the fingers are, relative to the scroll area. */
@@ -85,6 +94,7 @@ export function Floor({
   const [zoom, setZoom] = useState(1);
   const zoomRef = useRef(1);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
   const pinch = useRef<Pinch | null>(null);
   /** Scroll position to restore after the zoom re-renders, keeping the focal point under the fingers. */
   const anchor = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null);
@@ -122,29 +132,63 @@ export function Floor({
     const el = scrollRef.current;
     if (!el) return;
 
+    // While the fingers move, the plan is only stretched as a picture (CSS transform, no re-layout and
+    // no scrolling); the real zoom is laid out once, when the fingers lift. Re-laying out the whole plan
+    // and scrolling it on every finger move fought with the browser's own scrolling on the tablet, and
+    // the cards jittered and showed twice.
+    const grid = () => gridRef.current;
+    const clearPreview = () => {
+      const g = grid();
+      if (!g) return;
+      g.style.transform = '';
+      g.style.transformOrigin = '';
+      g.style.willChange = '';
+    };
     const onStart = (e: TouchEvent) => {
       if (e.touches.length !== 2) return;
       const m = midpoint(el, e.touches);
       if (m.dist <= 0) return;
+      const r = el.getBoundingClientRect();
+      const gr = grid()?.getBoundingClientRect();
       pinch.current = {
         startDist: m.dist,
         startZoom: zoomRef.current,
         fx: el.scrollWidth ? (el.scrollLeft + m.x) / el.scrollWidth : 0,
         fy: el.scrollHeight ? (el.scrollTop + m.y) / el.scrollHeight : 0,
+        x0: m.x,
+        y0: m.y,
+        gx: gr ? m.x + r.left - gr.left : 0,
+        gy: gr ? m.y + r.top - gr.top : 0,
+        zoom: zoomRef.current,
+        x: m.x,
+        y: m.y,
       };
     };
     const onMove = (e: TouchEvent) => {
       const p = pinch.current;
       if (!p || e.touches.length !== 2) return;
-      e.preventDefault(); // we handle the gesture; don't let the browser scroll or zoom the page
+      if (e.cancelable) e.preventDefault(); // we handle the gesture; don't let the browser scroll or zoom
       const m = midpoint(el, e.touches);
-      anchor.current = { fx: p.fx, fy: p.fy, x: m.x, y: m.y };
-      applyZoom(clamp((p.startZoom * m.dist) / p.startDist));
+      p.zoom = clamp((p.startZoom * m.dist) / p.startDist);
+      p.x = m.x;
+      p.y = m.y;
+      const g = grid();
+      if (g) {
+        g.style.willChange = 'transform';
+        g.style.transformOrigin = `${p.gx}px ${p.gy}px`;
+        g.style.transform = `translate(${m.x - p.x0}px, ${m.y - p.y0}px) scale(${p.zoom / p.startZoom})`;
+      }
     };
     const onEnd = (e: TouchEvent) => {
       if (e.touches.length >= 2) return;
+      const p = pinch.current;
       pinch.current = null;
-      if (Math.abs(zoomRef.current - 1) < SNAP && zoomRef.current !== 1) applyZoom(1);
+      if (!p) return;
+      clearPreview();
+      const z = Math.abs(p.zoom - 1) < SNAP ? 1 : p.zoom;
+      if (z === zoomRef.current) return;
+      anchor.current = { fx: p.fx, fy: p.fy, x: p.x, y: p.y };
+      applyZoom(z);
     };
 
     el.addEventListener('touchstart', onStart, { passive: true });
@@ -193,6 +237,7 @@ export function Floor({
         onClick={onPlanClick}
       >
         <div
+          ref={gridRef}
           className="floor__grid"
           data-zoom={zoom}
           style={{
