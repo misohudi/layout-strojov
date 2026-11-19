@@ -12,7 +12,7 @@ import { Legend, matchesLegend, type LegendKey } from './Legend';
 import { MultiSheet, multiGroups, StaffingSheet, UtilizationSheet } from './ShiftInsights';
 import { EasterEgg, useEasterEgg } from './EasterEgg';
 import { computeStats } from '../domain/stats';
-import { clearDraft, copyFromLastRecord } from '../db/repo';
+import { clearDraft, copyFromLastRecord, togglePerson } from '../db/repo';
 import { isPool, type Hall, type PersonRole } from '../domain/types';
 
 /** The zone last shown on this tablet (a per-device convenience; storage may be unavailable). */
@@ -144,6 +144,9 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   const multiPeople = new Set(groups.map((g) => g.person.id));
   const marksOf = new Map<string, number[]>();
   for (const g of groups) for (const m of g.machines) marksOf.set(m.id, [...(marksOf.get(m.id) ?? []), g.no]);
+  /** A person dragged onto a machine: added to it (already there – nothing changes). */
+  const placePerson = (personId: string, machineId: string) =>
+    draft.assignments[machineId]?.personIds.includes(personId) ? undefined : togglePerson(db, shiftId, machineId, personId);
   const nameOf = new Map(people.map((p) => [p.id, p.name]));
   const personOf = new Map(people.map((p) => [p.id, p]));
   const open = machines.find((m) => m.id === openId);
@@ -346,6 +349,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   highlighted={hit === true}
                   dimmed={hit === false}
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
+                  machineId={m.id}
                   onClick={() => setOpenId(m.id)}
                 />
               );
@@ -405,6 +409,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
             setBackTo('staffing');
             setOpenId(id);
           }}
+          onPlace={placePerson}
           onClose={() => setStaffingOpen(false)}
         />
       )}
@@ -439,6 +444,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
           halls={halls}
           assignments={draft.assignments}
           initialRole={peopleRole}
+          onPlace={placePerson}
           onClose={() => setPeopleRole(null)}
         />
       )}

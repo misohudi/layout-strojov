@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useDB } from './useDB';
 import { setMachineType, togglePerson } from '../db/repo';
-import { tileClass } from './MachineTile';
+import { justDropped, usePersonDrag } from './dragPerson';
+import { nickOf } from '../domain/nick';
 import { byHallAndPosition } from '../domain/record';
 import { isPool, roleOf, ROLE_LABEL, type Assignment, type Hall, type Machine, type OrderType, type Person, type PersonRole, type Shift } from '../domain/types';
 
@@ -14,6 +15,8 @@ interface Props {
   assignments: Record<string, Assignment>;
   /** Role shown first: the header field that was tapped. */
   initialRole: PersonRole;
+  /** A person dragged onto a machine on the plan. */
+  onPlace?(personId: string, machineId: string): unknown;
   onClose(): void;
 }
 
@@ -34,7 +37,8 @@ const TYPES: { label: string; value: OrderType | null; cls: string }[] = [
  * People of the department by shift (own shift first, then the other shifts, then "Ostatní"), with
  * the machines they work on and the order type there. Tapping a person assigns machines and order types.
  */
-export function PeopleList({ people, shifts, currentShiftId, machines, halls = [], assignments, initialRole, onClose }: Props) {
+export function PeopleList({ people, shifts, currentShiftId, machines, halls = [], assignments, initialRole, onPlace = () => {}, onClose }: Props) {
+  const drag = usePersonDrag(onPlace);
   const [role, setRole] = useState<PersonRole>(initialRole);
   const [openId, setOpenId] = useState<string | null>(null);
   const active = machines.filter((m) => m.status === 'active').sort(byHallAndPosition(halls));
@@ -64,8 +68,8 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
   }
 
   return (
-    <div className="sheet-backdrop" onClick={onClose}>
-      <div className="sheet sheet--tall" role="dialog" aria-label="Zoznam ľudí" onClick={(e) => e.stopPropagation()}>
+    <div className="sheet-backdrop sheet-backdrop--light sheet-backdrop--drag" onClick={() => !justDropped() && onClose()}>
+      <div className="sheet sheet--tall sheet--see-through" role="dialog" aria-label="Zoznam ľudí" onClick={(e) => e.stopPropagation()}>
         <div className="sheet__top">
           <div className="sheet__head">
             <h2>Zoznam ľudí</h2>
@@ -84,39 +88,36 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
               </button>
             ))}
           </div>
+          <p className="muted drag-hint">Človeka potiahnite prstom na stroj. Ťuknutím otvoríte jeho stroje.</p>
         </div>
         {sections.length === 0 && <p className="muted">Žiadni ľudia – pridajte ich v nastaveniach.</p>}
-        <div className="table-wrap">
-          <table aria-label={ROLES.find((r) => r.value === role)!.label} className="machine-list">
-            <thead>
-              <tr><th>Človek</th><th>Stroj</th><th>Zakázka</th></tr>
-            </thead>
-            <tbody>
-              {sections.map((g) => [
-                <tr key={`shift-${g.shift.id}`} className="machine-list__zone"><th colSpan={3}>{g.title}</th></tr>,
-                ...g.people.map((p) => {
-                  const own = machinesOf(p.id);
-                  const rows = own.length ? own : [null];
-                  return rows.map((m, i) => {
-                    const type = m ? assignments[m.id]?.type ?? null : null;
-                    return (
-                      <tr
-                        key={`${p.id}-${m?.id ?? 'none'}`}
-                        className={`clickable ${i > 0 ? 'machine-list__more' : ''}`}
-                        aria-label={i === 0 ? p.name : undefined}
-                        onClick={() => setOpenId(p.id)}
-                      >
-                        <td>{i === 0 ? p.name : ''}</td>
-                        <td>{m ? m.name : <span className="muted">–</span>}</td>
-                        <td>{m && <span className={`type-badge ${tileClass(type, false)}`}>{type ?? 'voľný'}</span>}</td>
-                      </tr>
-                    );
-                  });
-                }),
-              ])}
-            </tbody>
-          </table>
-        </div>
+        {sections.map((g) => (
+          <section key={g.shift.id} className="people-section" aria-label={g.title}>
+            <h3>{g.title}</h3>
+            <div className="people-list">
+              {g.people.map((p) => {
+                const own = machinesOf(p.id);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={`person person--drag ${own.length ? 'person--on' : ''}`}
+                    aria-label={own.length ? `${p.name} – ${own.map((m) => m.name).join(', ')}` : `${p.name} – voľný`}
+                    {...drag.bind(p.id)}
+                    onClick={() => setOpenId(p.id)}
+                  >
+                    <span>{p.name}</span>
+                    {own.length > 0 ? (
+                      <small className="person__count">{own.map((m) => nickOf(m)).join(' · ')}</small>
+                    ) : (
+                      <small className="person__count">voľný</small>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

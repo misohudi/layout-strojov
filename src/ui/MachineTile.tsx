@@ -28,6 +28,8 @@ interface Props {
   people?: TilePerson[];
   selected?: boolean;
   dragging?: boolean;
+  /** Machine id on the plan: a person can be dragged onto the tile (see dragPerson). */
+  machineId?: string;
   /** Viacobsluha shown (tap on the header field): the numbers of the people working on this machine. */
   marks?: number[];
   /** Legend highlight: the tile stands out (slight zoom) or is greyed out. */
@@ -46,7 +48,7 @@ export function tileClass(type: OrderType | null, outOfService: boolean) {
 }
 
 export function MachineTile({
-  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, marks = [], onClick, dragProps,
+  name, nick, kind, x, y, w, h, type, outOfService, priority, people = [], selected, dragging, highlighted, dimmed, marks = [], machineId, onClick, dragProps,
 }: Props) {
   const short = nickOf({ name, nick });
   const first = people[0];
@@ -59,6 +61,8 @@ export function MachineTile({
     <button
       type="button"
       data-testid="machine-tile"
+      data-machine-id={machineId}
+      data-machine-active={machineId ? String(!outOfService) : undefined}
       title={name}
       className={`tile ${tileClass(type, outOfService)} ${isPriority ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''} ${highlighted ? 'tile--hl' : ''} ${dimmed ? 'tile--dim' : ''}`}
       style={{

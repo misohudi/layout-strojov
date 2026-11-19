@@ -621,3 +621,31 @@ button.legend__stat { font: inherit; color: var(--text); cursor: pointer; }
 .plan-notes--faded { opacity: 0.45; }
 /* start screen: build version in the bottom-right corner */
 .start__version { position: fixed; right: 16px; bottom: 10px; margin: 0; font-size: 12px; color: var(--muted); letter-spacing: 0.04em; }
+
+/* ---- Dragging people onto machines (like the little man in Google Maps) ---- */
+.sheet--see-through { background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(2px); transition: opacity 0.15s ease; }
+.sheet-backdrop--drag { transition: background 0.15s ease; }
+/* while a person is dragged the sheet nearly vanishes and lets the finger reach the machines under it */
+body.is-dragging-person .sheet--see-through { opacity: 0.12; pointer-events: none; }
+body.is-dragging-person .sheet-backdrop--drag { background: transparent; pointer-events: none; }
+body.is-dragging-person { cursor: grabbing; user-select: none; }
+.person--drag { touch-action: none; user-select: none; cursor: grab; font: inherit; background: var(--surface); }
+.person--drag.person--on { background: var(--primary); }
+.person--drag .person__count { white-space: nowrap; }
+.drag-source { opacity: 0.35; }
+.drag-hint { margin: 0; font-size: 13px; }
+.people-section { display: flex; flex-direction: column; gap: 8px; }
+.people-section h3 { margin: 0; }
+.drag-ghost {
+  position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; margin: 0;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35); opacity: 1 !important;
+}
+/* the spot under the finger where the person will land */
+.drag-shadow {
+  position: fixed; left: 0; top: 0; z-index: 99; pointer-events: none; width: 26px; height: 10px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.35); filter: blur(1px);
+}
+.tile.tile--drop { outline: 4px solid var(--mb-orange); outline-offset: 3px; transform: scale(1.08); z-index: 5; }
+.tile--dropped { animation: tile-drop 0.45s ease-out; }
+@keyframes tile-drop { 0% { transform: scale(1.08); } 40% { transform: scale(0.94); } 70% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .tile--dropped { animation: none; } }

@@ -525,12 +525,12 @@ test('tapping Frézari opens the people list by shift; a person gets a machine a
   await userEvent.click(screen.getByRole('button', { name: /^Frézari 1/ }));
   const list = await screen.findByRole('dialog', { name: 'Zoznam ľudí' });
   expect(within(list).getByRole('button', { name: 'Frézari' })).toHaveAttribute('aria-pressed', 'true');
-  const table = within(list).getByRole('table');
-  const headings = [...table.querySelectorAll('.machine-list__zone')].map((h) => h.textContent);
-  expect(headings.slice(0, 2)).toEqual(['Moja zmena B', 'Zmena A']); // own shift first
-  expect(within(table).queryByText('Horváth')).toBeNull(); // operators are under the other filter
-  const kovac = within(table).getByRole('row', { name: /Kováč/ });
-  expect(kovac).toHaveTextContent('voľný');
+  // people as badges by shift, own shift first
+  const sections = within(list).getAllByRole('region').map((r) => r.getAttribute('aria-label'));
+  expect(sections.slice(0, 2)).toEqual(['Moja zmena B', 'Zmena A']);
+  expect(within(list).queryByText('Horváth')).toBeNull(); // operators are under the other filter
+  const kovac = within(list).getByRole('button', { name: /^Kováč – / });
+  expect(kovac).toHaveAccessibleName('Kováč – HERMLE C60');
 
   await userEvent.click(kovac);
   const panel = await screen.findByRole('dialog', { name: /Kováč/ });
@@ -544,8 +544,7 @@ test('tapping Frézari opens the people list by shift; a person gets a machine a
   });
   await userEvent.click(within(panel).getByRole('button', { name: 'Hotovo' }));
   const back = await screen.findByRole('dialog', { name: 'Zoznam ľudí' });
-  expect(within(back).getByText('DMC 1035')).toBeInTheDocument();
-  expect(within(back).getByText('EXT')).toBeInTheDocument();
+  expect(within(back).getByRole('button', { name: /^Kováč – .*DMC 1035/ })).toBeInTheDocument();
 
   await userEvent.click(within(back).getByRole('button', { name: 'Operátori' }));
   expect(within(back).getByText('Horváth')).toBeInTheDocument();
@@ -661,4 +660,56 @@ test('start screen: the shift names sit at one height whether started or not, an
   expect(a.querySelector('small')).not.toBeNull();
   expect(b.querySelector('small')).toHaveTextContent('rozpracované od');
   expect(screen.getByText(/^Verzia \d+\.\d+\.\d+ · \S+/)).toBeInTheDocument();
+});
+
+/** Drags a person's badge with a finger onto `target` (the test DOM has no layout: the point is faked). */
+function dragOnto(badge: HTMLElement, target: Element | null) {
+  // jsdom has no elementFromPoint (no layout): the finger is over `target`
+  Object.defineProperty(document, 'elementFromPoint', { value: () => target, configurable: true });
+  const ev = (type: string, x: number, y: number) =>
+    fireEvent(badge, new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 3, clientX: x, clientY: y, button: 0 }));
+  ev('pointerdown', 10, 10);
+  ev('pointermove', 40, 60);
+  ev('pointermove', 80, 120);
+  ev('pointerup', 80, 120);
+  delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+}
+
+test('a person dragged from the people list onto a machine works there; dropped beside, nothing changes', async () => {
+  const h = await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true, role: 'frezar' });
+  await startDraft(db, 's-B', 'B', new Date());
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(screen.getByRole('button', { name: /^Frézari 0/ }));
+  const list = await screen.findByRole('dialog', { name: 'Zoznam ľudí' });
+  const badge = within(list).getByRole('button', { name: 'Horváth – voľný' });
+  // beside the machines: back to the list, no machine
+  dragOnto(badge, document.querySelector('.floor__grid'));
+  expect(screen.getByRole('dialog', { name: 'Zoznam ľudí' })).toBeInTheDocument();
+  expect((await db.drafts.get('s-B'))!.assignments['m-0']).toBeUndefined();
+  // onto the first machine
+  const tile = screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === 'm-0')!;
+  dragOnto(badge, tile);
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-0']?.personIds).toEqual([h]));
+  expect(screen.getByRole('dialog', { name: 'Zoznam ľudí' })).toBeInTheDocument(); // the list stays open
+  // dropped again on the same machine: still once (not taken off)
+  dragOnto(within(list).getByRole('button', { name: /^Horváth – / }), tile);
+  await new Promise((r) => setTimeout(r, 50));
+  expect((await db.drafts.get('s-B'))!.assignments['m-0']?.personIds).toEqual([h]);
+});
+
+test('a free person dragged from Obsadenosť onto a machine with an order but nobody on it', async () => {
+  const n = await upsertPerson(db, { name: 'Novák', shiftId: 's-B', active: true });
+  await startDraft(db, 's-B', 'B', new Date());
+  await setMachineType(db, 's-B', 'm-1', 'INT');
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: /– kde chýbajú ľudia$/ }));
+  const sheet = await screen.findByRole('dialog', { name: 'Kde chýbajú ľudia' });
+  const tile = screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === 'm-1')!;
+  expect(tile).toHaveClass('tile--hl');
+  dragOnto(within(sheet).getByRole('button', { name: /^Novák/ }), tile);
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-1']?.personIds).toEqual([n]));
+  // Novák is no longer free and the machine is no longer missing people
+  await vi.waitFor(() => expect(within(sheet).getByText('Na každom stroji so zákazkou niekto je.')).toBeInTheDocument());
 });
