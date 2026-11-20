@@ -408,7 +408,7 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
                   marks={legendKey === 'multi' ? marksOf.get(m.id) : undefined}
                   machineId={m.id}
                   selected={m.id === openId}
-                  pressProps={tileDrag.bindHold(m.id, a?.personIds[0], personOf.get(a?.personIds[0] ?? '')?.name ?? '')}
+                  pressProps={tileDrag.bindHold(m.id, a?.personIds[0], personOf.get(a?.personIds[0] ?? '')?.name ?? '', personOf.get(a?.personIds[0] ?? '')?.role)}
                   onClick={() => tapMachine(m)}
                 />
               );

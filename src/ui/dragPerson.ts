@@ -1,5 +1,6 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { dragFigureSvg, type DragPose } from './dragFigure';
+import type { PersonRole } from '../domain/types';
 
 /**
  * Dragging a person onto a machine: the white operator figure hangs under the finger / cursor, held by
@@ -33,6 +34,32 @@ const FIGURE_PX = 72;
 const GRIP_PX = (5 / 64) * FIGURE_PX;
 /** From the finger down to the figure's feet – the spot it lands on. */
 const FEET_PX = ((61 - 5) / 64) * FIGURE_PX;
+/** The hanging figure from the top of its head to its feet (px, unscaled). */
+const BODY_PX = ((61.9 - 15.2) / 64) * FIGURE_PX;
+
+/**
+ * Where the person ends up in the machine icon (viewBox 120 × 116, see MachineIcon): the frézar stands
+ * at the control panel, the operátor sits on the stool in front of the machine.
+ */
+const SPOT: Record<PersonRole, { x: number; top: number; feet: number }> = {
+  frezar: { x: 63, top: 26.4, feet: 108 },
+  operator: { x: 46, top: 29.6, feet: 108 },
+};
+
+/** The landing spot in screen pixels: under the figure's feet, and how much to scale the figure. */
+function landingSpot(tile: HTMLElement, role: PersonRole) {
+  const icon = tile.querySelector<SVGSVGElement>('.tile__icon');
+  const r = (icon ?? tile).getBoundingClientRect();
+  if (!icon || !r.width) {
+    return { x: r.left + r.width / 2, feet: r.top + r.height * 0.8, scale: 0.5 };
+  }
+  // the icon keeps its proportions inside its box (preserveAspectRatio: xMidYMid meet)
+  const k = Math.min(r.width / 120, r.height / 116);
+  const left = r.left + (r.width - 120 * k) / 2;
+  const top = r.top + (r.height - 116 * k) / 2;
+  const s = SPOT[role];
+  return { x: left + s.x * k, feet: top + s.feet * k, scale: ((s.feet - s.top) * k) / BODY_PX };
+}
 /** Sideways speed (px/ms) from which the hanging figure swings. */
 const SWING_SPEED = 0.25;
 
@@ -40,6 +67,8 @@ interface Drag {
   personId: string;
   /** The machine the person was picked up from (plan only). */
   from?: string;
+  /** Frézar lands standing, operátor sitting. */
+  role: PersonRole;
   pointerId: number;
   /** A mouse drags at once; a finger has to hold first. */
   mouse: boolean;
@@ -193,23 +222,35 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     const gone = () => ghost.remove();
     const overOwn = !cancelled && tileAt(x, y + FEET_PX)?.dataset.machineId === d.from;
     if (target) {
-      // lands on the machine: down into its middle, shrinking into it
-      const r = target.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const cy = r.top + r.height / 2;
+      // lands in front of the machine: flies over the spot where the frézar stands / the operátor sits,
+      // shrinks to the size of the figure in the icon, drops onto it and turns into it
+      const spot = landingSpot(target, d.role);
+      const hands = spot.feet - FEET_PX * spot.scale;
+      const hover = Math.max(10, FEET_PX * spot.scale * 0.35);
+      // an empty machine shows its figure only once the person has landed
+      const empty = target.dataset.machineStaffed !== 'true';
+      if (empty) target.classList.add('tile--landing');
+      setPose(d, 'drop');
+      const name = ghost.querySelector<HTMLElement>('.drag-ghost__name');
+      if (name) animate(name, [{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'forwards' });
+      const LAND_MS = 560;
       animate(
         ghost,
         [
-          { transform: from, opacity: 1 },
-          // the feet come down in the middle of the machine
-          { transform: handsAt(cx, cy - FEET_PX * 0.9, 0.9), opacity: 1, offset: 0.7 },
-          { transform: handsAt(cx, cy - FEET_PX * 0.4, 0.4), opacity: 0 },
+          { transform: from, opacity: 1, easing: 'ease-out' },
+          { transform: handsAt(spot.x, hands - hover, spot.scale), opacity: 1, offset: 0.5, easing: 'ease-in' },
+          { transform: handsAt(spot.x, hands, spot.scale), opacity: 1, offset: 0.72 },
+          { transform: handsAt(spot.x, hands, spot.scale), opacity: 0 },
         ],
-        { duration: 260, easing: 'ease-in', fill: 'forwards' },
+        { duration: LAND_MS, fill: 'forwards' },
         gone,
       );
-      target.classList.add('tile--dropped');
-      setTimeout(() => target.classList.remove('tile--dropped'), 500);
+      // the touch-down: the machine gives a little, its own figure appears as the falling one fades
+      setTimeout(() => {
+        target.classList.remove('tile--landing');
+        target.classList.add('tile--dropped');
+        setTimeout(() => target.classList.remove('tile--dropped'), 450);
+      }, LAND_MS * 0.72);
       void handlersRef.current.place(d.personId, target.dataset.machineId!, d.from);
     } else if (d.from && handlersRef.current.discard && !cancelled && !overOwn) {
       // thrown away beside the machines: falls and fades on the spot
@@ -316,9 +357,9 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     },
   };
 
-  function newDrag(e: ReactPointerEvent<HTMLElement>, personId: string, look: () => HTMLElement, from?: string): Drag {
+  function newDrag(e: ReactPointerEvent<HTMLElement>, personId: string, role: PersonRole, look: () => HTMLElement, from?: string): Drag {
     return {
-      personId, from, pointerId: e.pointerId, mouse: e.pointerType === 'mouse',
+      personId, from, role, pointerId: e.pointerId, mouse: e.pointerType === 'mouse',
       startX: e.clientX, startY: e.clientY, source: e.currentTarget, look,
       ghost: null, figure: null, shadow: null, target: null, pose: 'hang',
       last: { x: e.clientX, t: performance.now(), vx: 0 },
@@ -326,12 +367,12 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
   }
 
   /** A person's badge in a sheet: dragged (mouse) or held for a moment and dragged (finger). */
-  const bind = (personId: string) => ({
+  const bind = (personId: string, role: PersonRole = 'frezar') => ({
     ...blockClickAfterDrop,
     onPointerDown(e: ReactPointerEvent<HTMLElement>) {
       if (e.button !== 0) return;
       const source = e.currentTarget;
-      press(newDrag(e, personId, () => source), HOLD_SHEET_MS);
+      press(newDrag(e, personId, role, () => source), HOLD_SHEET_MS);
     },
     onContextMenu(e: ReactMouseEvent) {
       e.preventDefault(); // holding must not open the browser's menu
@@ -339,11 +380,11 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
   });
 
   /** A machine on the plan with a person on it: held for a moment (finger) or dragged (mouse). */
-  const bindHold = (machineId: string, personId: string | undefined, name: string) => ({
+  const bindHold = (machineId: string, personId: string | undefined, name: string, role: PersonRole = 'frezar') => ({
     ...blockClickAfterDrop,
     onPointerDown(e: ReactPointerEvent<HTMLElement>) {
       if (e.button !== 0 || !personId) return;
-      press(newDrag(e, personId, () => badge(name), machineId), HOLD_MS);
+      press(newDrag(e, personId, role, () => badge(name), machineId), HOLD_MS);
     },
     onContextMenu(e: ReactMouseEvent) {
       if (personId) e.preventDefault(); // holding must not open the browser's menu

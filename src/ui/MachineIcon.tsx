@@ -108,7 +108,7 @@ function Standing() {
   const legs =
     'M50.8 74.2L63.2 76L69.5 90.5L73.5 104.2L78.5 105.4C79.5 105.8 79.8 108 78.5 108L68.2 108L63.8 92L57.8 80.5L56 92L58 104.4L62 105.6C62.8 106 62.8 108 61.5 108L51.8 108L50 91.5Z';
   return (
-    <g>
+    <g className="icon-figure">
       {/* thin cut-out so the figure separates from the machine */}
       <g fill={BG} stroke={BG} {...round}>
         <circle cx="62" cy="35" r="8.6" stroke="none" />
@@ -137,7 +137,7 @@ function Seated() {
   const legs =
     'M35 75.5L55 77C59 77.3 61 79.5 61 83.2L61 104.2L66 105.4C67 105.8 67 108 65.6 108L55 108L55 84.2L38 83.2C35.8 83 35 81.2 35 79Z';
   return (
-    <g>
+    <g className="icon-figure">
       <g fill={BG} stroke={BG} {...round}>
         <circle cx="45" cy="38" r="8.4" stroke="none" />
         <path d={torso} strokeWidth={4.4} />

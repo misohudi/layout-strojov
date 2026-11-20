@@ -700,3 +700,7 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 .drag-ghost__figure svg { width: 100%; height: 100%; }
 /* a mouse drags at once: no text selection on the badges meanwhile */
 .person--drag { -webkit-user-select: none; }
+
+/* a person lands on an empty machine: its figure appears only at the touch-down (see dragPerson) */
+.icon-figure { transition: opacity 0.18s ease; }
+.tile--landing .icon-figure { opacity: 0; transition: none; }

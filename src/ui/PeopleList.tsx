@@ -66,7 +66,7 @@ export function PeopleList({ people, shifts, currentShiftId, machines, halls = [
         type="button"
         className={`person person--drag ${mine.length ? 'person--on' : ''}`}
         aria-label={mine.length ? `${p.name} – ${mine.map((m) => m.name).join(', ')}` : `${p.name} – voľný`}
-        {...drag.bind(p.id)}
+        {...drag.bind(p.id, roleOf(p))}
         onClick={() => setOpenId(p.id)}
       >
         <span>{p.name}</span>
