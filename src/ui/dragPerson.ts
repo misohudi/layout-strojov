@@ -2,8 +2,9 @@ import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent
 import { dragFigureSvg, type DragPose } from './dragFigure';
 
 /**
- * Dragging a person onto a machine: the operator figure hangs from the finger / cursor holding the
- * person's name, a small shadow marks the spot it will land on, a see-through sheet it came from turns
+ * Dragging a person onto a machine: the white operator figure hangs under the finger / cursor, held by
+ * its hands, with the person's name above the finger; a small shadow under its feet marks the spot it
+ * will land on, a see-through sheet it came from turns
  * almost invisible so the plan shows, and the machine under the finger lights up. Moving sideways the
  * figure swings; over a machine it gets ready to land.
  *
@@ -26,8 +27,12 @@ const DRAG_PX = 8;
 const HOLD_MS = 450;
 /** A badge in a sheet comes off after a shorter hold (finger; moving before it scrolls the list). */
 const HOLD_SHEET_MS = 300;
-/** The figure's feet stay this far above the finger, so the finger doesn't cover it. */
-const LIFT_PX = 14;
+/** Size of the hanging figure (px). */
+const FIGURE_PX = 72;
+/** The figure is held by its hands: they are this far below the top of the icon (viewBox 64). */
+const GRIP_PX = (5 / 64) * FIGURE_PX;
+/** From the finger down to the figure's feet – the spot it lands on. */
+const FEET_PX = ((61 - 5) / 64) * FIGURE_PX;
 /** Sideways speed (px/ms) from which the hanging figure swings. */
 const SWING_SPEED = 0.25;
 
@@ -81,8 +86,8 @@ function animate(el: HTMLElement, frames: Keyframe[], opts: KeyframeAnimationOpt
 
 /** Centre of an element at a point. */
 const at = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${scale})`;
-/** Bottom centre of the ghost (the figure's feet) at a point. */
-const feetAt = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) translate(-50%, -100%) scale(${scale})`;
+/** The ghost is anchored at the figure's hands: they are at the point (the finger / cursor). */
+const handsAt = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) scale(${scale})`;
 
 /**
  * While a person hangs on the finger the page must not scroll or zoom under it. The listener is there
@@ -131,7 +136,7 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
   function setPose(d: Drag, pose: DragPose) {
     if (d.pose === pose || !d.figure) return;
     d.pose = pose;
-    d.figure.innerHTML = dragFigureSvg(pose, { size: 48 });
+    d.figure.innerHTML = dragFigureSvg(pose, { size: FIGURE_PX });
   }
 
   function start(d: Drag, x: number, y: number) {
@@ -142,7 +147,7 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     name.removeAttribute('id');
     const figure = document.createElement('span');
     figure.className = 'drag-ghost__figure';
-    figure.innerHTML = dragFigureSvg('hang', { size: 48 });
+    figure.innerHTML = dragFigureSvg('hang', { size: FIGURE_PX });
     const ghost = document.createElement('div');
     ghost.className = 'drag-ghost';
     ghost.setAttribute('aria-hidden', 'true');
@@ -153,10 +158,12 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     d.ghost = ghost;
     d.figure = figure;
     d.shadow = shadow;
-    ghost.style.transform = feetAt(x, y - LIFT_PX);
-    shadow.style.transform = at(x, y);
+    ghost.style.setProperty('--figure-px', `${FIGURE_PX}px`);
+    ghost.style.setProperty('--grip-px', `${GRIP_PX}px`);
+    ghost.style.transform = handsAt(x, y);
+    shadow.style.transform = at(x, y + FEET_PX);
     // the person lifts off
-    animate(ghost, [{ transform: feetAt(x, y, 0.6) }, { transform: feetAt(x, y - LIFT_PX) }], { duration: 160, easing: 'ease-out' });
+    animate(ghost, [{ transform: handsAt(x, y, 0.6) }, { transform: handsAt(x, y) }], { duration: 160, easing: 'ease-out' });
     document.body.classList.add('is-dragging-person');
     active++;
     d.source.classList.add('drag-source');
@@ -182,9 +189,9 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     setTarget(d, null);
     const ghost = d.ghost!;
     d.shadow!.remove();
-    const from = feetAt(x, y - LIFT_PX);
+    const from = handsAt(x, y);
     const gone = () => ghost.remove();
-    const overOwn = !cancelled && tileAt(x, y)?.dataset.machineId === d.from;
+    const overOwn = !cancelled && tileAt(x, y + FEET_PX)?.dataset.machineId === d.from;
     if (target) {
       // lands on the machine: down into its middle, shrinking into it
       const r = target.getBoundingClientRect();
@@ -194,8 +201,9 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
         ghost,
         [
           { transform: from, opacity: 1 },
-          { transform: feetAt(cx, cy, 0.9), opacity: 1, offset: 0.7 },
-          { transform: feetAt(cx, cy, 0.4), opacity: 0 },
+          // the feet come down in the middle of the machine
+          { transform: handsAt(cx, cy - FEET_PX * 0.9, 0.9), opacity: 1, offset: 0.7 },
+          { transform: handsAt(cx, cy - FEET_PX * 0.4, 0.4), opacity: 0 },
         ],
         { duration: 260, easing: 'ease-in', fill: 'forwards' },
         gone,
@@ -207,7 +215,7 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
       // thrown away beside the machines: falls and fades on the spot
       animate(
         ghost,
-        [{ transform: from, opacity: 1 }, { transform: feetAt(x, y + 20, 0.5), opacity: 0 }],
+        [{ transform: from, opacity: 1 }, { transform: handsAt(x, y + 30, 0.5), opacity: 0 }],
         { duration: 280, easing: 'ease-in', fill: 'forwards' },
         gone,
       );
@@ -217,7 +225,7 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
       const r = d.source.getBoundingClientRect();
       animate(
         ghost,
-        [{ transform: from }, { transform: feetAt(r.left + r.width / 2, r.top + r.height / 2, 0.6), opacity: 0 }],
+        [{ transform: from }, { transform: handsAt(r.left + r.width / 2, r.top + r.height / 2, 0.4), opacity: 0 }],
         { duration: 320, easing: 'cubic-bezier(0.3, 1.3, 0.5, 1)', fill: 'forwards' },
         gone,
       );
@@ -232,9 +240,10 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     const dt = Math.max(1, now - d.last.t);
     // smoothed sideways speed: the figure swings against the direction it is carried
     d.last = { x, t: now, vx: d.last.vx * 0.6 + ((x - d.last.x) / dt) * 0.4 };
-    d.ghost!.style.transform = feetAt(x, y - LIFT_PX);
-    d.shadow!.style.transform = at(x, y);
-    setTarget(d, tileAt(x, y));
+    d.ghost!.style.transform = handsAt(x, y);
+    // the figure hangs under the finger: it lands where its feet are
+    d.shadow!.style.transform = at(x, y + FEET_PX);
+    setTarget(d, tileAt(x, y + FEET_PX));
     setPose(d, d.target ? 'drop' : d.last.vx < -SWING_SPEED ? 'swing-left' : d.last.vx > SWING_SPEED ? 'swing-right' : 'hang');
   }
 
