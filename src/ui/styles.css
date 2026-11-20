@@ -655,15 +655,7 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
   position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; margin: 0;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35); opacity: 1 !important;
 }
-/* the spot under the finger where the person will land */
-.drag-shadow {
-  position: fixed; left: 0; top: 0; z-index: 99; pointer-events: none; width: 26px; height: 10px; border-radius: 50%;
-  background: rgba(0, 0, 0, 0.35); filter: blur(1px);
-}
-.tile.tile--drop { outline: 4px solid var(--mb-orange); outline-offset: 3px; transform: scale(1.08); z-index: 5; }
-.tile--dropped { animation: tile-drop 0.45s ease-out; }
-@keyframes tile-drop { 0% { transform: scale(1.08); } 40% { transform: scale(0.94); } 70% { transform: scale(1.04); } 100% { transform: scale(1); } }
-@media (prefers-reduced-motion: reduce) { .tile--dropped { animation: none; } }
+.tile.tile--drop { outline: 4px solid var(--mb-orange); outline-offset: 3px; z-index: 5; }
 
 /* highlighting: the other machines with an order stay blue / red, only paler; free ones go grey */
 .tile--pale { opacity: 0.45; }
@@ -684,16 +676,16 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 .record-summary { display: flex; align-items: center; gap: 18px; }
 .record-summary__stats { margin: 0; font-size: 15px; line-height: 1.45; color: var(--muted); }
 
-/* dragged person: the ghost is anchored at the finger; the white figure hangs under it by its hands,
-   the name sits above the finger so the finger doesn't cover it */
+/* dragged person: the ghost is anchored at the finger; the name badge sits just under it and the white
+   figure hangs from the badge by its hands */
 .drag-ghost { width: 0; height: 0; box-shadow: none; transform-origin: 0 0; }
 .drag-ghost__name {
-  position: absolute; left: 0; bottom: 30px; transform: translateX(-50%); white-space: nowrap;
+  position: absolute; left: 0; top: var(--name-gap); transform: translateX(-50%); white-space: nowrap; z-index: 1;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); pointer-events: none;
 }
 /* white like the figures on the machine tiles, with a dark 1.5 px outline so it shows on the light plan */
 .drag-ghost__figure {
-  position: absolute; left: calc(var(--figure-px) / -2); top: calc(var(--grip-px) * -1);
+  position: absolute; left: calc(var(--figure-px) / -2); top: var(--figure-top);
   width: var(--figure-px); height: var(--figure-px); line-height: 0;
   color: #fff; --icon-bg: #111827; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
 }

@@ -90,8 +90,10 @@ function drawParts(parts: Part[]): string {
 }
 
 /** The icon as an SVG string (64 × 64), for files and for inline use. */
-export function dragFigureSvg(pose: DragPose, opts: { size?: number; title?: string } = {}): string {
-  const { body, legs, legTurn, bodyTurn, marker } = figure(pose);
+export function dragFigureSvg(pose: DragPose, opts: { size?: number; title?: string; landing?: boolean } = {}): string {
+  const { body, legs, legTurn, bodyTurn } = figure(pose);
+  // the dashed landing spot under the feet ('drop'); the app leaves it out
+  const marker = pose === 'drop' && opts.landing !== false;
   const size = opts.size ?? 64;
   const title = opts.title ? `<title>${opts.title}</title>` : '';
   const legsSvg = `<g transform="rotate(${legTurn} ${HIP[0]} ${HIP[1]})">${drawParts(legs)}</g>`;
