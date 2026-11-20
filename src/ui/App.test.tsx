@@ -903,3 +903,54 @@ test('tapping a bar in the statistics shows the breakdown of that shift', async 
   fireEvent.click(sheet.querySelectorAll('.trend__bar')[1]);
   expect(within(sheet).getByRole('region', { name: 'Rozpis teraz' })).toBeInTheDocument();
 });
+
+test('with a mouse a person is dragged at once, the moves arrive anywhere on the page; the figure hangs and swings', async () => {
+  const h = await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true, role: 'frezar' });
+  await startDraft(db, 's-B', 'B', new Date());
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(screen.getByRole('button', { name: /^Frézari 0/ }));
+  const badge = within(await screen.findByRole('dialog', { name: 'Zoznam ľudí' })).getByRole('button', { name: 'Horváth – voľný' });
+  const tile = screen.getAllByTestId('machine-tile').find((t) => t.dataset.machineId === 'm-0')!;
+  const ev = (el: Element, type: string, x: number, y: number) =>
+    fireEvent(el, new PointerEvent(type, { bubbles: true, cancelable: true, pointerId: 6, pointerType: 'mouse', clientX: x, clientY: y, button: 0 }));
+  Object.defineProperty(document, 'elementFromPoint', { value: () => null, configurable: true });
+  ev(badge, 'pointerdown', 100, 500);
+  // no hold: the mouse moves straight away, and the moves are over the plan, not over the badge
+  ev(document.body, 'pointermove', 140, 400);
+  const ghost = document.querySelector('.drag-ghost')!;
+  expect(ghost).not.toBeNull();
+  expect(ghost).toHaveTextContent('Horváth');
+  await new Promise((r) => setTimeout(r, 5));
+  ev(document.body, 'pointermove', 400, 380); // fast to the right: the figure swings
+  expect(ghost.querySelector('svg')!.dataset.pose).toBe('swing-right');
+  Object.defineProperty(document, 'elementFromPoint', { value: () => tile, configurable: true });
+  ev(document.body, 'pointermove', 402, 380); // over a machine: ready to land
+  expect(ghost.querySelector('svg')!.dataset.pose).toBe('drop');
+  ev(document.body, 'pointerup', 402, 380);
+  delete (document as { elementFromPoint?: unknown }).elementFromPoint;
+  await vi.waitFor(async () => expect((await db.drafts.get('s-B'))!.assignments['m-0']?.personIds).toEqual([h]));
+  expect(screen.getByRole('dialog', { name: 'Zoznam ľudí' })).toBeInTheDocument(); // the list stays open
+  expect(document.body.classList.contains('is-dragging-person')).toBe(false);
+});
+
+test('a finger holding a person does not scroll the page; before the hold it scrolls as usual', async () => {
+  await upsertPerson(db, { name: 'Horváth', shiftId: 's-B', active: true, role: 'frezar' });
+  await startDraft(db, 's-B', 'B', new Date());
+  renderApp();
+  await pickShift('B');
+  await userEvent.click(screen.getByRole('button', { name: /^Frézari 0/ }));
+  const badge = within(await screen.findByRole('dialog', { name: 'Zoznam ľudí' })).getByRole('button', { name: 'Horváth – voľný' });
+  const touchMove = () => {
+    const e = new Event('touchmove', { bubbles: true, cancelable: true });
+    badge.dispatchEvent(e);
+    return e.defaultPrevented;
+  };
+  expect(touchMove()).toBe(false); // nobody held: the list scrolls
+  fireEvent(badge, new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 8, pointerType: 'touch', clientX: 10, clientY: 10, button: 0 }));
+  await new Promise((r) => setTimeout(r, 350)); // held: the person comes off
+  expect(document.body.classList.contains('is-dragging-person')).toBe(true);
+  expect(touchMove()).toBe(true); // carried: the page stays still
+  fireEvent(badge, new PointerEvent('pointercancel', { bubbles: true, pointerId: 8, pointerType: 'touch', clientX: 10, clientY: 10 }));
+  expect(touchMove()).toBe(false);
+});
