@@ -1,41 +1,55 @@
 import { useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { dragFigureSvg, type DragPose } from './dragFigure';
 
 /**
- * Dragging a person onto a machine, like the little man in Google Maps: the person's badge lifts off
- * above the finger (a small shadow marks the spot under it), a see-through sheet it came from turns
- * almost invisible so the plan shows, and the machine under the finger lights up.
+ * Dragging a person onto a machine: the operator figure hangs from the finger / cursor holding the
+ * person's name, a small shadow marks the spot it will land on, a see-through sheet it came from turns
+ * almost invisible so the plan shows, and the machine under the finger lights up. Moving sideways the
+ * figure swings; over a machine it gets ready to land.
  *
- * - From a sheet (the people list) the badge is held for a moment and then dragged; let go on a machine
- *   and the person is placed there, anywhere else and the badge flies back to the sheet. Moving the
- *   finger before that scrolls the list.
- * - From a machine on the plan the person is picked up by holding the machine for a moment; let go on
- *   another machine and the person moves there, anywhere else and the person is taken off the machine.
+ * - From a sheet (the people list): with a mouse the badge is simply dragged; with a finger it is held
+ *   for a moment first (moving at once scrolls the list). Let go on a machine and the person is placed
+ *   there, anywhere else and the badge flies back to the sheet.
+ * - From a machine on the plan the person is picked up by holding the machine for a moment (finger) or
+ *   by dragging it (mouse); let go on another machine and the person moves there, anywhere else and the
+ *   person is taken off the machine.
  *
  * A tap without moving / holding stays a normal tap.
+ *
+ * The moves are followed on the whole window, not only over the badge: a mouse leaves the badge at once,
+ * and the badge's sheet may change under the finger.
  */
 
-/** Movement (px) before a press turns into a drag – below it, it is a tap. */
+/** Movement (px) before a press turns into a drag (mouse) or a scroll (finger) – below it, it is a tap. */
 const DRAG_PX = 8;
-/** Holding a machine this long picks its person up. */
+/** Holding a machine this long picks its person up (finger). */
 const HOLD_MS = 450;
-/** A badge in a sheet comes off after a shorter hold (moving before it scrolls the list). */
+/** A badge in a sheet comes off after a shorter hold (finger; moving before it scrolls the list). */
 const HOLD_SHEET_MS = 300;
-/** The badge rides this far above the finger, so the finger doesn't cover it. */
-const LIFT_PX = 52;
+/** The figure's feet stay this far above the finger, so the finger doesn't cover it. */
+const LIFT_PX = 14;
+/** Sideways speed (px/ms) from which the hanging figure swings. */
+const SWING_SPEED = 0.25;
 
 interface Drag {
   personId: string;
   /** The machine the person was picked up from (plan only). */
   from?: string;
   pointerId: number;
+  /** A mouse drags at once; a finger has to hold first. */
+  mouse: boolean;
   startX: number;
   startY: number;
   source: HTMLElement;
-  /** Badge to clone for the ghost (the sheet's badge, or one made for a person on the plan). */
+  /** Name badge to clone for the ghost (the sheet's badge, or one made for a person on the plan). */
   look: () => HTMLElement;
   ghost: HTMLElement | null;
+  figure: HTMLElement | null;
   shadow: HTMLElement | null;
   target: HTMLElement | null;
+  pose: DragPose;
+  /** Last point and time, for the swing. */
+  last: { x: number; t: number; vx: number };
   hold?: ReturnType<typeof setTimeout>;
 }
 
@@ -48,7 +62,7 @@ export interface DropHandlers {
 
 /** The machine tile under a point (only machines in operation). */
 function tileAt(x: number, y: number): HTMLElement | null {
-  const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-machine-id]');
+  const el = document.elementFromPoint?.(x, y)?.closest<HTMLElement>('[data-machine-id]');
   return el && el.dataset.machineActive === 'true' ? el : null;
 }
 
@@ -65,15 +79,26 @@ function animate(el: HTMLElement, frames: Keyframe[], opts: KeyframeAnimationOpt
   }
 }
 
+/** Centre of an element at a point. */
 const at = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${scale})`;
-function place(el: HTMLElement, x: number, y: number) {
-  el.style.transform = at(x, y);
-}
+/** Bottom centre of the ghost (the figure's feet) at a point. */
+const feetAt = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) translate(-50%, -100%) scale(${scale})`;
 
-/** While a person hangs on the finger the page must not scroll or zoom under it. */
-const noScroll = (e: TouchEvent) => {
-  if (e.cancelable) e.preventDefault();
-};
+/**
+ * While a person hangs on the finger the page must not scroll or zoom under it. The listener is there
+ * from the start: a browser decides when a touch begins whether the page may stop it scrolling, so a
+ * listener added only once the drag starts comes too late (the touch scrolls and the drag is cancelled).
+ */
+let active = 0;
+if (typeof document !== 'undefined') {
+  document.addEventListener(
+    'touchmove',
+    (e) => {
+      if (active && e.cancelable) e.preventDefault();
+    },
+    { passive: false },
+  );
+}
 
 /**
  * A drag just ended: the click the browser sends right after it must not act. It holds until the next
@@ -95,32 +120,46 @@ function badge(name: string): HTMLElement {
 }
 
 export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: string) => unknown)) {
-  const handlers: DropHandlers = typeof on === 'function' ? { place: on } : on;
+  // the latest handlers, also for a drag that started before the last render
+  const handlersRef = useRef<DropHandlers>({ place: () => {} });
+  handlersRef.current = typeof on === 'function' ? { place: on } : on;
   const drag = useRef<Drag | null>(null);
+  /** Stops following the window once the press is over (kept across renders). */
+  const unlisten = useRef<(() => void) | null>(null);
   const [dragging, setDragging] = useState(false);
 
+  function setPose(d: Drag, pose: DragPose) {
+    if (d.pose === pose || !d.figure) return;
+    d.pose = pose;
+    d.figure.innerHTML = dragFigureSvg(pose, { size: 48 });
+  }
+
   function start(d: Drag, x: number, y: number) {
-    const ghost = d.look().cloneNode(true) as HTMLElement;
-    ghost.classList.add('drag-ghost');
-    ghost.removeAttribute('id');
+    if (!d.source.isConnected) return; // the sheet went away meanwhile
+    const name = d.look().cloneNode(true) as HTMLElement;
+    name.classList.add('drag-ghost__name');
+    name.classList.remove('drag-source');
+    name.removeAttribute('id');
+    const figure = document.createElement('span');
+    figure.className = 'drag-ghost__figure';
+    figure.innerHTML = dragFigureSvg('hang', { size: 48 });
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
     ghost.setAttribute('aria-hidden', 'true');
+    ghost.append(name, figure);
     const shadow = document.createElement('div');
     shadow.className = 'drag-shadow';
     document.body.append(shadow, ghost);
     d.ghost = ghost;
+    d.figure = figure;
     d.shadow = shadow;
-    place(ghost, x, y - LIFT_PX);
-    place(shadow, x, y);
-    // the badge lifts off
-    animate(ghost, [{ transform: at(x, y) }, { transform: at(x, y - LIFT_PX, 1.15) }], { duration: 160, easing: 'ease-out' });
+    ghost.style.transform = feetAt(x, y - LIFT_PX);
+    shadow.style.transform = at(x, y);
+    // the person lifts off
+    animate(ghost, [{ transform: feetAt(x, y, 0.6) }, { transform: feetAt(x, y - LIFT_PX) }], { duration: 160, easing: 'ease-out' });
     document.body.classList.add('is-dragging-person');
-    document.addEventListener('touchmove', noScroll, { passive: false });
+    active++;
     d.source.classList.add('drag-source');
-    try {
-      d.source.setPointerCapture?.(d.pointerId); // keep getting the moves even off the badge / machine
-    } catch {
-      // not an active pointer (e.g. a synthetic one) – the moves still arrive while over the page
-    }
     navigator.vibrate?.(15);
     setDragging(true);
   }
@@ -137,17 +176,17 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
   function finish(d: Drag, x: number, y: number, cancelled: boolean) {
     lastDragEnd = Date.now();
     document.body.classList.remove('is-dragging-person');
-    document.removeEventListener('touchmove', noScroll);
+    active = Math.max(0, active - 1);
     d.source.classList.remove('drag-source');
     const target = cancelled ? null : d.target;
     setTarget(d, null);
     const ghost = d.ghost!;
     d.shadow!.remove();
-    const from = at(x, y - LIFT_PX, 1.15);
+    const from = feetAt(x, y - LIFT_PX);
     const gone = () => ghost.remove();
     const overOwn = !cancelled && tileAt(x, y)?.dataset.machineId === d.from;
     if (target) {
-      // drops onto the machine: down to its middle, shrinking into it
+      // lands on the machine: down into its middle, shrinking into it
       const r = target.getBoundingClientRect();
       const cx = r.left + r.width / 2;
       const cy = r.top + r.height / 2;
@@ -155,64 +194,111 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
         ghost,
         [
           { transform: from, opacity: 1 },
-          { transform: at(cx, cy, 0.9), opacity: 1, offset: 0.7 },
-          { transform: at(cx, cy, 0.4), opacity: 0 },
+          { transform: feetAt(cx, cy, 0.9), opacity: 1, offset: 0.7 },
+          { transform: feetAt(cx, cy, 0.4), opacity: 0 },
         ],
         { duration: 260, easing: 'ease-in', fill: 'forwards' },
         gone,
       );
       target.classList.add('tile--dropped');
       setTimeout(() => target.classList.remove('tile--dropped'), 500);
-      void handlers.place(d.personId, target.dataset.machineId!, d.from);
-    } else if (d.from && handlers.discard && !cancelled && !overOwn) {
+      void handlersRef.current.place(d.personId, target.dataset.machineId!, d.from);
+    } else if (d.from && handlersRef.current.discard && !cancelled && !overOwn) {
       // thrown away beside the machines: falls and fades on the spot
       animate(
         ghost,
-        [{ transform: from, opacity: 1 }, { transform: at(x, y + 20, 0.5), opacity: 0 }],
+        [{ transform: from, opacity: 1 }, { transform: feetAt(x, y + 20, 0.5), opacity: 0 }],
         { duration: 280, easing: 'ease-in', fill: 'forwards' },
         gone,
       );
-      void handlers.discard(d.personId, d.from);
-    } else {
+      void handlersRef.current.discard(d.personId, d.from);
+    } else if (d.source.isConnected) {
       // missed (or let go on its own machine): flies back where it came from
       const r = d.source.getBoundingClientRect();
       animate(
         ghost,
-        [{ transform: from }, { transform: at(r.left + r.width / 2, r.top + r.height / 2) }],
+        [{ transform: from }, { transform: feetAt(r.left + r.width / 2, r.top + r.height / 2, 0.6), opacity: 0 }],
         { duration: 320, easing: 'cubic-bezier(0.3, 1.3, 0.5, 1)', fill: 'forwards' },
         gone,
       );
+    } else {
+      gone();
     }
     setDragging(false);
   }
 
-  function move(e: ReactPointerEvent<HTMLElement>) {
+  function follow(d: Drag, x: number, y: number) {
+    const now = performance.now();
+    const dt = Math.max(1, now - d.last.t);
+    // smoothed sideways speed: the figure swings against the direction it is carried
+    d.last = { x, t: now, vx: d.last.vx * 0.6 + ((x - d.last.x) / dt) * 0.4 };
+    d.ghost!.style.transform = feetAt(x, y - LIFT_PX);
+    d.shadow!.style.transform = at(x, y);
+    setTarget(d, tileAt(x, y));
+    setPose(d, d.target ? 'drop' : d.last.vx < -SWING_SPEED ? 'swing-left' : d.last.vx > SWING_SPEED ? 'swing-right' : 'hang');
+  }
+
+  function end(d: Drag) {
+    clearTimeout(d.hold);
+    if (drag.current === d) drag.current = null;
+    unlisten.current?.();
+    unlisten.current = null;
+  }
+
+  function onMove(e: PointerEvent) {
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
     if (!d.ghost) {
       if (Math.hypot(e.clientX - d.startX, e.clientY - d.startY) < DRAG_PX) return;
-      // only holding picks a person up – moving first is scrolling (the plan or the list)
-      clearTimeout(d.hold);
-      drag.current = null;
-      return;
+      if (d.mouse) {
+        start(d, e.clientX, e.clientY); // a mouse just drags
+        if (!d.ghost) return end(d);
+      } else {
+        // a finger moving before the hold is scrolling (the plan or the list)
+        return end(d);
+      }
     }
-    place(d.ghost!, e.clientX, e.clientY - LIFT_PX);
-    place(d.shadow!, e.clientX, e.clientY);
-    setTarget(d, tileAt(e.clientX, e.clientY));
+    if (e.cancelable) e.preventDefault(); // no text selection with a mouse
+    follow(d, e.clientX, e.clientY);
   }
 
-  function up(e: ReactPointerEvent<HTMLElement>, cancelled: boolean) {
+  function onUp(e: PointerEvent, cancelled: boolean) {
     const d = drag.current;
     if (!d || d.pointerId !== e.pointerId) return;
-    clearTimeout(d.hold);
-    drag.current = null;
+    end(d);
     if (d.ghost) finish(d, e.clientX, e.clientY, cancelled);
   }
 
-  const common = {
-    onPointerMove: move,
-    onPointerUp: (e: ReactPointerEvent<HTMLElement>) => up(e, false),
-    onPointerCancel: (e: ReactPointerEvent<HTMLElement>) => up(e, true),
+  function listen() {
+    const move = (e: PointerEvent) => onMove(e);
+    const up = (e: PointerEvent) => onUp(e, false);
+    const cancel = (e: PointerEvent) => onUp(e, true);
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', cancel);
+    unlisten.current = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', cancel);
+    };
+  }
+
+  /** A press: a finger waits for the hold, then the person comes off; a mouse waits for a move. */
+  function press(d: Drag, ms: number) {
+    if (drag.current) end(drag.current);
+    drag.current = d;
+    listen();
+    if (!d.mouse) {
+      d.hold = setTimeout(() => {
+        if (drag.current === d && !d.ghost) {
+          start(d, d.startX, d.startY);
+          if (!d.ghost) end(d);
+        }
+      }, ms);
+    }
+  }
+
+  const blockClickAfterDrop = {
     onClickCapture(e: ReactMouseEvent) {
       if (justDropped()) {
         e.preventDefault();
@@ -221,40 +307,34 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     },
   };
 
-  /** Waits for the hold, then the person comes off onto the finger. */
-  function press(d: Drag, ms: number) {
-    d.hold = setTimeout(() => {
-      if (drag.current === d && !d.ghost) start(d, d.startX, d.startY);
-    }, ms);
-    drag.current = d;
+  function newDrag(e: ReactPointerEvent<HTMLElement>, personId: string, look: () => HTMLElement, from?: string): Drag {
+    return {
+      personId, from, pointerId: e.pointerId, mouse: e.pointerType === 'mouse',
+      startX: e.clientX, startY: e.clientY, source: e.currentTarget, look,
+      ghost: null, figure: null, shadow: null, target: null, pose: 'hang',
+      last: { x: e.clientX, t: performance.now(), vx: 0 },
+    };
   }
 
-  /** A person's badge in a sheet: held for a moment = dragged. */
+  /** A person's badge in a sheet: dragged (mouse) or held for a moment and dragged (finger). */
   const bind = (personId: string) => ({
-    ...common,
+    ...blockClickAfterDrop,
     onPointerDown(e: ReactPointerEvent<HTMLElement>) {
       if (e.button !== 0) return;
       const source = e.currentTarget;
-      press({
-        personId, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
-        source, look: () => source, ghost: null, shadow: null, target: null,
-      }, HOLD_SHEET_MS);
+      press(newDrag(e, personId, () => source), HOLD_SHEET_MS);
     },
     onContextMenu(e: ReactMouseEvent) {
       e.preventDefault(); // holding must not open the browser's menu
     },
   });
 
-  /** A machine on the plan with a person on it: held for a moment = that person picked up. */
+  /** A machine on the plan with a person on it: held for a moment (finger) or dragged (mouse). */
   const bindHold = (machineId: string, personId: string | undefined, name: string) => ({
-    ...common,
+    ...blockClickAfterDrop,
     onPointerDown(e: ReactPointerEvent<HTMLElement>) {
       if (e.button !== 0 || !personId) return;
-      const source = e.currentTarget;
-      press({
-        personId, from: machineId, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY,
-        source, look: () => badge(name), ghost: null, shadow: null, target: null,
-      }, HOLD_MS);
+      press(newDrag(e, personId, () => badge(name), machineId), HOLD_MS);
     },
     onContextMenu(e: ReactMouseEvent) {
       if (personId) e.preventDefault(); // holding must not open the browser's menu
