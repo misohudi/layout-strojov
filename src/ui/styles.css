@@ -684,13 +684,19 @@ body.is-dragging-person { cursor: grabbing; user-select: none; }
 .record-summary { display: flex; align-items: center; gap: 18px; }
 .record-summary__stats { margin: 0; font-size: 15px; line-height: 1.45; color: var(--muted); }
 
-/* dragged person: the operator figure hangs from the finger holding the name badge */
-.drag-ghost {
-  display: flex; flex-direction: column; align-items: center; gap: 0;
-  box-shadow: none; transform-origin: 50% 100%;
+/* dragged person: the ghost is anchored at the finger; the white figure hangs under it by its hands,
+   the name sits above the finger so the finger doesn't cover it */
+.drag-ghost { width: 0; height: 0; box-shadow: none; transform-origin: 0 0; }
+.drag-ghost__name {
+  position: absolute; left: 0; bottom: 30px; transform: translateX(-50%); white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); pointer-events: none;
 }
-.drag-ghost__name { box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); pointer-events: none; margin-bottom: -6px; position: relative; z-index: 1; }
-.drag-ghost__figure { display: block; width: 48px; height: 48px; line-height: 0; color: var(--text); --icon-bg: var(--bg); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25)); }
+/* white like the figures on the machine tiles, with a dark 1.5 px outline so it shows on the light plan */
+.drag-ghost__figure {
+  position: absolute; left: calc(var(--figure-px) / -2); top: calc(var(--grip-px) * -1);
+  width: var(--figure-px); height: var(--figure-px); line-height: 0;
+  color: #fff; --icon-bg: #111827; filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.3));
+}
 .drag-ghost__figure svg { width: 100%; height: 100%; }
 /* a mouse drags at once: no text selection on the badges meanwhile */
 .person--drag { -webkit-user-select: none; }
