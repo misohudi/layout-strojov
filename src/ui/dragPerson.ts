@@ -3,9 +3,8 @@ import { dragFigureSvg, type DragPose } from './dragFigure';
 import type { PersonRole } from '../domain/types';
 
 /**
- * Dragging a person onto a machine: the white operator figure hangs under the finger / cursor, held by
- * its hands, with the person's name above the finger; a small shadow under its feet marks the spot it
- * will land on, a see-through sheet it came from turns
+ * Dragging a person onto a machine: the person's name badge sits just under the finger / cursor and the
+ * white operator figure hangs from it by its hands; it lands where its feet are, a see-through sheet it came from turns
  * almost invisible so the plan shows, and the machine under the finger lights up. Moving sideways the
  * figure swings; over a machine it gets ready to land.
  *
@@ -32,8 +31,12 @@ const HOLD_SHEET_MS = 300;
 const FIGURE_PX = 72;
 /** The figure is held by its hands: they are this far below the top of the icon (viewBox 64). */
 const GRIP_PX = (5 / 64) * FIGURE_PX;
-/** From the finger down to the figure's feet – the spot it lands on. */
+/** From the figure's hands down to its feet. */
 const FEET_PX = ((61 - 5) / 64) * FIGURE_PX;
+/** The name badge starts this far under the finger. */
+const NAME_GAP_PX = 6;
+/** The figure's hands hold the badge this far above its bottom edge. */
+const GRIP_OVERLAP_PX = 6;
 /** The hanging figure from the top of its head to its feet (px, unscaled). */
 const BODY_PX = ((61.9 - 15.2) / 64) * FIGURE_PX;
 
@@ -79,7 +82,8 @@ interface Drag {
   look: () => HTMLElement;
   ghost: HTMLElement | null;
   figure: HTMLElement | null;
-  shadow: HTMLElement | null;
+  /** From the finger down to the figure's feet (the spot it lands on), once the badge is measured. */
+  feet: number;
   target: HTMLElement | null;
   pose: DragPose;
   /** Last point and time, for the swing. */
@@ -113,8 +117,6 @@ function animate(el: HTMLElement, frames: Keyframe[], opts: KeyframeAnimationOpt
   }
 }
 
-/** Centre of an element at a point. */
-const at = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${scale})`;
 /** The ghost is anchored at the figure's hands: they are at the point (the finger / cursor). */
 const handsAt = (x: number, y: number, scale = 1) => `translate(${x}px, ${y}px) scale(${scale})`;
 
@@ -165,7 +167,7 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
   function setPose(d: Drag, pose: DragPose) {
     if (d.pose === pose || !d.figure) return;
     d.pose = pose;
-    d.figure.innerHTML = dragFigureSvg(pose, { size: FIGURE_PX });
+    d.figure.innerHTML = dragFigureSvg(pose, { size: FIGURE_PX, landing: false });
   }
 
   function start(d: Drag, x: number, y: number) {
@@ -181,16 +183,16 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     ghost.className = 'drag-ghost';
     ghost.setAttribute('aria-hidden', 'true');
     ghost.append(name, figure);
-    const shadow = document.createElement('div');
-    shadow.className = 'drag-shadow';
-    document.body.append(shadow, ghost);
+    document.body.append(ghost);
     d.ghost = ghost;
     d.figure = figure;
-    d.shadow = shadow;
+    // the badge under the finger, the figure's hands holding its lower edge
+    const hands = NAME_GAP_PX + (name.offsetHeight || 32) - GRIP_OVERLAP_PX;
+    d.feet = hands + FEET_PX;
     ghost.style.setProperty('--figure-px', `${FIGURE_PX}px`);
-    ghost.style.setProperty('--grip-px', `${GRIP_PX}px`);
+    ghost.style.setProperty('--name-gap', `${NAME_GAP_PX}px`);
+    ghost.style.setProperty('--figure-top', `${hands - GRIP_PX}px`);
     ghost.style.transform = handsAt(x, y);
-    shadow.style.transform = at(x, y + FEET_PX);
     // the person lifts off
     animate(ghost, [{ transform: handsAt(x, y, 0.6) }, { transform: handsAt(x, y) }], { duration: 160, easing: 'ease-out' });
     document.body.classList.add('is-dragging-person');
@@ -217,15 +219,15 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     const target = cancelled ? null : d.target;
     setTarget(d, null);
     const ghost = d.ghost!;
-    d.shadow!.remove();
     const from = handsAt(x, y);
     const gone = () => ghost.remove();
-    const overOwn = !cancelled && tileAt(x, y + FEET_PX)?.dataset.machineId === d.from;
+    const overOwn = !cancelled && tileAt(x, y + d.feet)?.dataset.machineId === d.from;
     if (target) {
       // lands in front of the machine: flies over the spot where the frézar stands / the operátor sits,
       // shrinks to the size of the figure in the icon, drops onto it and turns into it
       const spot = landingSpot(target, d.role);
-      const hands = spot.feet - FEET_PX * spot.scale;
+      // the ghost scales around the finger point: its feet end up `feet × scale` under it
+      const hands = spot.feet - d.feet * spot.scale;
       const hover = Math.max(10, FEET_PX * spot.scale * 0.35);
       // an empty machine shows its figure only once the person has landed
       const empty = target.dataset.machineStaffed !== 'true';
@@ -245,12 +247,8 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
         { duration: LAND_MS, fill: 'forwards' },
         gone,
       );
-      // the touch-down: the machine gives a little, its own figure appears as the falling one fades
-      setTimeout(() => {
-        target.classList.remove('tile--landing');
-        target.classList.add('tile--dropped');
-        setTimeout(() => target.classList.remove('tile--dropped'), 450);
-      }, LAND_MS * 0.72);
+      // the touch-down: the machine's own figure appears as the falling one fades (the card stays still)
+      setTimeout(() => target.classList.remove('tile--landing'), LAND_MS * 0.72);
       void handlersRef.current.place(d.personId, target.dataset.machineId!, d.from);
     } else if (d.from && handlersRef.current.discard && !cancelled && !overOwn) {
       // thrown away beside the machines: falls and fades on the spot
@@ -282,9 +280,8 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     // smoothed sideways speed: the figure swings against the direction it is carried
     d.last = { x, t: now, vx: d.last.vx * 0.6 + ((x - d.last.x) / dt) * 0.4 };
     d.ghost!.style.transform = handsAt(x, y);
-    // the figure hangs under the finger: it lands where its feet are
-    d.shadow!.style.transform = at(x, y + FEET_PX);
-    setTarget(d, tileAt(x, y + FEET_PX));
+    // the badge and the figure hang under the finger: it lands where its feet are
+    setTarget(d, tileAt(x, y + d.feet));
     setPose(d, d.target ? 'drop' : d.last.vx < -SWING_SPEED ? 'swing-left' : d.last.vx > SWING_SPEED ? 'swing-right' : 'hang');
   }
 
@@ -361,7 +358,7 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     return {
       personId, from, role, pointerId: e.pointerId, mouse: e.pointerType === 'mouse',
       startX: e.clientX, startY: e.clientY, source: e.currentTarget, look,
-      ghost: null, figure: null, shadow: null, target: null, pose: 'hang',
+      ghost: null, figure: null, feet: FEET_PX, target: null, pose: 'hang',
       last: { x: e.clientX, t: performance.now(), vx: 0 },
     };
   }
