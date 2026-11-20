@@ -23,7 +23,8 @@ test('swinging poses lean the opposite way; only "drop" shows the landing spot',
 
 test('the SVG files in public/icons/drag are up to date (node scripts/drag-icons.ts)', () => {
   for (const { pose, label } of DRAG_POSES) {
-    const file = readFileSync(`public/icons/drag/operator-${pose}.svg`, 'utf8');
+    // git on Windows may check the files out with CRLF line ends
+    const file = readFileSync(`public/icons/drag/operator-${pose}.svg`, 'utf8').replace(/\r\n/g, '\n');
     expect(file).toBe(dragFigureSvg(pose, { title: `Operátor – ${label}` }) + '\n');
   }
 });
