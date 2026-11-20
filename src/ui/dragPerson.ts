@@ -33,8 +33,10 @@ const FIGURE_PX = 72;
 const GRIP_PX = (5 / 64) * FIGURE_PX;
 /** From the figure's hands down to its feet. */
 const FEET_PX = ((61 - 5) / 64) * FIGURE_PX;
-/** The name badge starts this far under the finger. */
-const NAME_GAP_PX = 6;
+/** The name badge starts this far under the finger, so the fingertip doesn't cover it… */
+const NAME_GAP_TOUCH_PX = 44;
+/** …and this far under a (thin) mouse cursor. */
+const NAME_GAP_MOUSE_PX = 12;
 /** The figure's hands hold the badge this far above its bottom edge. */
 const GRIP_OVERLAP_PX = 6;
 /** The hanging figure from the top of its head to its feet (px, unscaled). */
@@ -187,10 +189,11 @@ export function usePersonDrag(on: DropHandlers | ((personId: string, machineId: 
     d.ghost = ghost;
     d.figure = figure;
     // the badge under the finger, the figure's hands holding its lower edge
-    const hands = NAME_GAP_PX + (name.offsetHeight || 32) - GRIP_OVERLAP_PX;
+    const gap = d.mouse ? NAME_GAP_MOUSE_PX : NAME_GAP_TOUCH_PX;
+    const hands = gap + (name.offsetHeight || 32) - GRIP_OVERLAP_PX;
     d.feet = hands + FEET_PX;
     ghost.style.setProperty('--figure-px', `${FIGURE_PX}px`);
-    ghost.style.setProperty('--name-gap', `${NAME_GAP_PX}px`);
+    ghost.style.setProperty('--name-gap', `${gap}px`);
     ghost.style.setProperty('--figure-top', `${hands - GRIP_PX}px`);
     ghost.style.transform = handsAt(x, y);
     // the person lifts off
