@@ -67,6 +67,8 @@ export function MachineTile({
       data-testid="machine-tile"
       data-machine-id={machineId}
       data-machine-active={machineId ? String(!outOfService) : undefined}
+      // someone already shown on the machine: a person dropped onto it does not hide that figure
+      data-machine-staffed={machineId ? String(!!first) : undefined}
       title={name}
       className={`tile ${tileClass(type, outOfService)} ${isPriority ? 'tile--priority' : ''} ${selected ? 'tile--selected' : ''} ${dragging ? 'tile--dragging' : ''} ${highlighted ? 'tile--hl' : ''} ${dimmed ? (pale ? 'tile--pale' : 'tile--dim') : ''}`}
       style={{
