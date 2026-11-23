@@ -3,11 +3,12 @@ import { flushSync } from 'react-dom';
 import { RecordSheets, PAGE_W, PAGE_H } from '../ui/RecordSheets';
 import { APP_UPDATED_MESSAGE } from './excel';
 import { localDate } from '../domain/record';
+import { reportBaseName } from './xlsx';
 import type { ShiftRecord } from '../domain/types';
 
 /** File name of the history PDF (one record: its shift and date). */
 export function pdfFileName(records: ShiftRecord[], now = new Date()): string {
-  if (records.length === 1) return `Layout_${records[0].date}_zmena-${records[0].shiftName}.pdf`;
+  if (records.length === 1) return `${reportBaseName(records[0])}.pdf`;
   return `Historia_layoutov_${localDate(now.toISOString())}.pdf`;
 }
 

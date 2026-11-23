@@ -1,16 +1,9 @@
-import { useEffect, useState } from 'react';
 import { Floor } from './Floor';
 import { MachineTile } from './MachineTile';
 import { PLAN_FRAME, cropped } from './grid';
 import { hallLayout, isUniform } from '../domain/compact';
-import { buildReportXlsx, formatPct, reportFileName, skDate } from '../report/xlsx';
-import { downloadBlob, shareOrDownload } from '../report/share';
-import { pdfFileName } from '../report/pdf';
-import { ExportMenu, usePdf } from './ExportMenu';
-import {
-  getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
-} from '../report/folder';
-import { useDB } from './useDB';
+import { formatPct, skDate } from '../report/xlsx';
+import { ExportMenu } from './ExportMenu';
 import { BackButton } from './icons';
 import type { ShiftRecord } from '../domain/types';
 import { multiText } from '../domain/stats';
@@ -73,67 +66,14 @@ export function RecordZonePlan({ items, peopleByMachine }: {
 }
 
 export function RecordDetail({ record, onBack }: { record: ShiftRecord; onBack(): void }) {
-  // Prepare the file up front so the share sheet opens directly inside the tap (required on iPad).
-  const [blob, setBlob] = useState<Blob | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const db = useDB();
-  const [folder, setFolder] = useState<FolderHandle | null>(null);
-  const [savedTo, setSavedTo] = useState<string | null>(null);
-  const pdf = usePdf([record]);
-  useEffect(() => {
-    getReportFolder(db).then((h) => setFolder(h ?? null));
-  }, [db]);
-
-  async function saveToFolder() {
-    if (!folder || !blob) return;
-    setError(null);
-    setSavedTo(null);
-    await requestFolderAccess(folder); // first, while it still counts as the user's tap
-    const res = await saveToReportFolder(db, blob, reportFileName(record));
-    if (res.ok) setSavedTo(saveResultMessage(res));
-    else setError(saveResultMessage(res));
-  }
-
-  useEffect(() => {
-    let alive = true;
-    buildReportXlsx(record).then(
-      (b) => alive && setBlob(b),
-      (e) => alive && setError(e instanceof Error ? e.message : String(e)),
-    );
-    return () => {
-      alive = false;
-    };
-  }, [record]);
   const { zones, peopleByMachine, withZones } = recordZones(record);
   return (
     <div className="page">
       <div className="page__head">
         <BackButton onClick={onBack} />
         <h2>{`Zmena ${record.shiftName} · ${skDate(record.date)}`}</h2>
-        <ExportMenu
-          groups={[
-            {
-              title: 'PDF – plán a tabuľka',
-              actions: [
-                { label: 'Stiahnuť PDF', run: async () => downloadBlob(await pdf(), pdfFileName([record])) },
-                { label: 'Zdieľať PDF', run: async () => shareOrDownload(await pdf(), pdfFileName([record])) },
-              ],
-            },
-            {
-              title: 'Excel – report zmeny',
-              // the file is made up front, so sharing opens right inside the tap (needed on iPad)
-              note: blob ? undefined : 'Pripravujem report…',
-              actions: [
-                { label: 'Stiahnuť Excel', disabled: !blob, run: () => blob && downloadBlob(blob, reportFileName(record)) },
-                { label: 'Zdieľať Excel', disabled: !blob, run: () => blob && shareOrDownload(blob, reportFileName(record)) },
-                ...(folder ? [{ label: 'Uložiť do priečinka', disabled: !blob, run: saveToFolder }] : []),
-              ],
-            },
-          ]}
-        />
+        <ExportMenu records={[record]} />
       </div>
-      {savedTo && <div className="notice notice--ok">{savedTo}</div>}
-      {error && <div className="notice notice--warn">{error}</div>}
       {/* as in the PDF: occupancy stands out, the other figures next to it */}
       <div className="card record-summary">
         <StaffingKpi record={record} />

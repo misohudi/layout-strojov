@@ -1,18 +1,19 @@
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from '../App';
 import { DBProvider } from './useDB';
 import { openDB, ensureSeeded, type AppDB } from '../db/db';
 import { startDraft, setMachineType, togglePerson, upsertPerson } from '../db/repo';
-import { shareOrDownload } from '../report/share';
+import { shareOrDownload, shareOrDownloadFiles } from '../report/share';
 import { pickReportFolder } from '../report/folder';
 
-vi.mock('../report/share', () => ({ shareOrDownload: vi.fn(async () => 'shared') }));
+vi.mock('../report/share', () => ({ shareOrDownload: vi.fn(async () => 'shared'), shareOrDownloadFiles: vi.fn(async () => 'shared'), downloadBlob: vi.fn() }));
 
 let db: AppDB;
 let n = 0;
 beforeEach(async () => {
   vi.mocked(shareOrDownload).mockReset().mockResolvedValue('shared');
+  vi.mocked(shareOrDownloadFiles).mockReset().mockResolvedValue('shared');
   db = openDB(`close-${++n}-${Math.random()}`);
   await ensureSeeded(db);
   const p = await upsertPerson(db, { name: 'Kováč', shiftId: 's-B', active: true });
@@ -35,11 +36,12 @@ async function openLayout() {
 // Generating the report lazy-loads ExcelJS, which can be slow on a cold, busy test run.
 const SLOW = { timeout: 8000 };
 
-/** The share button is disabled until the Excel file is prepared. */
-async function shareButtonReady() {
-  const btn = await screen.findByRole('button', { name: 'Zdieľať report' }, SLOW);
-  await vi.waitFor(() => expect(btn).toBeEnabled(), SLOW);
-  return btn;
+/** After closing: Exportovať → the Excel ticked; returns the export sheet. */
+async function exportExcel() {
+  await userEvent.click(await screen.findByRole('button', { name: 'Exportovať' }, SLOW));
+  const sheet = await screen.findByRole('dialog', { name: 'Exportovať' });
+  await userEvent.click(within(sheet).getByRole('checkbox', { name: /^Excel/ }));
+  return sheet;
 }
 
 test('close dialog warns about machines with people but no type', async () => {
@@ -48,78 +50,79 @@ test('close dialog warns about machines with people but no type', async () => {
   expect(dialog).toHaveTextContent('1 stroj má ľudí bez farby');
 });
 
-test('closing saves the record, then sharing is its own tap, then back to picker', async () => {
+test('closing saves the record and exports nothing by itself; Exportovať offers the files, then back to the picker', async () => {
   await openLayout();
   await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu' }));
-  expect(await screen.findByText('Zmena je uzavretá a uložená v histórii.', {}, SLOW)).toBeInTheDocument();
+  expect(await screen.findByText(/Zmena je uzavretá a uložená v histórii\./, {}, SLOW)).toBeInTheDocument();
   const records = await db.records.toArray();
   expect(records).toHaveLength(1);
   expect(records[0].stats.ext).toBe(1);
   expect(await db.drafts.get('s-B')).toBeUndefined();
-  expect(shareOrDownload).not.toHaveBeenCalled();
+  expect(shareOrDownloadFiles).not.toHaveBeenCalled();
 
-  await userEvent.click(await shareButtonReady());
-  await vi.waitFor(() =>
-    expect(vi.mocked(shareOrDownload)).toHaveBeenCalledWith(expect.any(Blob), 'Obsadenost_Frezy_2026-11-11_zmena-B.xlsx'),
-  );
+  const sheet = await exportExcel();
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Zdieľať' }));
+  await vi.waitFor(() => expect(vi.mocked(shareOrDownloadFiles).mock.calls[0][0].map((f) => f.name)).toEqual(['Obsadenost_2026-11-11_zmena-B.xlsx']), SLOW);
+  await vi.waitFor(() => expect(screen.queryByRole('dialog', { name: 'Exportovať' })).toBeNull());
   await userEvent.click(screen.getByRole('button', { name: 'Hotovo' }));
   expect(await screen.findByText('Vyber svoju zmenu')).toBeInTheDocument();
 });
 
-test('a failing share shows the error and keeps the dialog usable', async () => {
-  vi.mocked(shareOrDownload).mockRejectedValueOnce(new Error('Zdieľanie zlyhalo'));
+test('a failing share shows the error and keeps the export usable', async () => {
+  vi.mocked(shareOrDownloadFiles).mockRejectedValueOnce(new Error('Zdieľanie zlyhalo'));
   await openLayout();
   await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu' }));
-  await userEvent.click(await shareButtonReady());
-  expect(await screen.findByText('Zdieľanie zlyhalo')).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Zdieľať report' })).toBeEnabled();
-  expect(screen.getByRole('button', { name: 'Hotovo' })).toBeEnabled();
+  const sheet = await exportExcel();
+  await userEvent.click(within(sheet).getByRole('button', { name: 'Zdieľať' }));
+  expect(await within(sheet).findByText('Zdieľanie zlyhalo', {}, SLOW)).toBeInTheDocument();
+  expect(within(sheet).getByRole('button', { name: 'Zdieľať' })).toBeEnabled();
 });
+
+/** A folder of the system picker, in memory. */
+interface FakeDir {
+  name: string;
+  files: Map<string, Blob>;
+  dirs: Map<string, FakeDir>;
+  queryPermission(): Promise<PermissionState>;
+  requestPermission?(): Promise<PermissionState>;
+  getDirectoryHandle(n: string): Promise<FakeDir>;
+  getFileHandle(n: string, o: { create: boolean }): Promise<{ createWritable(): Promise<{ write(b: Blob): Promise<void>; close(): Promise<void> }> }>;
+}
 
 describe('with a report folder chosen in settings', () => {
   const win = window as unknown as { showDirectoryPicker?: unknown };
-  function fakeDir(fail = false) {
+  function fakeDir(name = 'REPORT_OBSADENOST'): FakeDir {
     const files = new Map<string, Blob>();
+    const dirs = new Map<string, FakeDir>();
     return {
-      name: 'REPORT_OBSADENOST',
-      files,
+      name, files, dirs,
       queryPermission: vi.fn(async () => 'prompt' as PermissionState),
       requestPermission: vi.fn(async () => 'granted' as PermissionState),
-      getFileHandle: vi.fn(async (fileName: string) => {
-        if (fail) throw new DOMException('Sieť nedostupná', 'NotFoundError');
-        return {
-          createWritable: async () => {
-            let data: Blob | null = null;
-            return { write: async (b: Blob) => { data = b; }, close: async () => { files.set(fileName, data!); } };
-          },
-        };
+      getDirectoryHandle: async (n: string) => {
+        if (!dirs.has(n)) dirs.set(n, fakeDir(n));
+        return dirs.get(n)!;
+      },
+      getFileHandle: vi.fn(async (fileName: string, o: { create: boolean }) => {
+        if (!o.create && !files.has(fileName)) throw new DOMException('missing', 'NotFoundError');
+        return { createWritable: async () => ({ write: async (b: Blob) => { files.set(fileName, b); }, close: async () => {} }) };
       }),
     };
   }
   afterEach(() => { delete win.showDirectoryPicker; });
 
-  test('closing the shift saves the report straight into the folder', async () => {
+  test('closing leaves the folder alone; Uložiť do priečinka puts the report into its month', async () => {
     const dir = fakeDir();
     win.showDirectoryPicker = vi.fn(async () => dir);
     await pickReportFolder(db);
     await openLayout();
     await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu' }));
-    expect(await screen.findByText('Report uložený do priečinka REPORT_OBSADENOST.', {}, SLOW)).toBeInTheDocument();
+    await screen.findByText(/Zmena je uzavretá/, {}, SLOW);
+    expect(dir.dirs.size + dir.files.size).toBe(0); // nothing saved by itself
+    const sheet = await exportExcel();
+    await userEvent.click(within(sheet).getByRole('button', { name: 'Uložiť do priečinka' }));
+    expect(await within(sheet).findByText('Uložené do priečinka REPORT_OBSADENOST: 1 súbor.', {}, SLOW)).toBeInTheDocument();
     expect(dir.requestPermission).toHaveBeenCalled();
-    expect([...dir.files.keys()]).toEqual(['Obsadenost_Frezy_2026-11-11_zmena-B.xlsx']);
-    expect(shareOrDownload).not.toHaveBeenCalled();
-    expect(screen.getByRole('button', { name: 'Zdieľať report' })).toBeInTheDocument();
-  });
-
-  test('if the network folder is unavailable the shift is still closed and sharing is offered', async () => {
-    win.showDirectoryPicker = vi.fn(async () => fakeDir(true));
-    await pickReportFolder(db);
-    await openLayout();
-    await userEvent.click(await screen.findByRole('button', { name: 'Uzavrieť zmenu' }));
-    expect(await screen.findByText(/nepodarilo uložiť do priečinka \(Sieť nedostupná\)/, {}, SLOW)).toBeInTheDocument();
-    expect(await db.records.count()).toBe(1);
-    expect(await shareButtonReady()).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Uložiť do priečinka' })).toBeInTheDocument();
+    expect([...dir.dirs.get('2026-11')!.files.keys()]).toEqual(['Obsadenost_2026-11-11_zmena-B.xlsx']);
   });
 });
 

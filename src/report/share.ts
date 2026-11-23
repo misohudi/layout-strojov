@@ -16,6 +16,22 @@ export async function shareOrDownload(blob: Blob, fileName: string): Promise<Sha
   return 'downloaded';
 }
 
+/** Opens the share sheet with several files; falls back to downloading each. */
+export async function shareOrDownloadFiles(files: { name: string; blob: Blob }[]): Promise<ShareResult> {
+  if (files.length === 1) return shareOrDownload(files[0].blob, files[0].name);
+  const list = files.map((f) => new File([f.blob], f.name, { type: f.blob.type }));
+  if (typeof navigator.canShare === 'function' && navigator.canShare({ files: list })) {
+    try {
+      await navigator.share({ files: list, title: files.map((f) => f.name).join(', ') });
+      return 'shared';
+    } catch (e) {
+      if (e instanceof DOMException && e.name === 'AbortError') return 'cancelled';
+    }
+  }
+  for (const f of files) downloadBlob(f.blob, f.name);
+  return 'downloaded';
+}
+
 /** Saves the file straight to the device (Downloads), without the share sheet. */
 export function downloadBlob(blob: Blob, fileName: string): void {
   const url = URL.createObjectURL(blob);

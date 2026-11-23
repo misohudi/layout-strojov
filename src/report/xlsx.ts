@@ -22,8 +22,13 @@ const hhmm = (iso: string) => {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+/** "Obsadenost_2026-11-23_zmena-A" – the Excel and the PDF of one shift share it. */
+export function reportBaseName(r: Pick<ShiftRecord, 'date' | 'shiftName'>): string {
+  return `Obsadenost_${r.date}_zmena-${r.shiftName}`;
+}
+
 export function reportFileName(r: ShiftRecord): string {
-  return `Obsadenost_Frezy_${r.date}_zmena-${r.shiftName}.xlsx`;
+  return `${reportBaseName(r)}.xlsx`;
 }
 
 const typeLabel = (row: RecordRow) => (row.outOfService ? 'mimo prevádzky' : (row.type ?? '–'));
