@@ -1,7 +1,7 @@
 import { openDB, ensureSeeded, type AppDB } from '../db/db';
 import { exportBackup, importBackup } from '../backup/backup';
 import {
-  isFolderSupported, pickReportFolder, getReportFolder, saveToReportFolder,
+  isFolderSupported, pickReportFolder, getReportFolder, saveToReportFolder, saveFilesToReportFolder,
   getFolderLabel, setFolderLabel,
 } from './folder';
 
@@ -104,4 +104,24 @@ test('a backup restored on another device does not bring a broken folder link', 
   await importBackup(other, await exportBackup(db));
   expect(await getReportFolder(other)).toBeUndefined();
   other.close();
+});
+
+test('a write that hangs (stuck network share) ends in an error instead of waiting forever', async () => {
+  const db = openDB(`folder-timeout-${Math.random()}`);
+  const dir = {
+    name: 'NET',
+    queryPermission: async () => 'granted' as PermissionState,
+    getFileHandle: async (_n: string, o: { create: boolean }) => {
+      if (!o.create) throw new DOMException('missing', 'NotFoundError');
+      return { createWritable: () => new Promise<never>(() => {}) }; // never answers
+    },
+  };
+  (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker = async () => dir;
+  await pickReportFolder(db);
+  const steps: string[] = [];
+  const res = await saveFilesToReportFolder(db, [{ name: 'a.pdf', blob: new Blob(['x']) }], async () => true, (d, t) => steps.push(`${d}/${t}`), 50);
+  expect(res).toEqual({ ok: false, reason: 'error', message: 'Zápis súboru a.pdf trvá príliš dlho' });
+  expect(steps).toEqual(['0/1']);
+  delete (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker;
+  db.close();
 });
