@@ -282,7 +282,8 @@ export function LayoutView({ shiftId, onChangeShift, onHistory, onSettings, onCl
   };
 
   return (
-    <div className="screen">
+    // a long press is for picking people up – no browser menu (copy, select) on the plan screen
+    <div className="screen" onContextMenu={(e) => e.preventDefault()}>
       <Header
         shiftName={shift?.name ?? '?'}
         longestShiftName={Math.max(1, ...shifts.filter((s) => !isPool(s)).map((s) => s.name.length))}
