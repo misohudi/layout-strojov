@@ -1,5 +1,6 @@
 import { pdfFileName } from './pdf';
-import { chunkRows, ROWS_PER_PAGE, statsLine } from '../ui/RecordSheets';
+import { chunkRows, ROWS_PER_PAGE } from './pdfDraw';
+import { statsLine } from '../ui/RecordDetail';
 import type { ShiftRecord } from '../domain/types';
 
 const rec = (date: string, shiftName: string) => ({ date, shiftName }) as ShiftRecord;

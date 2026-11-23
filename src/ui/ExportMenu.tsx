@@ -24,6 +24,8 @@ export function ExportMenu({ records, label = 'Exportovať', primary = true }: {
   const [perShift, setPerShift] = useState<boolean | null>(null);
   const [folder, setFolder] = useState<FolderHandle | null>(null);
   const [busy, setBusy] = useState<Where | null>(null);
+  /** What is happening right now (making the files, saving 2 of 4…). */
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<{ message: string; failed: Where } | null>(null);
   const [done, setDone] = useState<string | null>(null);
   /** Files already in the folder: the question and its answer. */
@@ -54,8 +56,12 @@ export function ExportMenu({ records, label = 'Exportovať', primary = true }: {
     try {
       if (where === 'folder') {
         if (folder) await requestFolderAccess(folder); // first, while it still counts as the user's tap
-        const res = await saveFilesToReportFolder(db, await files(true), (names) =>
-          new Promise<boolean>((resolve) => setAsk({ names, answer: resolve })),
+        setStatus('Pripravujem súbory…');
+        const out = await files(true);
+        const res = await saveFilesToReportFolder(
+          db, out,
+          (names) => new Promise<boolean>((resolve) => setAsk({ names, answer: resolve })),
+          (done, total) => setStatus(`Ukladám do priečinka ${Math.min(done + 1, total)} / ${total}…`),
         );
         setAsk(null);
         if (!res.ok) {
@@ -65,6 +71,7 @@ export function ExportMenu({ records, label = 'Exportovať', primary = true }: {
         setDone(filesResultMessage(res));
         return;
       }
+      setStatus('Pripravujem súbory…');
       const out = await files(split);
       if (where === 'download') out.forEach((f) => downloadBlob(f.blob, f.name));
       else await shareOrDownloadFiles(out);
@@ -73,6 +80,7 @@ export function ExportMenu({ records, label = 'Exportovať', primary = true }: {
       setError({ message: e instanceof Error ? e.message : String(e), failed: where });
     } finally {
       setBusy(null);
+      setStatus(null);
     }
   }
 
@@ -161,6 +169,7 @@ export function ExportMenu({ records, label = 'Exportovať', primary = true }: {
                 </div>
               </div>
             )}
+            {status && <p className="muted export-menu__note" role="status">{status}</p>}
             {done && <div className="notice notice--ok">{done}</div>}
             {error && (
               <div className="notice notice--warn" role="alert">

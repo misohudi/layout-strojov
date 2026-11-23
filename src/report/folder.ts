@@ -116,6 +116,7 @@ export async function saveToReportFolder(db: AppDB, blob: Blob, fileName: string
  */
 export async function saveFilesToReportFolder(
   db: AppDB, files: OutFile[], overwrite: (existing: string[]) => Promise<boolean>,
+  progress: (done: number, total: number) => void = () => {}, timeoutMs = WRITE_TIMEOUT_MS,
 ): Promise<FilesResult> {
   const dir = await getReportFolder(db);
   if (!dir) return { ok: false, reason: 'no-folder' };
@@ -133,17 +134,45 @@ export async function saveFilesToReportFolder(
     const replace = existing.length > 0 ? await overwrite(existing) : true;
     let saved = 0;
     for (let i = 0; i < files.length; i++) {
+      progress(i, files.length);
       if (exists[i] && !replace) continue;
-      const out = await (await targets[i].getFileHandle(files[i].name, { create: true })).createWritable();
-      await out.write(files[i].blob);
-      await out.close();
+      // one file at a time, each with a time limit: a slow or stuck network share ends in an error
+      await withTimeout(
+        (async () => {
+          const out = await (await targets[i].getFileHandle(files[i].name, { create: true })).createWritable();
+          await out.write(files[i].blob);
+          await out.close();
+        })(),
+        timeoutMs,
+        `Zápis súboru ${files[i].name}`,
+      );
       saved++;
     }
+    progress(files.length, files.length);
     return { ok: true, folder: dir.name, saved, skipped: files.length - saved };
   } catch (e) {
     const message = (e as { message?: unknown })?.message;
     return { ok: false, reason: 'error', message: typeof message === 'string' && message ? message : String(e) };
   }
+}
+
+/** A write to the (network) folder that takes longer than this is given up with an error. */
+export const WRITE_TIMEOUT_MS = 60_000;
+
+function withTimeout<T>(p: Promise<T>, ms: number, what: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${what} trvá príliš dlho`)), ms);
+    p.then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
 }
 
 const filesWord = (n: number) => (n === 1 ? '1 súbor' : n >= 2 && n <= 4 ? `${n} súbory` : `${n} súborov`);
