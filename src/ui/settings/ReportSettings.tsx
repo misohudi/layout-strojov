@@ -22,14 +22,14 @@ export function ReportSettings() {
       <h3>Sieťový priečinok pre reporty</h3>
       {!supported ? (
         <div className="notice notice--warn">
-          Tento prehliadač nevie ukladať priamo do priečinka. Report uložíte cez „Zdieľať report“ → aplikácia Súbory.
+          Tento prehliadač nevie ukladať priamo do priečinka. Report uložíte cez Exportovať → Zdieľať alebo Stiahnuť.
           Na tablete s Androidom použite aktuálny Chrome.
         </div>
       ) : (
         <>
           <p>
             {folder ? (
-              <>Reporty sa pri uzavretí zmeny uložia do priečinka <strong>{folder}</strong>.</>
+              <>Exportovať → Uložiť do priečinka ukladá reporty do <strong>{folder}</strong> – každú zmenu do podpriečinka jej mesiaca (napr. 2026-11).</>
             ) : (
               'Priečinok zatiaľ nie je vybraný.'
             )}
@@ -57,8 +57,9 @@ export function ReportSettings() {
             )}
           </div>
           <p className="muted">
-            Vo výbere priečinka otvorte sieťový disk (ako v aplikácii Súbory) a zvoľte priečinok pre reporty.
-            Prihlasovacie údaje k disku spravuje tablet, aplikácia ich nevidí.
+            Vo výbere priečinka otvorte sieťový disk a zvoľte priečinok pre reporty. Sieťový disk, ktorý aplikácia
+            Súbory nevidí, sprístupní aplikácia CIFS Documents Provider (nastaví ho IT). Prihlasovacie údaje k disku
+            spravuje tablet, aplikácia ich nevidí.
           </p>
         </>
       )}

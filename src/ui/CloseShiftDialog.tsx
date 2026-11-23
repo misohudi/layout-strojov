@@ -4,12 +4,9 @@ import { useDB } from './useDB';
 import { buildShiftRecord } from '../domain/record';
 import { multiText, computeStats } from '../domain/stats';
 import { saveRecordAndReset } from '../db/repo';
-import { buildReportXlsx, formatPct, reportFileName } from '../report/xlsx';
+import { formatPct } from '../report/xlsx';
 import { APP_UPDATED_MESSAGE, loadExcel } from '../report/excel';
-import { shareOrDownload } from '../report/share';
-import {
-  getReportFolder, requestFolderAccess, saveResultMessage, saveToReportFolder, type FolderHandle,
-} from '../report/folder';
+import { ExportMenu } from './ExportMenu';
 import type { ShiftRecord, Stats } from '../domain/types';
 
 interface Props {
@@ -21,21 +18,15 @@ interface Props {
 const errMsg = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
 /**
- * Two steps on purpose:
- * 1. "Uzavrieť zmenu" saves the record and prepares the Excel file.
- * 2. "Zdieľať report" is a separate tap that calls the share sheet right away – browsers
- *    (especially Safari on iPad) only allow sharing directly inside a user gesture.
- * After step 1 the dialog renders from local state, so it keeps working although the draft is gone.
+ * "Uzavrieť zmenu" saves the record to the history; nothing is exported by itself. Then "Exportovať"
+ * offers the files (Excel / PDF) and where they go (report folder, download, share).
+ * After closing the dialog renders from local state, so it keeps working although the draft is gone.
  */
 export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   const db = useDB();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [closed, setClosed] = useState<{ record: ShiftRecord; blob: Blob | null } | null>(null);
-  const [shared, setShared] = useState(false);
-  /** Network folder chosen in Settings → Report (if any). */
-  const [folder, setFolder] = useState<FolderHandle | null>(null);
-  const [savedTo, setSavedTo] = useState<string | null>(null);
+  const [closed, setClosed] = useState<{ record: ShiftRecord } | null>(null);
   const live = useLiveQuery(async () => {
     const [draft, machines, people] = await Promise.all([
       db.drafts.get(shiftId),
@@ -48,20 +39,11 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
   // Warm up the Excel library while the foreman reads the summary.
   useEffect(() => {
     loadExcel().catch(() => {});
-    getReportFolder(db).then((h) => setFolder(h ?? null));
-  }, [db]);
-
-  async function saveToFolder(record: ShiftRecord, blob: Blob) {
-    const res = await saveToReportFolder(db, blob, reportFileName(record));
-    if (res.ok) setSavedTo(saveResultMessage(res));
-    else setError(saveResultMessage(res));
-  }
+  }, []);
 
   async function close() {
     setBusy(true);
     setError(null);
-    // Ask for folder access first, while the browser still counts this as the user's tap.
-    if (folder) await requestFolderAccess(folder);
     try {
       const [draft, machines, people, shifts, halls] = await Promise.all([
         db.drafts.get(shiftId),
@@ -74,14 +56,7 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
       if (!draft || !shift) throw new Error('Zmena už nie je otvorená');
       const record = buildShiftRecord({ draft, shift, machines, people, shifts, halls, now: new Date(), id: crypto.randomUUID() });
       await saveRecordAndReset(db, record);
-      setClosed({ record, blob: null });
-      try {
-        const blob = await buildReportXlsx(record);
-        setClosed({ record, blob });
-        if (folder) await saveToFolder(record, blob);
-      } catch (e) {
-        setError(errMsg(e));
-      }
+      setClosed({ record });
     } catch (e) {
       setError(errMsg(e));
     } finally {
@@ -89,34 +64,6 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
     }
   }
 
-  async function share() {
-    if (!closed) return;
-    setError(null);
-    setBusy(true);
-    try {
-      // The blob is normally ready, so share() runs immediately inside this tap.
-      const blob = closed.blob ?? (await buildReportXlsx(closed.record));
-      if (!closed.blob) setClosed({ ...closed, blob });
-      const res = await shareOrDownload(blob, reportFileName(closed.record));
-      if (res !== 'cancelled') setShared(true);
-    } catch (e) {
-      setError(errMsg(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function retrySave() {
-    if (!closed || !folder) return;
-    setError(null);
-    setBusy(true);
-    try {
-      await requestFolderAccess(folder);
-      await saveToFolder(closed.record, closed.blob ?? (await buildReportXlsx(closed.record)));
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const stats: Stats | null = closed
     ? closed.record.stats
@@ -147,14 +94,10 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
           </div>
         )}
         {closed ? (
-          <p>
-            Zmena je uzavretá a uložená v histórii.
-            {shared && <span className="muted"> Report bol odoslaný.</span>}
-          </p>
+          <p>Zmena je uzavretá a uložená v histórii. Report (Excel, PDF) uložíte alebo pošlete cez Exportovať.</p>
         ) : (
           <p className="muted">Po uzavretí sa zmena uloží do histórie a pôdorys tejto zmeny sa vyprázdni.</p>
         )}
-        {savedTo && <div className="notice notice--ok">{savedTo}</div>}
         {error && (
           <div className="notice notice--warn">
             {error}
@@ -166,12 +109,7 @@ export function CloseShiftDialog({ shiftId, onCancel, onClosed }: Props) {
         <div className="row">
           {closed ? (
             <>
-              {folder && !savedTo && (
-                <button className="btn btn--primary" disabled={busy} onClick={retrySave}>Uložiť do priečinka</button>
-              )}
-              <button className={`btn ${folder && !savedTo ? '' : 'btn--primary'}`} disabled={busy} onClick={share}>
-                Zdieľať report
-              </button>
+              <ExportMenu records={[closed.record]} />
               <button className="btn" disabled={busy} onClick={onClosed}>Hotovo</button>
             </>
           ) : (

@@ -77,7 +77,7 @@ test('history workbook has a row per record', async () => {
 });
 
 test('reportFileName and formatPct', () => {
-  expect(reportFileName(rec())).toBe('Obsadenost_Frezy_2026-11-11_zmena-B.xlsx');
+  expect(reportFileName(rec())).toBe('Obsadenost_2026-11-11_zmena-B.xlsx');
   expect(formatPct(75)).toBe('75,0 %');
   expect(formatPct(2.9)).toBe('2,9 %');
   expect(formatPct(100)).toBe('100,0 %');

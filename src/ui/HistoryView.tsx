@@ -3,11 +3,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { useDB } from './useDB';
 import { BackButton } from './icons';
 import { listRecords } from '../db/repo';
-import { buildHistoryXlsx, formatPct, skDate } from '../report/xlsx';
-import { downloadBlob, shareOrDownload } from '../report/share';
-import { pdfFileName } from '../report/pdf';
-import { ExportMenu, usePdf } from './ExportMenu';
-import { localDate } from '../domain/record';
+import { formatPct, skDate } from '../report/xlsx';
+import { ExportMenu } from './ExportMenu';
 import { RecordDetail } from './RecordDetail';
 import { isPool } from '../domain/types';
 
@@ -23,10 +20,6 @@ export function HistoryView({ onBack }: { onBack(): void }) {
     [db, shiftId, from, to],
   );
 
-  const list = records ?? [];
-  const pdf = usePdf(list);
-  const excelName = () => `Historia_obsadenosti_${localDate(new Date().toISOString())}.xlsx`;
-
   const open = records?.find((r) => r.id === openId);
   if (open) return <RecordDetail record={open} onBack={() => setOpenId(null)} />;
 
@@ -35,25 +28,7 @@ export function HistoryView({ onBack }: { onBack(): void }) {
       <div className="page__head">
         <BackButton onClick={onBack} />
         <h2>História zmien</h2>
-        <ExportMenu
-          disabled={!records?.length}
-          groups={[
-            {
-              title: 'PDF – plány a tabuľky',
-              actions: [
-                { label: 'Stiahnuť PDF', run: async () => downloadBlob(await pdf(), pdfFileName(list)) },
-                { label: 'Zdieľať PDF', run: async () => shareOrDownload(await pdf(), pdfFileName(list)) },
-              ],
-            },
-            {
-              title: 'Excel – prehľad zmien',
-              actions: [
-                { label: 'Stiahnuť Excel', run: async () => downloadBlob(await buildHistoryXlsx(list), excelName()) },
-                { label: 'Zdieľať Excel', run: async () => shareOrDownload(await buildHistoryXlsx(list), excelName()) },
-              ],
-            },
-          ]}
-        />
+        <ExportMenu records={records ?? []} />
       </div>
       <div className="card row">
         <label className="field">
